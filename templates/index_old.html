@@ -1,0 +1,165 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <title>Spy with my little eye</title>
+    <link rel=stylesheet type=text/css href="{{ url_for('static', filename='style.css') }}" >
+    <link rel="stylesheet" href="http://yui.yahooapis.com/pure/0.6.0/pure-min.css">
+</head>
+<body>
+    <script type="text/javascript" src="//code.jquery.com/jquery-2.1.4.min.js"></script>
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.5/socket.io.min.js"></script>
+    <script type="text/javascript" charset="utf-8">
+        $(document).ready(function(){
+            namespace = '/test';
+            var $window = $(window);
+            var $usernameInput = $('.usernameInput'); // Input for username
+            var $loginPage = $('.login.page');
+            var $chatPage = $('.chat.page');
+            var socket = io.connect('http://' + document.domain + ':' + location.port + namespace);
+
+            var $currentInput = $usernameInput.focus();
+            var username;
+
+            socket.on('disconnect', function() {
+                $('#log').append('<br>Disconnected');
+            });
+            socket.on('usercount', function(msg) {
+                $('#active_users').text(msg.num_users + ' active users');
+            });
+            socket.on('no partner', function(msg) {
+                $('#log').text("No partner available. Stay tuned!");
+            })
+            socket.on('questioner', function(msg) {
+                setImage(msg.data);
+                setPartner(msg.name);
+                $('#question').show()
+            })
+            socket.on('answerer', function(msg) {
+                setImage(msg.data);
+                setPartner(msg.name);
+            })
+            socket.on('new question', function(msg) {
+                $('#log').append('<div style="question alignright">' + msg + '</div>')
+                $('#answer').show()
+            });
+            socket.on('new answer', function(msg) {
+                $('#log').append('<div style="answer alignright">' + msg + '</div>')
+                $('#question').show()
+            });
+
+            function setImage(img) {
+                $('#image').show();
+                $('#image').html(img);
+            }
+            function setPartner(partner) {
+                $('#log').html('<div class="alignleft"><b>' + username + '</b></div><div class="alignright"><b>' + partner + '</b></div><div style="clear: both"></div>')
+            }
+            // Sets the client's username
+            function setUsername () {
+                username = cleanInput($usernameInput.val().trim());
+
+                // If the username is valid
+                if (username) {
+                    $loginPage.hide();
+                    $chatPage.show();
+                    $loginPage.off('click');
+                    $('#welcome').show()
+                    $('#welcome').text('Welcome ' + username)
+                    // Tell the server your username
+                    socket.emit('add user', username);
+                }
+            }
+
+            // Prevents input from having injected markup
+            function cleanInput (input) {
+                return $('<div/>').text(input).text();
+            }
+
+            // event handler for server sent data
+            // the data is displayed in the "Received" section of the page
+            // handlers for the different forms in the page
+            // these send data to the server in a variety of ways
+
+
+            $('a#newgame').click(function(event) {
+                $('a#newgame').hide();
+                $('#welcome').hide();
+
+                socket.emit('next')
+                return false;
+            });
+            $('a#yes').click(function(event) {
+                $('#log').append('<div class="alignleft">Yes</div><br/>')
+                $('#answer').hide();
+
+                socket.emit('new answer', 'yes')
+                return false;
+            });
+            $('a#no').click(function(event) {
+                $('#log').append('<div class="alignleft">No</div><br/>')
+                $('#answer').hide();
+
+                socket.emit('new answer', 'no')
+                return false;
+            });
+            $('a#na').click(function(event) {
+                $('#log').append('<div class="alignleft">Not applicable</div><br/>')
+                $('#answer').hide();
+
+                socket.emit('new answer', 'na')
+                return false;
+            });
+
+
+            $window.keydown(function (event) {
+                // Auto-focus the current input when a key is typed
+                if (!(event.ctrlKey || event.metaKey || event.altKey)) {
+                    $currentInput.focus();
+                }
+                // When the client hits ENTER on their keyboard
+                if (event.which === 13) {
+                    if (username) {
+                        $('#question').hide()
+                        var message = $('#questionInput').val()
+                        $('#log').append('<div class="alignleft">' + message + '</div><br/>')
+                        socket.emit('new question', message)
+                    } else {
+                        setUsername();
+                    }
+                }
+            });
+        });
+    </script>
+    <body id="css-zen-garden">
+    <div class="page-wrapper">
+
+        <section class="intro" id="zen-intro">
+            <header role="banner">
+                <h1 id="active_users"></h1>
+                <h2>I Spy With My Little Eye</h2>
+            </header>
+
+            <div class="summary" id="zen-summary" role="article">
+                
+                <div class="login page">
+                    <p>A game designed for collecting multimodal dialogue.</p>
+                    <div class="form">
+                        <h3 class="title">What's your username?</h3>
+                        <input class="usernameInput" type="text" maxlength="14" />
+                    </div>
+                </div>
+
+                <div class="chat page">
+                    <p id="welcome">Welcome</p>
+                    <div id="image"></div>
+                    <div id="log"></div>
+                    <div id="question"><input id="questionInput" style="float: left; clear: both" type="text" /></div>
+                    <div id="answer"><a class="button-success pure-button">Yes</a><button id="no" class="button-error">No</button><button id="na" class="button-warning pure-button">Not applicable</button></div>
+                    <a id="newgame">Play a new game</a>
+                </div>
+            </div>
+        </section>
+
+    </div>
+</body>
+</html>

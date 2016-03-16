@@ -1,0 +1,290 @@
+/* css Zen Garden submission 221 - 'Mid Century Modern', by Andrew Lohman, http://www.andrewlohman.com/  */
+/* css released under Creative Commons License - http://creativecommons.org/licenses/by-nc-sa/1.0/  */
+
+/* TYPEKIT_KIT_ID: vzq4ipz */
+
+/* 
+==========================================================================
+Reset
+==========================================================================
+*/
+
+/*! normalize.css v2.1.0 | MIT License | git.io/normalize */
+article,aside,details,figcaption,figure,footer,header,hgroup,main,nav,section,summary {display: block;}
+audio,canvas,video {display: inline-block;}
+audio:not([controls]) {display: none;height: 0;}
+[hidden] {display: none;}
+html {font-family: sans-serif;-webkit-text-size-adjust: 100%;-ms-text-size-adjust: 100%;}
+body {margin: 0;}
+a:focus {outline: thin dotted;}
+a:active,a:hover {outline: 0;}
+h1 {font-size: 2em;margin: 0.67em 0;}
+abbr[title] {border-bottom: 1px dotted;}
+b,strong {font-weight: bold;}
+dfn {font-style: italic;}
+hr {-moz-box-sizing: content-box;box-sizing: content-box;height: 0;}
+mark {background: #ff0;color: #000;}
+code,kbd,pre,samp {font-family: monospace, serif;font-size: 1em;}
+pre {white-space: pre-wrap;}
+q {quotes: "\201C" "\201D" "\2018" "\2019";}
+small {font-size: 80%;}
+sub,sup {font-size: 75%;line-height: 0;position: relative;vertical-align: baseline;}
+sup {top: -0.5em;}
+sub {bottom: -0.25em;}
+img {border: 0;}
+svg:not(:root) {overflow: hidden;}
+figure {margin: 0;}
+fieldset {border: 1px solid #c0c0c0;margin: 0 2px;padding: 0.35em 0.625em 0.75em;}
+legend {border: 0;padding: 0;}
+button,input,select,textarea {font-family: inherit;font-size: 100%;margin: 0;}
+button,input {line-height: normal;}
+button,select {text-transform: none;}
+button,html input[type="button"],input[type="reset"],input[type="submit"] {-webkit-appearance: button;cursor: pointer;}
+button[disabled],html input[disabled] {cursor: default;}
+input[type="checkbox"],input[type="radio"] {box-sizing: border-box;padding: 0;}
+input[type="search"] {-webkit-appearance: textfield;-moz-box-sizing: content-box;-webkit-box-sizing: content-box;box-sizing: content-box;}
+input[type="search"]::-webkit-search-cancel-button,
+input[type="search"]::-webkit-search-decoration {-webkit-appearance: none;}
+button::-moz-focus-inner,input::-moz-focus-inner {border: 0;padding: 0;}
+textarea {overflow: auto;vertical-align: top;}
+table {border-collapse: collapse;border-spacing: 0;}
+
+/* 
+==========================================================================
+Some globals
+==========================================================================
+*/
+abbr[title],
+acronym[title] {
+  border-bottom-width: 0;
+}
+html,
+body {
+  font-family: "ff-meta-web-pro", sans-serif;
+  text-rendering: optimizeLegibility;
+  font-size: 100%;
+  line-height: 26px;
+  background: #ddd;
+  background-size: 60%;
+  color: #0d2c40;
+}
+a {
+  color: #0d2c40;
+  text-decoration: none;
+  border-bottom: 1px solid #0d2c40;
+  -webkit-transition: all 0.2s ease-out;
+  -moz-transition: all 0.2s ease-out;
+  -o-transition: all 0.2s ease-out;
+  -ms-transition: all 0.2s ease-out;
+  transition: all 0.2s ease-out;
+}
+a:hover {
+  color: rgba(0, 0, 0, 0.4);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.4);
+}
+/* 
+==========================================================================
+Page wrapper
+==========================================================================
+*/
+.page-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 120em;
+  margin: 0 auto;
+  padding: 0;
+  overflow: hidden;
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+}
+/* 
+==========================================================================
+Intro
+==========================================================================
+*/
+.intro {
+  overflow: hidden;
+}
+.intro header {
+  position: relative;
+  background: #ddd;
+  overflow: hidden;
+  width: 35%;
+  height: 50em;
+  float: left;
+  -webkit-transition: all 0.4s ease;
+  -moz-transition: all 0.4s ease;
+  -o-transition: all 0.4s ease;
+  -ms-transition: all 0.4s ease;
+  transition: all 0.4s ease;
+}
+  @media (max-width: 70em) {
+    .intro header {
+      background: #ddd;
+      width: 100%;
+      height: 27em;
+    }
+  }
+  @media (max-width: 53em) {
+    .intro header {
+      height: 20em;
+    }
+  }
+.intro header h1 {
+  position: absolute;
+  color: blue;
+  font-size: 100%;
+  line-height: 2em;
+  top: 0.6em;
+  left: 0em;
+  width: auto;
+  margin: 0;
+  padding: 2em;
+  filter: progid:DXImageTransform.Microsoft.BasicImage(rotation=3);
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+}
+.intro header h2 {
+  position: relative;
+  background: #0d2c40 url(icon-star.svg) no-repeat left bottom;
+  background-size: 101%;
+  float: right;
+  color: #ffffff;
+  font-size: 250%;
+  line-height: 1.25em;
+  width: 60%;
+  height: 20.019em;
+  margin: 0 0 0 0;
+  padding: 3em 0.5em 0 0.5em;
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+}
+  @media (max-width: 70em) {
+    .intro header h2 {
+      background: #0d2c40 url(icon-star.svg) no-repeat left bottom;
+      background-size: 49%;
+      width: 66.666%;
+      height: 11em;
+      padding: 1em 0.5em 0 0.5em;
+    }
+  }
+  @media (max-width: 53em) {
+    .intro header h2 {
+      background: #0d2c40 url(icon-star.svg) no-repeat left bottom;
+      background-size: 49%;
+      font-size: 200%;
+      width: 66.666%;
+      height: 10em;
+      padding: 1em 0.5em 0 0.5em;
+    }
+  }
+.intro .summary {
+  font-size: 100%;
+  color: #000;
+  width: 50%;
+  float: left;
+  background: #ddd;
+  background-repeat: no-repeat;
+  background-position: center bottom;
+  background-size: 101%;
+  height: 50em;
+  margin: 0;
+  padding: 3em 2em 10em 2em;
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+}
+  @media (max-width: 70em) {
+    .intro .summary {
+      width: 100%;
+      height: auto;
+      padding: 2em 1em 37% 1em;
+    }
+  }
+
+.intro .summary a {
+  color: #ffffff;
+  text-decoration: none;
+  border-bottom: 1px solid #ffffff;
+}
+.intro .summary a:hover {
+  color: rgba(0, 0, 0, 0.4);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.4);
+}
+
+.login.page .usernameInput {
+  font-size: 200%;
+}
+.login.page .form .usernameInput {
+  background-color: transparent;
+  border: none;
+  color: #0d2c40;
+  border-bottom: 2px solid #fff;
+  outline: none;
+  padding-bottom: 15px;
+  text-align: center;
+  width: 400px;
+}
+.chat.page{
+  font-size: 100%;
+  display: none;
+}
+.login.page h3 {
+  color: #0d2c40;
+}
+#image{
+  display: none;
+}
+#image img {
+  display:  block;
+  margin: 0 auto;
+  max-width: 400px;
+  width: 100%;
+  height: auto;
+}
+#question{
+  display: none;
+}
+#answer{
+  display: none;
+}
+#welcome{
+  display: none;
+}
+.alignleft{
+  float: left;
+}
+.alignright{
+  float: right;
+}
+#questionInput {
+  background-color: transparent;
+  border: none;
+  color: #0d2c40;
+  border-bottom: 2px solid #fff;
+  outline: none;
+  padding-bottom: 15px;
+  text-align: center;
+  width: 400px;
+}
+
+.button-success {
+    background: rgb(28, 184, 65); /* this is a green */
+}
+
+.button-error {
+    background: rgb(202, 60, 60); /* this is a maroon */
+}
+
+.button-warning {
+    background: rgb(223, 117, 20); /* this is an orange */
+}
+
+.button-secondary {
+    background: rgb(66, 184, 221); /* this is a light blue */
+}
+
+
