@@ -1,7 +1,7 @@
 $(document).ready(function(){
     namespace = '/test';
     var $window = $(window);
-    var socket = io.connect('http://' + document.domain + ':' + location.port + namespace);
+    var socket = io.connect('https://' + document.domain + ':' + location.port + namespace);
     var username;
 
     socket.on('disconnect', function() {
