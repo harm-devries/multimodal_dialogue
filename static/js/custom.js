@@ -1,5 +1,5 @@
 $(document).ready(function(){
-    namespace = '/test';
+    namespace = '/game';
     var $window = $(window);
     var socket = io.connect('https://' + document.domain + ':' + location.port + namespace);
     var username;

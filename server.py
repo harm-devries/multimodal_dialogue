@@ -39,27 +39,27 @@ def index():
 def game():
     return render_template('game.html')
 
-@sio.on('add user', namespace='/test')
+@sio.on('add user', namespace='/game')
 def add_username(sid, username):
     clients_name[sid] = username
-    sio.emit('usercount', {'num_users': len(clients_name)}, namespace='/test')
+    sio.emit('usercount', {'num_users': len(clients_name)}, namespace='/game')
 
 
-@sio.on('newquestion', namespace='/test')
+@sio.on('newquestion', namespace='/game')
 def new_question(sid, message):
     print 'neq question'
     print message
     sio.emit('newquestion', message,
-             room=clients_partner[sid], namespace='/test')
+             room=clients_partner[sid], namespace='/game')
 
 
-@sio.on('new answer', namespace='/test')
+@sio.on('new answer', namespace='/game')
 def new_answer(sid, message):
     sio.emit('new answer', message,
-             room=clients_partner[sid], namespace='/test')
+             room=clients_partner[sid], namespace='/game')
 
 
-@sio.on('next', namespace='/test')
+@sio.on('next', namespace='/game')
 def next(sid):
     print "next"
     partnerid = False
@@ -76,20 +76,20 @@ def next(sid):
             sio.emit('questioner',
                      {'data': '<img class="img-responsive img-rounded" src="static/{}.jpg" />'.format(imageid)},
                      room=id,
-                     namespace='/test')
+                     namespace='/game')
             sio.emit('answerer',
                      {'data': '<img class="img-responsive img-rounded" src="static/{}.jpg" />'.format(imageid)},
                      room=sid,
-                     namespace='/test')
+                     namespace='/game')
         else:
             sio.emit('answerer',
                      {'data': '<img class="img-responsive img-rounded" src="static/{}.jpg" />'.format(imageid)},
                      room=id,
-                     namespace='/test')
+                     namespace='/game')
             sio.emit('questioner',
                      {'data': '<img class="img-responsive img-rounded" src="static/{}.jpg" />'.format(imageid)},
                      room=sid,
-                     namespace='/test')
+                     namespace='/game')
 
         del clients_waiting[partnerid]
     else:
@@ -97,19 +97,19 @@ def next(sid):
         sio.emit('no partner',
                  {},
                  room=sid,
-                 namespace='/test')
+                 namespace='/game')
 
-@sio.on('connect', namespace='/test')
+@sio.on('connect', namespace='/game')
 def connect(sid, re):
     print 'connect'
 
-# @sio.on('disconnect', namespace='/test')
+# @sio.on('disconnect', namespace='/game')
 # def disconnect(sid):
 #     print clients_name
 #     del clients_name[sid]
 #     sio.emit('usercount',
 #              {'num_users': len(clients_name)},
-#              namespace='/test')
+#              namespace='/game')
 
 
 if __name__ == '__main__':
