@@ -1,35 +1,34 @@
 import random
-
-# from threading import Thread
+import os
+import json
+import numpy
+from pymongo import MongoClient
 
 from flask import Flask, render_template
-#from flask.ext.socketio import SocketIO
 # from flask.ext.login import LoginManager, UserMixin, login_required
 
 import socketio
 # set this to 'threading', 'eventlet', or 'gevent'
-async_mode = 'eventlet'
+async_mode = 'gevent'
 
-if async_mode == 'eventlet':
-    import eventlet
-    eventlet.monkey_patch()
-elif async_mode == 'gevent':
+if async_mode == 'gevent':
     from gevent import monkey
     monkey.patch_all()
 
 sio = socketio.Server(logger=True, async_mode=async_mode)
 app = Flask(__name__)
 app.wsgi_app = socketio.Middleware(sio, app.wsgi_app)
-app.config['SECRET_KEY'] = 'secret!'
-thread = None
+app.config['SECRET_KEY'] = 'spywithmylittleeye!'
+
 # sio = SocketIO(app)
 # login_manager = LoginManager()
 # login_manager.init_app(app)
 
-clients_name = {}
 clients_waiting = {}
 clients_partner = {}
 
+client = MongoClient(os.environ['MONGODB_URL'])
+db = client.coco.images
 
 @app.route('/')
 def index():
@@ -71,23 +70,33 @@ def next(sid):
         clients_partner[partnerid] = sid
         clients_partner[sid] = partnerid
         role = (random.random() > 0.5)
-        imageid = random.randint(1, 10)
+        ind = random.randint(0, 15000)
+        obj = db.find_one({'i': ind})
+        ann_ind = random.randint(0, len(obj['annotations']) - 1)
+        ann = obj['annotations'][ann_ind]
+
         if role:
             sio.emit('questioner',
-                     {'data': '<img class="img-responsive img-rounded" src="static/{}.jpg" />'.format(imageid)},
+                     {'img': 'https://msvocds.blob.core.windows.net/imgs/{}.jpg'.format(obj['id'])},
                      room=id,
                      namespace='/game')
             sio.emit('answerer',
-                     {'data': '<img class="img-responsive img-rounded" src="static/{}.jpg" />'.format(imageid)},
+                     {'img': 'https://msvocds.blob.core.windows.net/imgs/{}.jpg'.format(obj['id']), 
+                      'poly_x': ann['poly_x'],
+                      'poly_y': ann['poly_y'],
+                      'name': ann['category']},
                      room=sid,
                      namespace='/game')
         else:
             sio.emit('answerer',
-                     {'data': '<img class="img-responsive img-rounded" src="static/{}.jpg" />'.format(imageid)},
+                     {'img': 'https://msvocds.blob.core.windows.net/imgs/{}.jpg'.format(obj['id']), 
+                      'poly_x': ann['poly_x'],
+                      'poly_y': ann['poly_y'],
+                      'name': ann['category']},
                      room=id,
                      namespace='/game')
             sio.emit('questioner',
-                     {'data': '<img class="img-responsive img-rounded" src="static/{}.jpg" />'.format(imageid)},
+                     {'img': 'https://msvocds.blob.core.windows.net/imgs/{}.jpg'.format(obj['id'])},
                      room=sid,
                      namespace='/game')
 
@@ -101,37 +110,12 @@ def next(sid):
 
 @sio.on('connect', namespace='/game')
 def connect(sid, re):
-    print 'connect'
+    print 'connect' + sid
 
-# @sio.on('disconnect', namespace='/game')
-# def disconnect(sid):
-#     print clients_name
-#     del clients_name[sid]
-#     sio.emit('usercount',
-#              {'num_users': len(clients_name)},
-#              namespace='/game')
-
-
-if __name__ == '__main__':
-    if async_mode == 'threading':
-        # deploy with Werkzeug
-        app.run(threaded=True)
-    elif async_mode == 'eventlet':
-        # deploy with eventlet
-        import eventlet
-        eventlet.wsgi.server(eventlet.listen(('', 5000)), app)
-    elif async_mode == 'gevent':
-        # deploy with gevent
-        from gevent import pywsgi
-        try:
-            from geventwebsocket.handler import WebSocketHandler
-            websocket = True
-        except ImportError:
-            websocket = False
-        if websocket:
-            pywsgi.WSGIServer(('', 5000), app,
-                              handler_class=WebSocketHandler).serve_forever()
-        else:
-            pywsgi.WSGIServer(('', 5000), app).serve_forever()
-    else:
-        print('Unknown async_mode: ' + async_mode)
+@sio.on('disconnect', namespace='/game')
+def disconnect(sid):
+    if sid in clients_waiting:
+        del clients_waiting[sid]
+    # sio.emit('usercount',
+    #          {'num_users': len(clients_name)},
+    #          namespace='/game')

@@ -14,11 +14,8 @@ body{
 #no, #na {
 	margin-left: 5px;
 }
-#question, #answer, #guess, #waiting {
+#question, #answer, #guess, #waiting, #object {
 	display: none;
-}
-.log{
-	padding-top: 10px;
 }
 .well{
 	font-size: 125%;

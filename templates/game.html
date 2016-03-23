@@ -64,15 +64,15 @@
 
     <!-- Main jumbotron for a primary marketing message or call to action -->
 
-    <div class="container">
+    <div class="container" style="height: 100%">
       <!-- Example row of columns -->
-      <div class="row">
+      <div class="row" style="height: 100%">
         <div class="col-sm-6">
           <h2 id="title">The game</h2>
           <p id="intro">You are one click away from starting the multimodal dialogue game, a variant of <a href="https://en.wikipedia.org/wiki/I_spy">I spy with my little eye</a>. It is two-player guessing game where you will be either assigned the <b>spy</b> or <b>questioner</b> role. As a spy you will be assigned an object in a scene, while the questioner can ask yes/no questions to figure out which object that is. Please check out the side bar for for more information about the rules. 
           </p>
           <p id="p_newgame"><a class="btn btn-success" id="newgame" role="button">Start a new game &raquo;</a></p>
-          <div id="image"></div>
+          <div id="image"><canvas id="img"></canvas></div>
           <br />
           <form class="row" id="guess" class="form-inline" role="form">
             <div class="col-sm-9">
@@ -82,23 +82,25 @@
               <button class="btn btn-primary" id="guessbtn" type="submit">Guess</button>
             </div>
           </form>
+          <div id="object">
+          </div>
         </div>
-        <div class="col-sm-6">
+        <div class="col-sm-6" style="height: 100%">
           <div id="waiting" class="well">
             <span class="loader"><span class="loader-inner"></span></span> <span id="waiting_text"></span>
           </div>
           <div class="row" id="question">
             <div class="col-sm-1"><h3>Q:</h3></div>
-            <div class="well" class="col-sm-10">
+            <div class="well col-sm-11">
               <div class="row">
-                <div class="col-sm-9"><input autocomplete="off" type="text" id="newquestion" placeholder="Ask a new question" class="form-control"></div>
+                <div class="col-sm-10"><input autocomplete="off" type="text" id="newquestion" placeholder="Ask a new question" class="form-control"></div>
                 <div clas="col-sm-1"><a class="btn btn-success" id="ask" type="submit">Ask</a></div>
               </div>
             </div>
           </div>
           <div class="row" id="answer">
             <div class="col-sm-1"><h3>A:</h3></div>
-            <div class="well col-sm-10"><a id="yes" class="btn btn-success">Yes</a> <a id="no" class="btn btn-danger">No</a> <a id="na" class="btn btn-info">Not applicable</a> </div> 
+            <div class="well col-sm-11"><a id="yes" class="btn btn-success">Yes</a> <a id="no" class="btn btn-danger">No</a> <a id="na" class="btn btn-info">Not applicable</a> </div> 
           </div>
           <div class="log"></div>
         </div>
