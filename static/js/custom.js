@@ -6,7 +6,16 @@ $(document).ready(function(){
     var poly_y;
 
     socket.on('disconnect', function() {
-        $('.log').append('<br>Disconnected');
+        hideAll();
+        $('#intro').html('<div class="well">The server unexpectedly closed the connection</div>');
+    });
+    socket.on('partner_disconnect', function() {
+        hideAll();
+        poly_x = null;
+        poly_y = null;
+        $('.log').html('');
+        $('#intro').html('<div class="well">Sorry! Your partner unexpectedly closed the game.</div>');
+        $('#intro').show();
     });
     socket.on('usercount', function(msg) {
         $('#active_users').text(msg.num_users + ' active users');
@@ -45,6 +54,36 @@ $(document).ready(function(){
         $('#waiting').hide();
         $('#question').fadeIn(1000);
     });
+    socket.on('correct_answer', function(msg) {
+        hideAll();
+        if (msg.partner) {
+            $('#intro').html('<div class="well">Congratulations! Your partner have guessed the correct object!</div>');
+        } else {
+            $('#intro').html('<div class="well">Congratulations! You have guessed the correct object!</div>');
+        }
+        $('#intro').show();
+    });
+    socket.on('incorrect_answer', function(msg) {
+        if (msg.partner) {
+            text = 'Your partner incorrectly guessed <strong>' + msg.obj + '</strong>';
+        } else {
+            text = 'You incorrectly guessed <strong>' + msg.obj + '</strong>';
+        }
+        $('.log').prepend('<hr style="margin-top: 0;"><div class="row"><div class="col-sm-1"><h3>G:</h3></div><div class="well well-sm col-sm-11">' + text + '</div></div>');
+        $('#guessinput').val(''); 
+        $('#guessbtn').attr('disabled', false); 
+    });
+
+    function hideAll() {
+        $('.log').hide();
+        $('#intro').hide();
+        $('#answer').hide();
+        $('#question').hide();
+        $('#waiting').hide();
+        $('#guess').hide();
+        $('#image').hide();
+        $('#object').hide();
+    }
 
     function addAnswer(msg){
         $('.log').prepend('<hr style="margin-top: 0;"><div class="row"><div class="col-sm-1"><h3>A:</h3></div><div class="well well-sm col-sm-11">' + msg + '</div></div>');
@@ -83,7 +122,12 @@ $(document).ready(function(){
     // handlers for the different forms in the page
     // these send data to the server in a variety of ways
 
-
+    $('a#guessbtn').click(function(event) {
+        $('#guessbtn').attr('disabled', false); 
+        var obj = $('#guessinput').val();
+        socket.emit('guess', obj);
+        return false;
+    });
     $('a#newgame').click(function(event) {
         $('#p_newgame').hide();
         socket.emit('next');
@@ -170,8 +214,4 @@ $(document).ready(function(){
     $(window).resize(function() {
         renderImage();
     });
-
-    $('#guess').typeahead({        
-        local: ['alpha','allpha2','alpha3','bravo','charlie','delta','epsilon','gamma','zulu']
-});   
 });
