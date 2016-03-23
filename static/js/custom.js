@@ -8,6 +8,7 @@ $(document).ready(function(){
     socket.on('disconnect', function() {
         hideAll();
         $('#intro').html('<div class="well">The server unexpectedly closed the connection</div>');
+        $('#intro').show();
     });
     socket.on('partner_disconnect', function() {
         hideAll();
@@ -40,7 +41,7 @@ $(document).ready(function(){
         renderImage();
         $('#waiting_text').text('Waiting for a new question');
         $('#waiting').show();
-        $('#object').html('<div class="well">Your object is ' + msg.name);
+        $('#object').html('<div class="well"><img width="40px" height="40px" src="http://mscoco.org/static/icons/' + msg.catid + '.jpg" /> Your object is ' + msg.name + '</div>');
         $('#object').show();
 
     })
@@ -56,22 +57,24 @@ $(document).ready(function(){
     });
     socket.on('correct_answer', function(msg) {
         hideAll();
+        $('#guessinput').val(''); 
         if (msg.partner) {
-            $('#intro').html('<div class="well">Congratulations! Your partner have guessed the correct object!</div>');
+            $('#intro').html('<div class="well">Congratulations! Your partner has guessed the correct object!</div>');
         } else {
             $('#intro').html('<div class="well">Congratulations! You have guessed the correct object!</div>');
         }
         $('#intro').show();
     });
     socket.on('incorrect_answer', function(msg) {
-        if (msg.partner) {
-            text = 'Your partner incorrectly guessed <strong>' + msg.obj + '</strong>';
-        } else {
-            text = 'You incorrectly guessed <strong>' + msg.obj + '</strong>';
-        }
-        $('.log').prepend('<hr style="margin-top: 0;"><div class="row"><div class="col-sm-1"><h3>G:</h3></div><div class="well well-sm col-sm-11">' + text + '</div></div>');
+        hideAll();
         $('#guessinput').val(''); 
-        $('#guessbtn').attr('disabled', false); 
+        if (msg.partner) {
+            text = 'Game over! Your partner incorrectly guessed <strong>' + msg.obj + '</strong>';
+        } else {
+            text = 'Game over! You incorrectly guessed <strong>' + msg.obj + '</strong>';
+        }
+        $('#intro').html('<div class="well">'+text+'</div>');
+        $('#intro').show(); 
     });
 
     function hideAll() {
@@ -100,11 +103,15 @@ $(document).ready(function(){
         var canvas = $('canvas#img')[0];
         var ctx = canvas.getContext("2d");
         var im = new Image();
-        var new_width = $('#image').width();
+        var max_width = $('#image').width();
+        var max_height = 400;
 
         im.onload = function() {
-            var scale = new_width/im.width;
+            var width_scale = max_width/im.width;
+            var height_scale = max_height/im.height;
+            var scale = Math.min(width_scale, height_scale);
             var new_height = parseInt(im.height*scale);
+            var new_width = parseInt(im.width*scale);
             canvas.width = new_width;
             canvas.height = new_height;
             roundedImage(ctx, 0, 0, new_width, new_height, 5); //Rounded corners
@@ -214,4 +221,53 @@ $(document).ready(function(){
     $(window).resize(function() {
         renderImage();
     });
+
+    var substringMatcher = function(strs) {
+      return function findMatches(q, cb) {
+        var matches, substringRegex;
+
+        // an array that will be populated with substring matches
+        matches = [];
+
+        // regex used to determine if a string contains the substring `q`
+        substrRegex = new RegExp(q, 'i');
+
+        // iterate through the pool of strings and for any string that
+        // contains the substring `q`, add it to the `matches` array
+        $.each(strs, function(i, str) {
+          if (substrRegex.test(str)) {
+            matches.push(str);
+          }
+        });
+
+        cb(matches);
+      };
+    };
+
+    // var states = ['Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California',
+    //   'Colorado', 'Connecticut', 'Delaware', 'Florida', 'Georgia', 'Hawaii',
+    //   'Idaho', 'Illinois', 'Indiana', 'Iowa', 'Kansas', 'Kentucky', 'Louisiana',
+    //   'Maine', 'Maryland', 'Massachusetts', 'Michigan', 'Minnesota',
+    //   'Mississippi', 'Missouri', 'Montana', 'Nebraska', 'Nevada', 'New Hampshire',
+    //   'New Jersey', 'New Mexico', 'New York', 'North Carolina', 'North Dakota',
+    //   'Ohio', 'Oklahoma', 'Oregon', 'Pennsylvania', 'Rhode Island',
+    //   'South Carolina', 'South Dakota', 'Tennessee', 'Texas', 'Utah', 'Vermont',
+    //   'Virginia', 'Washington', 'West Virginia', 'Wisconsin', 'Wyoming'
+    // ];
+    // var states = new Bloodhound({
+    //   datumTokenizer: Bloodhound.tokenizers.whitespace,
+    //   queryTokenizer: Bloodhound.tokenizers.whitespace,
+    //   // `states` is an array of state names defined in "The Basics"
+    //   local: states
+    // });
+
+    // $('#guessinput').typeahead({
+    //   hint: true,
+    //   highlight: true,
+    //   minLength: 1
+    // },
+    // {
+    //   name: 'states',
+    //   source: states
+    // });
 });
