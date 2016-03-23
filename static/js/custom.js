@@ -1,6 +1,6 @@
 $(document).ready(function(){
     namespace = '/game';
-    var socket = io.connect('http://' + document.domain + ':' + location.port + namespace);
+    var socket = io.connect('https://' + document.domain + ':' + location.port + namespace);
     var image_src;
     var poly_x;
     var poly_y;
