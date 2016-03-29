@@ -4,6 +4,15 @@ $(document).ready(function(){
     var image_src;
     var poly_x;
     var poly_y;
+    var scale;
+    var img_canvas = $('canvas#img')[0];
+    var img_ctx = img_canvas.getContext("2d");
+    var segment_canvas = $('canvas#segment')[0];
+    var segment_ctx = segment_canvas.getContext("2d");
+    var objs;
+    var colors = [[255, 0, 0], [0, 255, 0], [0, 0, 255], [255, 255, 0], [255, 0, 255], 
+                  [0, 255, 255], [0, 255, 255], [0, 255, 255], [0, 255, 255], [0, 255, 255], 
+                  [0, 255, 255], [0, 255, 255], [0, 255, 255], [0, 255, 255]];
 
     socket.on('disconnect', function() {
         hideAll();
@@ -14,18 +23,18 @@ $(document).ready(function(){
         hideAll();
         poly_x = null;
         poly_y = null;
-        $('.log').html('');
+        objs = null;
+        $('#log').html('');
+        $('#log').show();
         $('#intro').html('<div class="well">Sorry! Your partner unexpectedly closed the game.</div>');
         $('#intro').show();
-    });
-    socket.on('usercount', function(msg) {
-        $('#active_users').text(msg.num_users + ' active users');
     });
     socket.on('no partner', function(msg) {
         $('#title').hide();
         $('#intro').html('<div class="well"><span class="loader"><span class="loader-inner"></span></span> Waiting for a new partner...</div>');
     })
     socket.on('questioner', function(msg) {
+        $('#title').hide();
         $('#intro').hide();
         $('#waiting_text').text('Waiting for an answer');
         image_src = msg.img;
@@ -34,6 +43,7 @@ $(document).ready(function(){
         $('#guess').show();
     })
     socket.on('answerer', function(msg) {
+        $('#title').hide();
         $('#intro').hide();
         image_src = msg.img;
         poly_x = msg.poly_x;
@@ -41,8 +51,14 @@ $(document).ready(function(){
         renderImage();
         $('#waiting_text').text('Waiting for a new question');
         $('#waiting').show();
-        $('#object').html('<div class="well"><img width="40px" height="40px" src="http://mscoco.org/static/icons/' + msg.catid + '.jpg" /> Your object is ' + msg.name + '</div>');
+        $('#object').html('<img width="40px" height="40px" src="http://mscoco.org/static/icons/' + msg.catid + '.jpg" /> Your object is ' + msg.name);
         $('#object').show();
+        $('#object').hover(function(){
+            renderSegment(poly_x, poly_y, scale, segment_ctx);
+        },
+        function(){
+            clearCanvas(segment_ctx, segment_canvas);
+        });
 
     })
     socket.on('newquestion', function(msg) {
@@ -55,17 +71,20 @@ $(document).ready(function(){
         $('#waiting').hide();
         $('#question').fadeIn(1000);
     });
-    socket.on('correct_answer', function(msg) {
-        hideAll();
-        $('#guessinput').val(''); 
+    socket.on('correct answer', function(msg) {
         if (msg.partner) {
-            $('#intro').html('<div class="well">Congratulations! Your partner has guessed the correct object!</div>');
+            $('#waiting_text').text('Congratulations. Your partner has guessed the correct object! ');
+            $('#waiting').show();
         } else {
-            $('#intro').html('<div class="well">Congratulations! You have guessed the correct object!</div>');
+            objs = msg.objs;
+            renderSegments(objs, scale, segment_ctx);
+            $('#question').hide();
+            $('#guess').hide();
+            $('#object').text('Correct! Please click on the correct annotation in the image above.');
+            $('#object').show();
         }
-        $('#intro').show();
     });
-    socket.on('incorrect_answer', function(msg) {
+    socket.on('incorrect answer', function(msg) {
         hideAll();
         $('#guessinput').val(''); 
         if (msg.partner) {
@@ -76,9 +95,31 @@ $(document).ready(function(){
         $('#intro').html('<div class="well">'+text+'</div>');
         $('#intro').show(); 
     });
+    socket.on('correct annotation', function(msg) {
+        hideAll();
+        $('#guessinput').val(''); 
+        if (msg.partner) {
+            text = 'Congratulations! Your partner has guessed the correct object. ';
+        } else {
+            text = 'Congratulations! You have guessed the correct object.';
+        }
+        $('#intro').html('<div class="well">'+text+'</div>');
+        $('#intro').show(); 
+    });
+    socket.on('wrong annotation', function(msg) {
+        hideAll();
+        $('#guessinput').val(''); 
+        if (msg.partner) {
+            text = 'Game over! Your partner has guessed the wrong object.';
+        } else {
+            text = 'Game over! You have guessed the wrong object. ';
+        }
+        $('#intro').html('<div class="well">'+text+'</div>');
+        $('#intro').show(); 
+    });
 
     function hideAll() {
-        $('.log').hide();
+        $('#log').hide();
         $('#intro').hide();
         $('#answer').hide();
         $('#question').hide();
@@ -89,36 +130,35 @@ $(document).ready(function(){
     }
 
     function addAnswer(msg){
-        $('.log').prepend('<hr style="margin-top: 0;"><div class="row"><div class="col-sm-1"><h3>A:</h3></div><div class="well well-sm col-sm-11">' + msg + '</div></div>');
+        $('#log').append('<div class="well well-sm">' + msg + '</div>');
+        scrollBottom();
     }
     function addQuestion(msg){
-        $('.log').prepend('<div class="row"><div class="col-sm-1"><h3>Q:</h3></div><div class="well well-sm col-sm-11">' + msg + '</div></div>');
+        $('#log').append('<div class="well well-sm">' + msg + '</div>');
+        scrollBottom();
     }
 
     function renderImage() {
-        $('#title').hide();
-        $('.log').show();
-
         $('#image').show();
-        var canvas = $('canvas#img')[0];
-        var ctx = canvas.getContext("2d");
         var im = new Image();
         var max_width = $('#image').width();
-        var max_height = 400;
+        var max_height = $('.center-container').height() - 15;
 
         im.onload = function() {
             var width_scale = max_width/im.width;
             var height_scale = max_height/im.height;
-            var scale = Math.min(width_scale, height_scale);
+            scale = Math.min(width_scale, height_scale);
             var new_height = parseInt(im.height*scale);
             var new_width = parseInt(im.width*scale);
-            canvas.width = new_width;
-            canvas.height = new_height;
-            roundedImage(ctx, 0, 0, new_width, new_height, 5); //Rounded corners
-            ctx.clip();
-            ctx.drawImage(im, 0, 0, new_width, new_height); //Draw image
-            if (poly_x != null) {
-                renderSegmentation(poly_x, poly_y, scale, ctx); // Render segmentation
+            img_canvas.width = new_width;
+            img_canvas.height = new_height;
+            segment_canvas.width = new_width;
+            segment_canvas.height = new_height;
+            roundedImage(img_ctx, 0, 0, new_width, new_height, 5); //Rounded corners
+            img_ctx.clip();
+            img_ctx.drawImage(im, 0, 0, new_width, new_height); //Draw image
+            if (objs != null) {
+                renderSegments(objs, scale, segment_ctx);
             }
         }
         im.src = image_src;
@@ -128,7 +168,7 @@ $(document).ready(function(){
     // the data is displayed in the "Received" section of the page
     // handlers for the different forms in the page
     // these send data to the server in a variety of ways
-
+    
     $('a#guessbtn').click(function(event) {
         $('#guessbtn').attr('disabled', false); 
         var obj = $('#guessinput').val();
@@ -152,6 +192,11 @@ $(document).ready(function(){
     $("#newquestion").keyup(function(event){
         if(event.keyCode == 13){
             $("a#ask").click();
+        }
+    });
+    $("#guessinput").keyup(function(event){
+        if(event.keyCode == 13){
+            $("a#guessbtn").click();
         }
     });    
     $('a#yes').click(function(event) {
@@ -178,13 +223,56 @@ $(document).ready(function(){
         socket.emit('new answer', msg);
         return false;
     });
+    $('canvas#segment').mousemove(function (e) {
+        if(objs != null) {
+            arr = getMousePosition(e);
+            var mouseX = arr[0], mouseY = arr[1];
+            clearCanvas(segment_ctx, segment_canvas);
+            renderSegments(objs, scale, segment_ctx, mouseX, mouseY);
+        }
+    });
+    segment_canvas.addEventListener('click', function(e) {
+        if(objs != null) {
+            arr = getMousePosition(e);
+            var mouseX = arr[0], mouseY = arr[1];
+            console.log(mouseX);
+            console.log(mouseY);
+            var id = getObjectFromClick(mouseX, mouseY, objs, scale);
+            if (id != null) {
+                socket.emit('guess annotation', id);
+            }
+        }
+    }, false);
 
-    function renderSegmentation(poly_x, poly_y, scale, ctx){
+    function getMousePosition(e){
+        var canvasOffset = $("canvas#segment").offset();
+        mouseX = parseInt(e.clientX - canvasOffset.left);
+        mouseY = parseInt(e.clientY - canvasOffset.top);
+        return [mouseX, mouseY]
+    }
+
+    function getObjectFromClick(mouseX, mouseY, objs, scale) {
+        for(i = 0; i < objs.length; i++) {
+            for(j=0; j<poly_x.length; j++) {
+                px = poly_x[j];
+                py = poly_y[j];
+
+                if (inside(mouseX, mouseY, px, py, scale)) {
+                    console.log('click');
+                    return objs[i].id;
+                }
+            }
+        }
+        return null;
+    }
+
+    /* Render single segmentation for oracle */
+    function renderSegment(poly_x, poly_y, scale, ctx){
         // set color for each object
         var r = 255;
         var g = 0;
         var b = 0;
-        ctx.fillStyle = 'rgba('+r+','+g+','+b+',0.7)';
+        ctx.fillStyle = 'rgba('+r+','+g+','+b+',0.4)';
 
         for (j=0; j<poly_x.length; j++){
             px = poly_x[j];
@@ -196,12 +284,85 @@ $(document).ready(function(){
                 ctx.lineTo(parseFloat(px[k]*scale), parseFloat(py[k]*scale));
             }
 
-            ctx.lineWidth = 3;
+            ctx.lineWidth = 2;
             ctx.closePath();
             ctx.fill();
             ctx.strokeStyle = 'black';
             ctx.stroke();
         }
+    }
+
+    /* Render all segments for questioner */
+    function renderSegments(objs, scale, ctx, mouseX, mouseY){
+        // set color for each object
+        highlight = false;
+        for(i = 0; i< objs.length; i++) {
+            var r = colors[i][0];
+            var g = colors[i][1];
+            var b = colors[i][2];
+            poly_x = objs[i].poly_x;
+            poly_y = objs[i].poly_y;
+
+            var highlight_obj = false;
+            if (mouseX != undefined && mouseY != undefined && !highlight) {
+                for(j=0; j<poly_x.length; j++){
+                    px = poly_x[j];
+                    py = poly_y[j];
+
+                    if (inside(mouseX, mouseY, px, py, scale)) {
+                        highlight_obj = true;
+                        highlight = true;
+                    }
+                }
+            }
+
+            if (highlight_obj) {
+                ctx.fillStyle = 'rgba('+r+','+g+','+b+',0.9)';
+            } else {
+                ctx.fillStyle = 'rgba('+r+','+g+','+b+',0.3)';
+            }
+
+            for (j=0; j<poly_x.length; j++){
+                px = poly_x[j];
+                py = poly_y[j];
+
+                // let's draw!!!!
+                ctx.beginPath();
+                ctx.moveTo(parseFloat(px[0]*scale), parseFloat(py[0]*scale));
+                for (k=1; k< px.length; k+=1) { 
+                    ctx.lineTo(parseFloat(px[k]*scale), parseFloat(py[k]*scale));
+                }
+                ctx.lineWidth = 2;
+                ctx.closePath();
+                ctx.fill();
+                ctx.strokeStyle = 'black';
+                ctx.stroke();
+            }
+        }
+        if (highlight) {
+            $('canvas#segment').css('cursor', 'pointer');
+        } else {
+            $('canvas#segment').css('cursor', 'default');
+        }
+    }
+
+    function clearCanvas(ctx, canvas) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function inside(x, y, poly_x, poly_y, scale) {
+        // ray-casting algorithm based on
+        // http://www.ecse.rpi.edu/Homepages/wrf/Research/Short_Notes/pnpoly.html
+        var inside = false;
+        for (var i = 0, j = poly_x.length - 1; i < poly_x.length; j = i++) {
+            var xi = poly_x[i]*scale, yi = poly_y[i]*scale;
+            var xj = poly_x[j]*scale, yj =poly_y[j]*scale;
+
+            var intersect = ((yi > y) != (yj > y))
+                && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+            if (intersect) inside = !inside;
+        }
+        return inside;
     }
 
     function roundedImage(ctx, x, y, width, height, radius) {
@@ -218,31 +379,42 @@ $(document).ready(function(){
         ctx.closePath();
     }
 
+    function scrollBottom() {
+        log = document.getElementById('log');
+        log.scrollTop = log.scrollHeight - log.clientHeight;
+    }
+
+    function resizeLog() {
+        $('#log').height($('.center-container').height() - 15);
+        scrollBottom();
+    }
+
     $(window).resize(function() {
         renderImage();
+        resizeLog();
     });
 
-    var substringMatcher = function(strs) {
-      return function findMatches(q, cb) {
-        var matches, substringRegex;
+    // var substringMatcher = function(strs) {
+    //   return function findMatches(q, cb) {
+    //     var matches, substringRegex;
 
-        // an array that will be populated with substring matches
-        matches = [];
+    //     // an array that will be populated with substring matches
+    //     matches = [];
 
-        // regex used to determine if a string contains the substring `q`
-        substrRegex = new RegExp(q, 'i');
+    //     // regex used to determine if a string contains the substring `q`
+    //     substrRegex = new RegExp(q, 'i');
 
-        // iterate through the pool of strings and for any string that
-        // contains the substring `q`, add it to the `matches` array
-        $.each(strs, function(i, str) {
-          if (substrRegex.test(str)) {
-            matches.push(str);
-          }
-        });
+    //     // iterate through the pool of strings and for any string that
+    //     // contains the substring `q`, add it to the `matches` array
+    //     $.each(strs, function(i, str) {
+    //       if (substrRegex.test(str)) {
+    //         matches.push(str);
+    //       }
+    //     });
 
-        cb(matches);
-      };
-    };
+    //     cb(matches);
+    //   };
+    // };
 
     // var states = ['Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California',
     //   'Colorado', 'Connecticut', 'Delaware', 'Florida', 'Georgia', 'Hawaii',

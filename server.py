@@ -57,17 +57,37 @@ def new_answer(sid, message):
 
 @sio.on('guess', namespace='/game')
 def guess(sid, obj):
+    obj = obj.lower()
     if sid in questioner_anns:
-        if questioner_anns[sid][questioner_id[sid]]['category'] == obj:
-            sio.emit('correct_answer', {'partner': False},
+        cat = questioner_anns[sid][questioner_id[sid]]['category']
+        if cat == obj:
+            objs = []
+            for x in questioner_anns[sid]:
+                if x['category'] == cat:
+                    objs.append(x)
+
+            sio.emit('correct answer', {'partner': False, 'objs': objs},
                      room=sid, namespace='/game')
-            sio.emit('correct_answer', {'partner': True},
+            sio.emit('correct answer', {'partner': True},
                      room=clients_partner[sid], namespace='/game')
         else:
-            sio.emit('incorrect_answer', {'obj': obj, 'partner': False},
+            sio.emit('incorrect answer', {'obj': obj, 'partner': False},
                      room=sid, namespace='/game')
-            sio.emit('incorrect_answer', {'obj': obj, 'partner': True},
+            sio.emit('incorrect answer', {'obj': obj, 'partner': True},
                      room=clients_partner[sid], namespace='/game')
+
+@sio.on('guess annotation', namespace='/game')
+def guess(sid, ann_id):
+    if questioner_anns[sid][questioner_id[sid]]['id'] == ann_id:
+        sio.emit('correct annotation', {'partner': False},
+                 room=sid, namespace='/game')
+        sio.emit('correct annotation', {'partner': True},
+                 room=clients_partner[sid], namespace='/game')
+    else:
+        sio.emit('wrong annotation', {'partner': False},
+                 room=sid, namespace='/game')
+        sio.emit('wrong annotation', {'partner': True},
+                 room=clients_partner[sid], namespace='/game')
 
 
 @sio.on('next', namespace='/game')
@@ -81,7 +101,7 @@ def next(sid):
         clients_partner[partnerid] = sid
         clients_partner[sid] = partnerid
         role = (random.random() > 0.5)
-        ind = random.randint(0, 15000)
+        ind = random.randint(0, 1500)
         t1 = time.time()
         obj = db.find_one({'i': ind})
         print time.time() - t1
@@ -102,7 +122,7 @@ def next(sid):
                       'poly_x': ann['poly_x'],
                       'poly_y': ann['poly_y'],
                       'name': ann['category'],
-                      'catid': ann['id']},
+                      'catid': ann['catid']},
                      room=sid,
                      namespace='/game')
         else:
@@ -114,7 +134,7 @@ def next(sid):
                       'poly_x': ann['poly_x'],
                       'poly_y': ann['poly_y'],
                       'name': ann['category'],
-                      'catid': ann['id']},
+                      'catid': ann['catid']},
                      room=id,
                      namespace='/game')
             sio.emit('questioner',
