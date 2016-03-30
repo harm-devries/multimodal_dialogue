@@ -1,6 +1,6 @@
 $(document).ready(function(){
     namespace = '/game';
-    var socket = io.connect('http://' + document.domain + ':' + location.port + namespace);
+    var socket = io.connect('https://' + document.domain + ':' + location.port + namespace);
     var image_src;
     var poly_x;
     var poly_y;
@@ -31,7 +31,7 @@ $(document).ready(function(){
     });
     socket.on('no partner', function(msg) {
         $('#title').hide();
-        $('#intro').html('<div class="well"><span class="loader"><span class="loader-inner"></span></span> Waiting for a new partner...</div>');
+        $('#intro').html('<div class="well"><span class="loader"><span class="loader-inner"></span></span>Waiting for a new partner...</div>');
     })
     socket.on('questioner', function(msg) {
         $('#title').hide();
@@ -94,6 +94,8 @@ $(document).ready(function(){
         }
         $('#intro').html('<div class="well">'+text+'</div>');
         $('#intro').show(); 
+        $('#p_newgame').show();
+        deletegame();
     });
     socket.on('correct annotation', function(msg) {
         hideAll();
@@ -105,6 +107,8 @@ $(document).ready(function(){
         }
         $('#intro').html('<div class="well">'+text+'</div>');
         $('#intro').show(); 
+        $('#p_newgame').show();
+        deletegame();
     });
     socket.on('wrong annotation', function(msg) {
         hideAll();
@@ -116,7 +120,15 @@ $(document).ready(function(){
         }
         $('#intro').html('<div class="well">'+text+'</div>');
         $('#intro').show(); 
+        $('#p_newgame').show();
+        deletegame();
     });
+
+    function deletegame(){
+        poly_x = null;
+        poly_y = null;
+        objs = null;
+    }
 
     function hideAll() {
         $('#log').hide();

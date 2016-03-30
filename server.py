@@ -1,7 +1,6 @@
 import os
 import random
 import socketio
-import time
 from pymongo import MongoClient
 from flask import Flask, render_template
 # from flask.ext.login import LoginManager, UserMixin, login_required
@@ -26,8 +25,7 @@ app.config['SECRET_KEY'] = 'spywithmylittleeye!'
 clients_waiting = {}
 clients_partner = {}
 questioner_anns = {}
-questioner_id = {}
-
+questioner_annid = {}
 
 client = MongoClient(os.environ['MONGODB_URL'])
 db = client.coco.images
@@ -59,7 +57,7 @@ def new_answer(sid, message):
 def guess(sid, obj):
     obj = obj.lower()
     if sid in questioner_anns:
-        cat = questioner_anns[sid][questioner_id[sid]]['category']
+        cat = questioner_anns[sid][questioner_annid[sid]]['category']
         if cat == obj:
             objs = []
             for x in questioner_anns[sid]:
@@ -75,10 +73,11 @@ def guess(sid, obj):
                      room=sid, namespace='/game')
             sio.emit('incorrect answer', {'obj': obj, 'partner': True},
                      room=clients_partner[sid], namespace='/game')
+            logout([sid, clients_partner[sid]])
 
 @sio.on('guess annotation', namespace='/game')
 def guess(sid, ann_id):
-    if questioner_anns[sid][questioner_id[sid]]['id'] == ann_id:
+    if questioner_anns[sid][questioner_annid[sid]]['id'] == ann_id:
         sio.emit('correct annotation', {'partner': False},
                  room=sid, namespace='/game')
         sio.emit('correct annotation', {'partner': True},
@@ -88,7 +87,7 @@ def guess(sid, ann_id):
                  room=sid, namespace='/game')
         sio.emit('wrong annotation', {'partner': True},
                  room=clients_partner[sid], namespace='/game')
-
+    logout([sid, clients_partner[sid]])
 
 @sio.on('next', namespace='/game')
 def next(sid):
@@ -102,15 +101,13 @@ def next(sid):
         clients_partner[sid] = partnerid
         role = (random.random() > 0.5)
         ind = random.randint(0, 1500)
-        t1 = time.time()
         obj = db.find_one({'i': ind})
-        print time.time() - t1
         ann_ind = random.randint(0, len(obj['annotations']) - 1)
         ann = obj['annotations'][ann_ind]
 
         if role:
             questioner_anns[id] = obj['annotations']
-            questioner_id[id] = ann_ind
+            questioner_annid[id] = ann_ind
             sio.emit('questioner',
                      {'img': ('https://msvocds.blob.core.windows.net/'
                               'imgs/{}.jpg').format(obj['id'])},
@@ -127,7 +124,7 @@ def next(sid):
                      namespace='/game')
         else:
             questioner_anns[sid] = obj['annotations']
-            questioner_id[sid] = ann_ind
+            questioner_annid[sid] = ann_ind
             sio.emit('answerer',
                      {'img': ('https://msvocds.blob.core.windows.net/'
                               'imgs/{}.jpg').format(obj['id']),
@@ -169,5 +166,14 @@ def disconnect(sid):
                  namespace='/game')
 
         clients_waiting[partnerid] = True
-        del clients_partner[sid]
-        del clients_partner[partnerid]
+        logout([sid, partnerid])
+
+
+def logout(sids):
+    for sid in sids:
+        if sid in clients_partner:
+            del clients_partner[sid]
+        if sid in questioner_anns:
+            del questioner_anns[sid]
+        if sid in questioner_annid:
+            del questioner_annid[sid]
