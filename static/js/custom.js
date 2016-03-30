@@ -1,6 +1,6 @@
 $(document).ready(function(){
     namespace = '/game';
-    var socket = io.connect('https://' + document.domain + ':' + location.port + namespace);
+    var socket = io.connect('http://' + document.domain + ':' + location.port + namespace);
     var image_src;
     var poly_x;
     var poly_y;
@@ -235,8 +235,6 @@ $(document).ready(function(){
         if(objs != null) {
             arr = getMousePosition(e);
             var mouseX = arr[0], mouseY = arr[1];
-            console.log(mouseX);
-            console.log(mouseY);
             var id = getObjectFromClick(mouseX, mouseY, objs, scale);
             if (id != null) {
                 socket.emit('guess annotation', id);
@@ -253,12 +251,13 @@ $(document).ready(function(){
 
     function getObjectFromClick(mouseX, mouseY, objs, scale) {
         for(i = 0; i < objs.length; i++) {
+            poly_x = objs[i].poly_x;
+            poly_y = objs[i].poly_y;
             for(j=0; j<poly_x.length; j++) {
                 px = poly_x[j];
                 py = poly_y[j];
 
                 if (inside(mouseX, mouseY, px, py, scale)) {
-                    console.log('click');
                     return objs[i].id;
                 }
             }
