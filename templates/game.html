@@ -9,7 +9,7 @@
     <meta name="author" content="">
     <link rel="icon" href="../../favicon.ico">
 
-    <title>Multimodal dialogue</title>
+    <title>Visual 20Q</title>
 
     <!-- Bootstrap core CSS -->
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
@@ -20,7 +20,7 @@
     <!-- Custom styles for this template -->
     <link href="{{ url_for('static', filename='css/jumbotron.css') }}" rel="stylesheet">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
-    <script>window.jQuery || document.write('<script src="../../assets/js/vendor/jquery.min.js"><\/script>')</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.11.3/jquery-ui.min.js"></script>
     <script src="static/js/bootstrap.min.js"></script>
     <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.5/socket.io.min.js"></script>
     <script src="static/js/custom.js"></script>
@@ -37,17 +37,11 @@
   </head>
 
   <body>
-  <div id="wrap">
-    <div class="navbar navbar-default navbar-fixed-top">
-      <div class="container">
-        <div class="navbar-header">
-          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-          </button>
-          <a class="navbar-brand" href="#">Multimodal dialogue</a>
-        </div>
+  <div class="navbar navbar-default navbar-fixed-top" id="top">
+    <div class="container">
+      <div class="navbar-header">
+        <a class="navbar-brand" href="/">Visual 20Q</a>
+      </div>
         <!-- <div class="collapse navbar-collapse">
           <ul class="nav navbar-nav">
             <li class="active"><a href="#">Home</a></li>
@@ -66,52 +60,16 @@
               </ul>
             </li>
           </ul>
-        </div><!--/.nav-collapse --> -->
-      </div>
-    </div>
-
-    <div class="center-container">
-      <!-- Example row of columns -->
-      <div class="container">
-        <div class="row">
-          <div class="col-sm-7">
-            <h2 id="title">The game</h2>
-            <p id="intro">You are one click away from starting the multimodal dialogue game, a variant of <a href="https://en.wikipedia.org/wiki/I_spy">I spy with my little eye</a>. It is two-player guessing game where you will be either assigned the <b>spy</b> or <b>questioner</b> role. As a spy you will be assigned an object in a scene, while the questioner can ask yes/no questions to figure out which object that is. Please check out the side bar for for more information about the rules. 
-            </p>
-            <p id="p_newgame"><a class="btn btn-success" id="newgame" role="button">Start a new game &raquo;</a></p>
-            <div style="position: relative;" id="image">
-            <canvas id="img" width="100" height="100" 
-             style="position: absolute; left: 0; top: 0; z-index: 0;"></canvas>
-            <canvas id="segment" width="100" height="100" 
-               style="position: absolute; left: 0; top: 0; z-index: 1;"></canvas>
-            </div>
-          </div>
-          <div class="col-sm-5">
-            <div id="log"></div>
-          </div>
-        </div>
-      </div>
+        </div><!--/.nav-collapse -->
     </div>
   </div>
 
-  <footer id="footer">
+  <div class="navbar-fixed-top" id="info">
     <div class="container">
       <div class="row">
-        <div class="col-sm-7">
-          <div class="row" id="guess" class="form-inline">
-            <div class="col-sm-9">
-              <input autocomplete="off" type="text" id="guessinput" placeholder="Guess the object" class="form-control">
-            </div>
-            <div class="col-sm-2">
-              <a class="btn btn-primary" id="guessbtn">Guess</a>
-            </div>
-          </div>
-          <div id="object">
-          </div>
-        </div>
         <div class="col-sm-5">
           <div id="waiting">
-            <span class="loader"><span class="loader-inner"></span></span> <span id="waiting_text"></span>
+            <span class="loader"><span class="loader-inner"></span></span><span id="waiting_text"></span>
           </div>
           <div id="question">
             <div class="row">
@@ -123,9 +81,41 @@
             <a id="yes" class="btn btn-success">Yes</a> <a id="no" class="btn btn-danger">No</a> <a id="na" class="btn btn-info">Not applicable</a>
           </div>
         </div>
+        <div class="col-sm-7">
+          <div id="guess">
+            <a class="btn btn-primary" id="guessbtn">Guess the object/person!</a>
+          </div>
+          <div id="object">
+          </div>
+        </div>
+      </div>
     </div>
-  </footer>
-  </div> <!-- /container -->
+  </div>
+
+    
+  <div class="center-container">
+    <!-- Example row of columns -->
+    <div class="container">
+      <div class="row">
+        <div class="col-sm-5" id="left">
+          <div class="page-header" id="title"><h2>The game</h2></div>
+
+          <p id="intro">You are one click away from starting the multimodal dialogue game, a variant of <a href="https://en.wikipedia.org/wiki/I_spy">I spy with my little eye</a>. It is two-player guessing game where you will be either assigned the <b>spy</b> or <b>questioner</b> role. As a spy you will be assigned an object in a scene, while the questioner can ask yes/no questions to figure out which object that is. Please check out the side bar for for more information about the rules. 
+          </p>
+          <p id="p_newgame"><a class="btn btn-success" id="newgame" role="button">Start a new game &raquo;</a></p>
+          <div id="log"></div>
+        </div>
+        <div class="col-sm-7" id ="right">
+          <div style="position: relative;" id="image">
+          <canvas id="img" width="100" height="100" 
+           style="position: absolute; left: 0; top: 0; z-index: 0;"></canvas>
+          <canvas id="segment" width="100" height="100" 
+             style="position: absolute; left: 0; top: 0; z-index: 1;"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
 
     <!-- Bootstrap core JavaScript

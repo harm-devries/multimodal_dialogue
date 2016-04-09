@@ -1,6 +1,8 @@
 import os
+import psycopg2
 import random
 import socketio
+import urlparse
 from pymongo import MongoClient
 from flask import Flask, render_template
 # from flask.ext.login import LoginManager, UserMixin, login_required
@@ -21,14 +23,24 @@ app.config['SECRET_KEY'] = 'spywithmylittleeye!'
 # sio = SocketIO(app)
 # login_manager = LoginManager()
 # login_manager.init_app(app)
+""" Dictionaries for dialogue info that remains in RAM """
+clients_waiting = {}  # Is client waiting?
+clients_partner = {}  # Socketid of client's partner
+clients_did = {}  # Dialogue id of client
+dialogue_anns = {}  # All annotations for dialogue
+dialogue_annind = {}  # Selected index of image annotations
 
-clients_waiting = {}
-clients_partner = {}
-questioner_anns = {}
-questioner_annid = {}
-
+""" Database connections """
 client = MongoClient(os.environ['MONGODB_URL'])
 db = client.coco.images
+
+urlparse.uses_netloc.append("postgres")
+url = urlparse.urlparse(os.environ["DATABASE_URL"])
+conn = psycopg2.connect(database=url.path[1:],
+                        user=url.username,
+                        password=url.password,
+                        host=url.hostname,
+                        port=url.port)
 
 
 @app.route('/')
@@ -43,41 +55,44 @@ def game():
 
 @sio.on('newquestion', namespace='/game')
 def new_question(sid, message):
+    curr = conn.cursor()
+    curr.execute("INSERT INTO qa(dialogue_id, type, msg)"
+                 "VALUES(%s, %s, %s)", (clients_did[sid],
+                                        'q',
+                                        message))
+    conn.commit()
     sio.emit('newquestion', message,
              room=clients_partner[sid], namespace='/game')
 
 
 @sio.on('new answer', namespace='/game')
 def new_answer(sid, message):
+    curr = conn.cursor()
+    curr.execute("INSERT INTO qa(dialogue_id, type, msg)"
+                 "VALUES(%s, %s, %s)", (clients_did[sid],
+                                        'a',
+                                        message))
+    conn.commit()
     sio.emit('new answer', message,
              room=clients_partner[sid], namespace='/game')
 
 
 @sio.on('guess', namespace='/game')
 def guess(sid, obj):
-    obj = obj.lower()
-    if sid in questioner_anns:
-        cat = questioner_anns[sid][questioner_annid[sid]]['category']
-        if cat == obj:
-            objs = []
-            for x in questioner_anns[sid]:
-                if x['category'] == cat:
-                    objs.append(x)
+    did = clients_did[sid]
+    objs = [x for x in dialogue_anns[did]]
+    sio.emit('all annotations', {'partner': False, 'objs': objs},
+             room=sid, namespace='/game')
+    sio.emit('all annotations', {'partner': True},
+             room=clients_partner[sid], namespace='/game')
 
-            sio.emit('correct answer', {'partner': False, 'objs': objs},
-                     room=sid, namespace='/game')
-            sio.emit('correct answer', {'partner': True},
-                     room=clients_partner[sid], namespace='/game')
-        else:
-            sio.emit('incorrect answer', {'obj': obj, 'partner': False},
-                     room=sid, namespace='/game')
-            sio.emit('incorrect answer', {'obj': obj, 'partner': True},
-                     room=clients_partner[sid], namespace='/game')
-            logout([sid, clients_partner[sid]])
 
 @sio.on('guess annotation', namespace='/game')
-def guess(sid, ann_id):
-    if questioner_anns[sid][questioner_annid[sid]]['id'] == ann_id:
+def guess_annotation(sid, ann_id):
+    did = clients_did[sid]
+    ann_ind = dialogue_annind[did]
+    print type(ann_id)
+    if dialogue_anns[did][ann_ind]['id'] == ann_id:
         sio.emit('correct annotation', {'partner': False},
                  room=sid, namespace='/game')
         sio.emit('correct annotation', {'partner': True},
@@ -89,8 +104,9 @@ def guess(sid, ann_id):
                  room=clients_partner[sid], namespace='/game')
     logout([sid, clients_partner[sid]])
 
+
 @sio.on('next', namespace='/game')
-def next(sid):
+def find_partner(sid):
     partnerid = False
     for id, user in clients_waiting.items():
         if id != sid and user:
@@ -105,9 +121,19 @@ def next(sid):
         ann_ind = random.randint(0, len(obj['annotations']) - 1)
         ann = obj['annotations'][ann_ind]
 
+        curr = conn.cursor()
+        curr.execute("INSERT INTO dialogues(image_id, ann_id) VALUES(%s, %s)",
+                     (obj['id'], ann['id']))
+        curr.execute("SELECT currval(pg_get_serial_sequence("
+                     "'dialogues','id'))")
+        dialogue_id, = curr.fetchone()
+        conn.commit()
+        clients_did[id] = dialogue_id
+        clients_did[sid] = dialogue_id
+        dialogue_anns[dialogue_id] = obj['annotations']
+        dialogue_annind[dialogue_id] = ann_ind
+
         if role:
-            questioner_anns[id] = obj['annotations']
-            questioner_annid[id] = ann_ind
             sio.emit('questioner',
                      {'img': ('https://msvocds.blob.core.windows.net/'
                               'imgs/{}.jpg').format(obj['id'])},
@@ -123,8 +149,6 @@ def next(sid):
                      room=sid,
                      namespace='/game')
         else:
-            questioner_anns[sid] = obj['annotations']
-            questioner_annid[sid] = ann_ind
             sio.emit('answerer',
                      {'img': ('https://msvocds.blob.core.windows.net/'
                               'imgs/{}.jpg').format(obj['id']),
@@ -162,10 +186,10 @@ def disconnect(sid):
         partnerid = clients_partner[sid]
         sio.emit('partner_disconnect',
                  '',
-                 room=clients_partner[sid],
+                 room=partnerid,
                  namespace='/game')
 
-        clients_waiting[partnerid] = True
+        find_partner(partnerid)
         logout([sid, partnerid])
 
 
@@ -173,7 +197,5 @@ def logout(sids):
     for sid in sids:
         if sid in clients_partner:
             del clients_partner[sid]
-        if sid in questioner_anns:
-            del questioner_anns[sid]
-        if sid in questioner_annid:
-            del questioner_annid[sid]
+        if sid in clients_did:
+            del clients_did[sid]

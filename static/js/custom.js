@@ -1,6 +1,6 @@
 $(document).ready(function(){
     namespace = '/game';
-    var socket = io.connect('https://' + document.domain + ':' + location.port + namespace);
+    var socket = io.connect('http://' + document.domain + ':' + location.port + namespace);
     var image_src;
     var poly_x;
     var poly_y;
@@ -10,55 +10,83 @@ $(document).ready(function(){
     var segment_canvas = $('canvas#segment')[0];
     var segment_ctx = segment_canvas.getContext("2d");
     var objs;
+    var no_partner = false;
+    var partner_disconnect = false;
     var colors = [[255, 0, 0], [0, 255, 0], [0, 0, 255], [255, 255, 0], [255, 0, 255], 
-                  [0, 255, 255], [0, 255, 255], [0, 255, 255], [0, 255, 255], [0, 255, 255], 
-                  [0, 255, 255], [0, 255, 255], [0, 255, 255], [0, 255, 255]];
+                  [255, 0, 0], [0, 255, 0], [0, 0, 255], [255, 255, 0], [255, 0, 255], 
+                  [255, 0, 0], [0, 255, 0], [0, 0, 255], [255, 255, 0], [255, 0, 255],
+                  [255, 0, 0], [0, 255, 0], [0, 0, 255], [255, 255, 0], [255, 0, 255],
+                  [255, 0, 0], [0, 255, 0], [0, 0, 255], [255, 255, 0], [255, 0, 255],
+                  [255, 0, 0], [0, 255, 0], [0, 0, 255], [255, 255, 0], [255, 0, 255]];
+    var fadeS = 600;
 
     socket.on('disconnect', function() {
         hideAll();
-        $('#intro').html('<div class="well">The server unexpectedly closed the connection</div>');
-        $('#intro').show();
+        $('#waiting_text').text('Sorry! The server unexpectedly closed the connection. ');
+        $('#waiting').show();
     });
     socket.on('partner_disconnect', function() {
         hideAll();
-        poly_x = null;
-        poly_y = null;
-        objs = null;
-        $('#log').html('');
-        $('#log').show();
-        $('#intro').html('<div class="well">Sorry! Your partner unexpectedly closed the game.</div>');
-        $('#intro').show();
+        partner_disconnect = true;
+        deletegame();
     });
     socket.on('no partner', function(msg) {
-        $('#title').hide();
-        $('#intro').html('<div class="well"><span class="loader"><span class="loader-inner"></span></span>Waiting for a new partner...</div>');
+        no_partner = true;
+        noPartner();
     })
     socket.on('questioner', function(msg) {
-        $('#title').hide();
-        $('#intro').hide();
-        $('#waiting_text').text('Waiting for an answer');
-        image_src = msg.img;
-        renderImage();
-        $('#question').show()
-        $('#guess').show();
+        if (!no_partner) {
+            noPartner();
+            no_partner = false;
+        }
+
+        setTimeout(function(){
+            $('#waiting_text').html('We have found a partner! You are the <b>questioner</b>.');
+        }, 2000);
+        
+        setTimeout(function(){
+            $('#waiting_text').text('Waiting for an answer..');
+            $('#waiting').hide();
+            image_src = msg.img;
+            $('#image').show();
+            renderImage();
+            $('#newquestion').focus();
+            $('#question').fadeIn(fadeS);
+            $('#newquestion').focus();
+            $('#guess').fadeIn(fadeS);
+
+        }, 4000);
+        
     })
     socket.on('answerer', function(msg) {
-        $('#title').hide();
-        $('#intro').hide();
-        image_src = msg.img;
-        poly_x = msg.poly_x;
-        poly_y = msg.poly_y;
-        renderImage();
-        $('#waiting_text').text('Waiting for a new question');
-        $('#waiting').show();
-        $('#object').html('<img width="40px" height="40px" src="http://mscoco.org/static/icons/' + msg.catid + '.jpg" /> Your object is ' + msg.name);
-        $('#object').show();
-        $('#object').hover(function(){
-            renderSegment(poly_x, poly_y, scale, segment_ctx);
-        },
-        function(){
-            clearCanvas(segment_ctx, segment_canvas);
-        });
+        if (!no_partner) {
+            noPartner();
+            no_partner = false;
+        }
+
+        setTimeout(function(){
+            $('#waiting_text').html('We have found a partner! You are the <b>oracle</b>.');
+        }, 2000);
+
+        setTimeout(function(){
+            $('#title').fadeOut(fadeS);
+            $('#intro').fadeOut(fadeS);
+            image_src = msg.img;
+            poly_x = msg.poly_x;
+            poly_y = msg.poly_y;
+            $('#image').show();
+            renderImage();
+            $('#waiting_text').text('Waiting for a new question');
+            $('#waiting').fadeIn(fadeS);
+            $('#object').html('<img width="35px" height="35px" src="http://mscoco.org/static/icons/' + msg.catid + '.jpg" /> ' + msg.name);
+            $('#object').fadeIn(fadeS);
+            $('#object').hover(function(){
+                clearCanvas(segment_ctx, segment_canvas);
+            },
+            function(){
+                renderSegment(poly_x, poly_y, scale, segment_ctx);
+            });
+        }, 3500);
 
     })
     socket.on('newquestion', function(msg) {
@@ -70,64 +98,60 @@ $(document).ready(function(){
         addAnswer(msg);
         $('#waiting').hide();
         $('#question').fadeIn(1000);
+        $('#newquestion').focus();
     });
-    socket.on('correct answer', function(msg) {
+    socket.on('all annotations', function(msg) {
         if (msg.partner) {
-            $('#waiting_text').text('Congratulations. Your partner has guessed the correct object! ');
+            $('#waiting_text').text('Your partner started guessing the object!');
             $('#waiting').show();
         } else {
             objs = msg.objs;
             renderSegments(objs, scale, segment_ctx);
             $('#question').hide();
             $('#guess').hide();
-            $('#object').text('Correct! Please click on the correct annotation in the image above.');
+            $('#object').html('<h3>Please click on one of the objects in the image below.</h3>');
             $('#object').show();
         }
     });
-    socket.on('incorrect answer', function(msg) {
-        hideAll();
-        $('#guessinput').val(''); 
-        if (msg.partner) {
-            text = 'Game over! Your partner incorrectly guessed <strong>' + msg.obj + '</strong>';
-        } else {
-            text = 'Game over! You incorrectly guessed <strong>' + msg.obj + '</strong>';
-        }
-        $('#intro').html('<div class="well">'+text+'</div>');
-        $('#intro').show(); 
-        $('#p_newgame').show();
-        deletegame();
-    });
     socket.on('correct annotation', function(msg) {
         hideAll();
+        infoBarUp();
         $('#guessinput').val(''); 
         if (msg.partner) {
-            text = 'Congratulations! Your partner has guessed the correct object. ';
+            text = 'Your partner has guessed the correct object. ';
         } else {
-            text = 'Congratulations! You have guessed the correct object.';
+            text = 'You have guessed the correct object.';
         }
-        $('#intro').html('<div class="well">'+text+'</div>');
-        $('#intro').show(); 
+        $('#title').html('<h2>Congratulations!</h2>');
+        $('#title').fadeIn(fadeS);
+        $('#intro').html(text);
+        $('#intro').fadeIn(fadeS); 
         $('#p_newgame').show();
         deletegame();
     });
     socket.on('wrong annotation', function(msg) {
         hideAll();
+        infoBarUp();
         $('#guessinput').val(''); 
         if (msg.partner) {
-            text = 'Game over! Your partner has guessed the wrong object.';
+            text = 'Your partner has guessed the wrong object.';
         } else {
-            text = 'Game over! You have guessed the wrong object. ';
+            text = 'You have guessed the wrong object. ';
         }
-        $('#intro').html('<div class="well">'+text+'</div>');
-        $('#intro').show(); 
+        $('#title').html('<h2>Game over!</h2>');
+        $('#title').fadeIn(fadeS);
+        $('#intro').html(text);
+        $('#intro').fadeIn(fadeS); 
         $('#p_newgame').show();
         deletegame();
     });
 
-    function deletegame(){
+    function deletegame() {
         poly_x = null;
         poly_y = null;
         objs = null;
+        $('#log').html('');
+        $('#log').show();
     }
 
     function hideAll() {
@@ -141,17 +165,57 @@ $(document).ready(function(){
         $('#object').hide();
     }
 
+    function noPartner() {
+        $('#title').fadeOut(fadeS);
+        $('#intro').fadeOut(fadeS);
+        if(partner_disconnect) {
+            $('#waiting_text').text('Your partner disconnected. Waiting for a new partner..');
+            partner_disconnect = false;
+        } else {
+            $('#waiting_text').text('Searching for a partner..');
+        }
+        
+        $('#waiting').show();
+        infoBarDown();
+    }
+
+    function infoBarDown() {
+        $('body').animate({
+            paddingTop: "120px"
+        }, 1000);
+        $('#info').animate({
+            height: "60px",
+            paddingTop: "10px",
+            paddingBottom: "10px" 
+        }, 1000);
+        // $('#left').switchClass("col-sm-9", "col-sm-5", 0, "easeInOutQuad");
+        // $('#right').switchClass("col-sm-3", "col-sm-7", 0, "easeInOutQuad");
+
+    }
+    function infoBarUp() {
+        $('body').animate({
+            paddingTop: "50px"
+        }, 1000);
+        $('#info').animate({
+            height: "0px",
+            paddingTop: "0px",
+            paddingBottom: "0px" 
+        }, 1000);
+        // $('#left').switchClass("col-sm-5", "col-sm-9", 0, "easeInOutQuad");
+        // $('#right').switchClass("col-sm-7", "col-sm-3", 0, "easeInOutQuad");
+
+    }
+
     function addAnswer(msg){
-        $('#log').append('<div class="well well-sm">' + msg + '</div>');
+        $('#log').prepend('<div class="well well-sm">' + msg + '</div>');
         scrollBottom();
     }
     function addQuestion(msg){
-        $('#log').append('<div class="well well-sm">' + msg + '</div>');
+        $('#log').prepend('<div class="well well-sm">' + msg + '</div>');
         scrollBottom();
     }
 
     function renderImage() {
-        $('#image').show();
         var im = new Image();
         var max_width = $('#image').width();
         var max_height = $('.center-container').height() - 15;
@@ -172,6 +236,9 @@ $(document).ready(function(){
             if (objs != null) {
                 renderSegments(objs, scale, segment_ctx);
             }
+            if (poly_x != null) {
+                renderSegment(poly_x, poly_y, scale, segment_ctx);
+            }
         }
         im.src = image_src;
     }
@@ -183,8 +250,7 @@ $(document).ready(function(){
     
     $('a#guessbtn').click(function(event) {
         $('#guessbtn').attr('disabled', false); 
-        var obj = $('#guessinput').val();
-        socket.emit('guess', obj);
+        socket.emit('guess', '');
         return false;
     });
     $('a#newgame').click(function(event) {
@@ -212,7 +278,7 @@ $(document).ready(function(){
         }
     });    
     $('a#yes').click(function(event) {
-        msg = '<span class="text-success">Yes</span>'
+        msg = 'Yes'
         addAnswer(msg);
         $('#answer').hide();
         $('#waiting').fadeIn(1000);
@@ -220,7 +286,7 @@ $(document).ready(function(){
         return false;
     });
     $('a#no').click(function(event) {
-        msg = '<span class="text-warning">No</span>'
+        msg = 'No'
         addAnswer(msg);
         $('#answer').hide();
         $('#waiting').fadeIn(1000);
@@ -228,7 +294,7 @@ $(document).ready(function(){
         return false;
     });
     $('a#na').click(function(event) {
-        msg = '<span class="text-info">Not applicable</span>'
+        msg = 'Not applicable'
         addAnswer(msg);
         $('#answer').hide();
         $('#waiting').fadeIn(1000);
@@ -303,44 +369,73 @@ $(document).ready(function(){
         }
     }
 
+    function getPolyArea(px, py) {
+        var min_x = Infinity;
+        var min_y = Infinity;
+        var max_x = 0;
+        var max_y = 0;
+        for (i = 0; i<px.length; i++) {
+            min_x = Math.min(min_x, px[i]/scale);
+            min_y = Math.min(min_y, px[i]/scale);
+            max_x = Math.max(min_x, px[i]/scale);
+            max_y = Math.max(min_y, px[i]/scale);
+        }
+        return (max_x - min_x)*(max_y-min_y);
+    }
+
+    function getHighlightedObjIndex(objs, scale, mouseX, mouseY) {
+        var ind;
+        var area = Infinity;
+        console.log('length');
+        console.log(objs.length);
+        for (var i = 0; i< objs.length; i++) {
+            poly_x = objs[i].poly_x;
+            poly_y = objs[i].poly_y;
+            console.log(poly_x);
+            
+            for(j=0; j<poly_x.length; j++){
+                px = poly_x[j];
+                py = poly_y[j];
+                ar = getPolyArea(px, py);
+                if (inside(mouseX, mouseY, px, py, scale) && ar < area) {
+                    ind = i;
+                    area = ar;
+                }
+            }
+        }
+        return ind;
+    }
+
     /* Render all segments for questioner */
-    function renderSegments(objs, scale, ctx, mouseX, mouseY){
+    function renderSegments(objs, scale, ctx, mouseX, mouseY) {
         // set color for each object
-        highlight = false;
-        for(i = 0; i< objs.length; i++) {
+        var ind;
+        if(mouseX != undefined && mouseY != undefined) {
+            ind = getHighlightedObjIndex(objs, scale, mouseX, mouseY);
+            console.log('end');
+            console.log(ind);
+        }
+        for(var i = 0; i< objs.length; i++) {
             var r = colors[i][0];
             var g = colors[i][1];
             var b = colors[i][2];
             poly_x = objs[i].poly_x;
             poly_y = objs[i].poly_y;
 
-            var highlight_obj = false;
-            if (mouseX != undefined && mouseY != undefined && !highlight) {
-                for(j=0; j<poly_x.length; j++){
-                    px = poly_x[j];
-                    py = poly_y[j];
-
-                    if (inside(mouseX, mouseY, px, py, scale)) {
-                        highlight_obj = true;
-                        highlight = true;
-                    }
-                }
-            }
-
-            if (highlight_obj) {
+            if (i == ind) {
                 ctx.fillStyle = 'rgba('+r+','+g+','+b+',0.9)';
             } else {
                 ctx.fillStyle = 'rgba('+r+','+g+','+b+',0.3)';
             }
 
-            for (j=0; j<poly_x.length; j++){
+            for (var j=0; j<poly_x.length; j++){
                 px = poly_x[j];
                 py = poly_y[j];
 
                 // let's draw!!!!
                 ctx.beginPath();
                 ctx.moveTo(parseFloat(px[0]*scale), parseFloat(py[0]*scale));
-                for (k=1; k< px.length; k+=1) { 
+                for (var k=1; k< px.length; k+=1) { 
                     ctx.lineTo(parseFloat(px[k]*scale), parseFloat(py[k]*scale));
                 }
                 ctx.lineWidth = 2;
@@ -350,7 +445,7 @@ $(document).ready(function(){
                 ctx.stroke();
             }
         }
-        if (highlight) {
+        if (k!= undefined) {
             $('canvas#segment').css('cursor', 'pointer');
         } else {
             $('canvas#segment').css('cursor', 'default');
@@ -391,8 +486,7 @@ $(document).ready(function(){
     }
 
     function scrollBottom() {
-        log = document.getElementById('log');
-        log.scrollTop = log.scrollHeight - log.clientHeight;
+        log.scrollTop = $('#log').offset().top;
     }
 
     function resizeLog() {
@@ -404,53 +498,4 @@ $(document).ready(function(){
         renderImage();
         resizeLog();
     });
-
-    // var substringMatcher = function(strs) {
-    //   return function findMatches(q, cb) {
-    //     var matches, substringRegex;
-
-    //     // an array that will be populated with substring matches
-    //     matches = [];
-
-    //     // regex used to determine if a string contains the substring `q`
-    //     substrRegex = new RegExp(q, 'i');
-
-    //     // iterate through the pool of strings and for any string that
-    //     // contains the substring `q`, add it to the `matches` array
-    //     $.each(strs, function(i, str) {
-    //       if (substrRegex.test(str)) {
-    //         matches.push(str);
-    //       }
-    //     });
-
-    //     cb(matches);
-    //   };
-    // };
-
-    // var states = ['Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California',
-    //   'Colorado', 'Connecticut', 'Delaware', 'Florida', 'Georgia', 'Hawaii',
-    //   'Idaho', 'Illinois', 'Indiana', 'Iowa', 'Kansas', 'Kentucky', 'Louisiana',
-    //   'Maine', 'Maryland', 'Massachusetts', 'Michigan', 'Minnesota',
-    //   'Mississippi', 'Missouri', 'Montana', 'Nebraska', 'Nevada', 'New Hampshire',
-    //   'New Jersey', 'New Mexico', 'New York', 'North Carolina', 'North Dakota',
-    //   'Ohio', 'Oklahoma', 'Oregon', 'Pennsylvania', 'Rhode Island',
-    //   'South Carolina', 'South Dakota', 'Tennessee', 'Texas', 'Utah', 'Vermont',
-    //   'Virginia', 'Washington', 'West Virginia', 'Wisconsin', 'Wyoming'
-    // ];
-    // var states = new Bloodhound({
-    //   datumTokenizer: Bloodhound.tokenizers.whitespace,
-    //   queryTokenizer: Bloodhound.tokenizers.whitespace,
-    //   // `states` is an array of state names defined in "The Basics"
-    //   local: states
-    // });
-
-    // $('#guessinput').typeahead({
-    //   hint: true,
-    //   highlight: true,
-    //   minLength: 1
-    // },
-    // {
-    //   name: 'states',
-    //   source: states
-    // });
 });
