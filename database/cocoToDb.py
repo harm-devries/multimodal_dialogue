@@ -1,14 +1,8 @@
+"""Insert coco dataset into postgres database."""
 import json
-import psycopg2
+import os
 import sys
-
-
-training_file = 'annotations/instances_train2014.json'
-validation_file = 'annotations/instances_val2014.json'
-
-databasename = ""
-login = ""
-password = ""
+from db_utils import db_connect, parse_postgresurl
 
 
 def chunks(l, n):
@@ -28,7 +22,10 @@ def loadCategories(cur, data):
     # 1 create supercategory table
     print("inserting supercategories...")
     try:
+        i = 0
         for name, index in supercategory.iteritems():
+            print i
+            i = i + 1
             cur.execute(
                 "INSERT INTO object_supercategory (supercategory_id,name)"
                 "VALUES (%s,%s)", (index, name))
@@ -113,16 +110,14 @@ def loadPictures(cur, data):
         print error
         sys.exit()
 
-
-try:
-    # print("dbname='"+databasename+"' user='"+login+"' password='"+password+"'")
-    conn = psycopg2.connect("dbname='testdb' user='fstrub'"
-                            "host='localhost'password='21914218820*I!'")
-except:
-    print("I am unable to connect to the database.")
-    sys.exit()
+# Postgres url must be in environment variable DATABASE_URL
+database, username, password, hostname, port = parse_postgresurl(
+    os.environ["DATABASE_URL"])
+conn = db_connect(database, username, password, hostname, port)
 cur = conn.cursor()
 
+training_file = '../annotations/instances_train2014.json'
+validation_file = '../annotations/instances_val2014.json'
 
 print("loading training file...")
 with open(training_file) as data_file:
@@ -136,3 +131,5 @@ with open(validation_file) as data_file:
     loadPictures(cur, data)
 
 conn.commit()
+cur.close()
+conn.close()
