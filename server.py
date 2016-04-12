@@ -18,15 +18,13 @@ app = Flask(__name__)
 app.wsgi_app = socketio.Middleware(sio, app.wsgi_app)
 app.config['SECRET_KEY'] = 'spywithmylittleeye!'
 
-# sio = SocketIO(app)
-# login_manager = LoginManager()
-# login_manager.init_app(app)
 """ Dictionaries for dialogue info that remains in RAM """
 clients_waiting = {}  # Is client waiting?
 clients_partner = {}  # Socketid of client's partner
 clients_did = {}  # Dialogue id of client
-dialogue_anns = {}  # All annotations for dialogue
-dialogue_annind = {}  # Selected index of image annotations
+dialogue_pic = {}  # Selected picture for dialogue: dialogue_id : Picture
+dialogue_obj_ind = {}  # Selected index of objects: dialogue_id : list index
+
 """ Database connection """
 db = DatabaseHelper.from_postgresurl(os.environ['DATABASE_URL'])
 
@@ -66,9 +64,9 @@ def new_answer(sid, message):
 
 
 @sio.on('guess', namespace='/game')
-def guess(sid, obj):
+def guess(sid):
     did = clients_did[sid]
-    objs = dialogue_anns[did]
+    objs = [obj.to_json() for obj in dialogue_pic[did].objects]
     sio.emit('all annotations', {'partner': False, 'objs': objs},
              room=sid, namespace='/game')
     sio.emit('all annotations', {'partner': True},
@@ -76,10 +74,10 @@ def guess(sid, obj):
 
 
 @sio.on('guess annotation', namespace='/game')
-def guess_annotation(sid, ann_id):
+def guess_annotation(sid, object_id):
     did = clients_did[sid]
-    ann_ind = dialogue_annind[did]
-    if dialogue_anns[did][ann_ind]['object_id'] == ann_id:
+    obj_ind = dialogue_obj_ind[did]
+    if dialogue_pic[did].objects[obj_ind].object_id == object_id:
         sio.emit('correct annotation', {'partner': False},
                  room=sid, namespace='/game')
         sio.emit('correct annotation', {'partner': True},
@@ -91,32 +89,6 @@ def guess_annotation(sid, ann_id):
                  room=clients_partner[sid], namespace='/game')
     logout([sid, clients_partner[sid]])
 
-
-def process_annotations(annotations):
-    """Preprocess annotations.
-
-    Convert area attribute from Decimal to float
-    because json encode can not handle Decimal.
-
-    Also convert segment coordinates from a single list into
-    x and y coordinate list.
-    """
-    anns = []
-    for ann in annotations:
-        ann = dict(ann)
-        ann['area'] = float(ann['area'])
-
-        segments = []
-        for seg in ann['segment']:
-            x = []
-            y = []
-            for i in range(0, len(seg), 2):
-                x.append(seg[i])
-                y.append(seg[i + 1])
-            segments.append({'x': x, 'y': y})
-        ann['segment'] = segments
-        anns.append(ann)
-    return anns
 
 @sio.on('next', namespace='/game')
 def find_partner(sid):
@@ -130,34 +102,33 @@ def find_partner(sid):
         clients_partner[partnerid] = sid
         clients_partner[sid] = partnerid
         role = (random.random() > 0.5)
-        coco_url, annotations = db.get_picture(9)
-        annotations = process_annotations(annotations)
-        ann_ind = random.randint(0, len(annotations) - 1)
-        ann = annotations[ann_ind]
+        pic = db.get_picture(9)
+        obj_ind = random.randint(0, len(pic.objects) - 1)
+        obj = pic.objects[obj_ind]
 
         clients_did[id] = dialogue_id
         clients_did[sid] = dialogue_id
-        dialogue_anns[dialogue_id] = annotations
-        dialogue_annind[dialogue_id] = ann_ind
+        dialogue_pic[dialogue_id] = pic
+        dialogue_obj_ind[dialogue_id] = obj_ind
 
         if role:
             sio.emit('questioner',
-                     {'img': coco_url},
+                     {'img': pic.coco_url},
                      room=id,
                      namespace='/game')
             sio.emit('answerer',
-                     {'img': coco_url,
-                      'object': ann},
+                     {'img': pic.coco_url,
+                      'object': obj.to_json()},
                      room=sid,
                      namespace='/game')
         else:
             sio.emit('answerer',
-                     {'img': coco_url,
-                      'object': ann},
+                     {'img': pic.coco_url,
+                      'object': obj.to_json()},
                      room=id,
                      namespace='/game')
             sio.emit('questioner',
-                     {'img': coco_url},
+                     {'img': pic.coco_url},
                      room=sid,
                      namespace='/game')
 

@@ -1,15 +1,14 @@
 $(document).ready(function(){
     namespace = '/game';
     var socket = io.connect('http://' + document.domain + ':' + location.port + namespace);
-    var image_src;
-    var poly_x;
-    var poly_y;
-    var scale;
+    var image_src; //image url
+    var object; // selected object for oracle
+    var scale; // scale of image compared to original size
     var img_canvas = $('canvas#img')[0];
     var img_ctx = img_canvas.getContext("2d");
     var segment_canvas = $('canvas#segment')[0];
     var segment_ctx = segment_canvas.getContext("2d");
-    var objs;
+    var objs; // All annotations. Only defined after questioner pressed guess button
     var no_partner = false;
     var partner_disconnect = false;
     var colors = [[255, 0, 0], [0, 255, 0], [0, 0, 255], [255, 255, 0], [255, 0, 255], 
@@ -72,19 +71,20 @@ $(document).ready(function(){
             $('#title').fadeOut(fadeS);
             $('#intro').fadeOut(fadeS);
             image_src = msg.img;
-            poly_x = msg.poly_x;
-            poly_y = msg.poly_y;
+            object = msg.object;
+            console.log(object);
+            console.log(msg);
             $('#image').show();
             renderImage();
             $('#waiting_text').text('Waiting for a new question');
             $('#waiting').fadeIn(fadeS);
-            $('#object').html('<img width="35px" height="35px" src="http://mscoco.org/static/icons/' + msg.catid + '.jpg" /> ' + msg.name);
+            $('#object').html('<img width="35px" height="35px" src="http://mscoco.org/static/icons/' + object.category_id + '.jpg" /> ' + object.name);
             $('#object').fadeIn(fadeS);
             $('#object').hover(function(){
                 clearCanvas(segment_ctx, segment_canvas);
             },
             function(){
-                renderSegment(poly_x, poly_y, scale, segment_ctx);
+                renderSegment(object.segment, scale, segment_ctx);
             });
         }, 3500);
 
@@ -236,8 +236,8 @@ $(document).ready(function(){
             if (objs != null) {
                 renderSegments(objs, scale, segment_ctx);
             }
-            if (poly_x != null) {
-                renderSegment(poly_x, poly_y, scale, segment_ctx);
+            if (object != null) {
+                renderSegment(object.segment, scale, segment_ctx);
             }
         }
         im.src = image_src;
@@ -250,7 +250,7 @@ $(document).ready(function(){
     
     $('a#guessbtn').click(function(event) {
         $('#guessbtn').attr('disabled', false); 
-        socket.emit('guess', '');
+        socket.emit('guess');
         return false;
     });
     $('a#newgame').click(function(event) {
@@ -328,15 +328,13 @@ $(document).ready(function(){
     }
 
     function getObjectFromClick(mouseX, mouseY, objs, scale) {
-        for(i = 0; i < objs.length; i++) {
-            poly_x = objs[i].poly_x;
-            poly_y = objs[i].poly_y;
-            for(j=0; j<poly_x.length; j++) {
-                px = poly_x[j];
-                py = poly_y[j];
-
-                if (inside(mouseX, mouseY, px, py, scale)) {
-                    return objs[i].id;
+        for (var i = 0; i< objs.length; i++) {
+            obj = objs[i];
+            for(j=0; j<obj.segment.length; j++){
+                coords_x = obj.segment[j].x;
+                coords_y = obj.segment[j].y;
+                if (inside(mouseX, mouseY, coords_x, coords_y, scale)) {
+                    return obj.object_id;
                 }
             }
         }
@@ -344,21 +342,21 @@ $(document).ready(function(){
     }
 
     /* Render single segmentation for oracle */
-    function renderSegment(poly_x, poly_y, scale, ctx){
+    function renderSegment(segment, scale, ctx){
         // set color for each object
         var r = 255;
         var g = 0;
         var b = 0;
         ctx.fillStyle = 'rgba('+r+','+g+','+b+',0.4)';
 
-        for (j=0; j<poly_x.length; j++){
-            px = poly_x[j];
-            py = poly_y[j];
+        for (j=0; j<segment.length; j++){
+            coords_x = segment[j].x;
+            coords_y = segment[j].y;
             // let's draw!!!!
             ctx.beginPath();
-            ctx.moveTo(parseFloat(px[0]*scale), parseFloat(py[0]*scale));
-            for (k=1; k< px.length; k+=1) { 
-                ctx.lineTo(parseFloat(px[k]*scale), parseFloat(py[k]*scale));
+            ctx.moveTo(parseFloat(coords_x[0]*scale), parseFloat(coords_y[0]*scale));
+            for (k=1; k < coords_x.length; k+=1) { 
+                ctx.lineTo(parseFloat(coords_x[k]*scale), parseFloat(coords_y[k]*scale));
             }
 
             ctx.lineWidth = 2;
@@ -369,41 +367,18 @@ $(document).ready(function(){
         }
     }
 
-    function getPolyArea(px, py) {
-        var min_x = Infinity;
-        var min_y = Infinity;
-        var max_x = 0;
-        var max_y = 0;
-        for (i = 0; i<px.length; i++) {
-            min_x = Math.min(min_x, px[i]/scale);
-            min_y = Math.min(min_y, px[i]/scale);
-            max_x = Math.max(min_x, px[i]/scale);
-            max_y = Math.max(min_y, px[i]/scale);
-        }
-        return (max_x - min_x)*(max_y-min_y);
-    }
-
     function getHighlightedObjIndex(objs, scale, mouseX, mouseY) {
-        var ind;
-        var area = Infinity;
-        console.log('length');
-        console.log(objs.length);
         for (var i = 0; i< objs.length; i++) {
-            poly_x = objs[i].poly_x;
-            poly_y = objs[i].poly_y;
-            console.log(poly_x);
-            
-            for(j=0; j<poly_x.length; j++){
-                px = poly_x[j];
-                py = poly_y[j];
-                ar = getPolyArea(px, py);
-                if (inside(mouseX, mouseY, px, py, scale) && ar < area) {
-                    ind = i;
-                    area = ar;
+            obj = objs[i];
+            for(j=0; j<obj.segment.length; j++){
+                coords_x = obj.segment[j].x;
+                coords_y = obj.segment[j].y;
+                if (inside(mouseX, mouseY, coords_x, coords_y, scale)) {
+                    return i;
                 }
             }
         }
-        return ind;
+        return null;
     }
 
     /* Render all segments for questioner */
@@ -412,15 +387,12 @@ $(document).ready(function(){
         var ind;
         if(mouseX != undefined && mouseY != undefined) {
             ind = getHighlightedObjIndex(objs, scale, mouseX, mouseY);
-            console.log('end');
-            console.log(ind);
         }
         for(var i = 0; i< objs.length; i++) {
             var r = colors[i][0];
             var g = colors[i][1];
             var b = colors[i][2];
-            poly_x = objs[i].poly_x;
-            poly_y = objs[i].poly_y;
+            obj = objs[i];
 
             if (i == ind) {
                 ctx.fillStyle = 'rgba('+r+','+g+','+b+',0.9)';
@@ -428,15 +400,14 @@ $(document).ready(function(){
                 ctx.fillStyle = 'rgba('+r+','+g+','+b+',0.3)';
             }
 
-            for (var j=0; j<poly_x.length; j++){
-                px = poly_x[j];
-                py = poly_y[j];
+            for (var j=0; j<obj.segment.length; j++){
+                coords_x = obj.segment[j].x;
+                coords_y = obj.segment[j].y;
 
-                // let's draw!!!!
                 ctx.beginPath();
-                ctx.moveTo(parseFloat(px[0]*scale), parseFloat(py[0]*scale));
-                for (var k=1; k< px.length; k+=1) { 
-                    ctx.lineTo(parseFloat(px[k]*scale), parseFloat(py[k]*scale));
+                ctx.moveTo(parseFloat(coords_x[0]*scale), parseFloat(coords_y[0]*scale));
+                for (var k=1; k< coords_x.length; k+=1) { 
+                    ctx.lineTo(parseFloat(coords_x[k]*scale), parseFloat(coords_y[k]*scale));
                 }
                 ctx.lineWidth = 2;
                 ctx.closePath();

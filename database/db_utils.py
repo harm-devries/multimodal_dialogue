@@ -4,6 +4,73 @@ import psycopg2.extras
 import urlparse
 
 
+class Picture():
+    """A picture object."""
+
+    def __init__(self, id, coco_url, objects):
+        self.id = id
+        self.coco_url = coco_url
+        self.objects = objects
+
+    def to_json(self):
+        """Convert picture object into json serializable dictionary"""
+        pic_dict = {}
+        pic_dict['picture_id'] = self.id
+        pic_dict['coco_url'] = self.coco_url
+        pic_dict['objects'] = [obj.to_json() for obj in self.objects]
+        return pic_dict
+
+
+class Object():
+    """Object wrapper"""
+
+    def __init__(self, object_id, category_id, category, segment, area):
+        self.object_id = object_id
+        self.category_id = category_id
+        self.category = category
+        self.segment = Object.process_segment(segment)
+        self.area = area
+
+    @staticmethod
+    def process_segment(segment):
+        """Split coordinates into separate x and y coordinate lists.
+
+        Pre:
+           segment = list of polygons
+           polygon = single list of coordinates
+           e.g. [x_0, y_0, ..., x_n, y_n]
+
+        Post:
+           segment = list of polygons
+           polygon['x'] = [x_0, ..., x_n]
+           polygon['y'] = [y_0, ..., y_n]
+        """
+        segments = []
+        for seg in segment:
+            x = []
+            y = []
+            for i in range(0, len(seg), 2):
+                x.append(seg[i])
+                y.append(seg[i + 1])
+            segments.append({'x': x, 'y': y})
+        return segments
+
+    def to_json(self):
+        """Convert into json serializable dictionary.
+
+        area: Numeric -> float
+        """
+        obj_dict = {}
+        obj_dict['object_id'] = self.object_id
+        obj_dict['category_id'] = self.category_id
+        obj_dict['category'] = self.category
+        # Numeric to float
+        obj_dict['area'] = float(self.area)
+        obj_dict['segment'] = self.segment
+
+        return obj_dict
+
+
 class DatabaseHelper():
     """Database helper for multimodal dialogue project."""
 
@@ -32,11 +99,13 @@ class DatabaseHelper():
                    url.hostname, url.port)
 
     def get_picture(self, id):
-        """Get image_url and its annotations by picture_id."""
+        """Fetch image by its id."""
         try:
             cur = self.conn.cursor()
             cur.execute('SELECT coco_url FROM picture '
                         'WHERE picture_id = %s', [id])
+            if cur.rowcount == 0:
+                return None
             coco_url, = cur.fetchone()
             cur.close()
         except Exception as e:
@@ -51,13 +120,20 @@ class DatabaseHelper():
                          'o.picture_id = %s '
                          'ORDER BY o.area ASC'), [id])
             rows = cur.fetchall()
+            objs = []
+            for row in rows:
+                obj = Object(row['object_id'], row['category_id'],
+                             row['name'], row['segment'], row['area'])
+                objs.append(obj)
+
         except Exception as e:
             print "Unable to get annotations"
             print e
 
-        return coco_url, rows
+        pic = Picture(id, coco_url, objs)
+        return pic
 
-    def insert(self, picture_id, object_id):
+    def insert_dialogue(self, picture_id, object_id):
         """Insert new dialogue."""
         # curr = self.conn.cursor()
         # curr.execute("INSERT INTO dialogue (picture_id, ann_id) "
@@ -67,9 +143,24 @@ class DatabaseHelper():
         # self.conn.commit()
         raise NotImplementedError()
 
+    def insert_question(self, hit_id, dialogue_id, message):
+        """Insert new question."""
+        raise NotImplementedError()
+
+    def insert_answer(self, hit_id, dialogue_id, message):
+        """Insert new answer."""
+        raise NotImplementedError()
+
+    def guess(self, hit_id, dialogue_id, ann_id):
+        """Guess the object."""
+        raise NotImplementedError()
+
 
 if __name__ == '__main__':
     import os
     db = DatabaseHelper.from_postgresurl(os.environ['DATABASE_URL'])
-    url, annotations = db.get_picture(9)
-    print annotations[0].keys()
+    pic = db.get_picture(1000)
+    if pic is None:
+        print "No object found.."
+    else:
+        print pic.objects[0].category
