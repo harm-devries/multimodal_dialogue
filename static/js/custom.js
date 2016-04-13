@@ -18,6 +18,8 @@ $(document).ready(function(){
                   [255, 0, 0], [0, 255, 0], [0, 0, 255], [255, 255, 0], [255, 0, 255],
                   [255, 0, 0], [0, 255, 0], [0, 0, 255], [255, 255, 0], [255, 0, 255]];
     var fadeS = 600;
+    var round = 0;
+    var score = 100;
 
     socket.on('disconnect', function() {
         hideAll();
@@ -41,9 +43,11 @@ $(document).ready(function(){
 
         setTimeout(function(){
             $('#waiting_text').html('We have found a partner! You are the <b>questioner</b>.');
-        }, 2000);
+        }, 1000);
         
         setTimeout(function(){
+            $('#title').fadeOut(fadeS);
+            $('#intro').fadeOut(fadeS);
             $('#waiting_text').text('Waiting for an answer..');
             $('#waiting').hide();
             image_src = msg.img;
@@ -53,8 +57,8 @@ $(document).ready(function(){
             $('#question').fadeIn(fadeS);
             $('#newquestion').focus();
             $('#guess').fadeIn(fadeS);
-
-        }, 4000);
+            $('#score').fadeIn(fadeS);
+        }, 2000);
         
     })
     socket.on('answerer', function(msg) {
@@ -65,31 +69,23 @@ $(document).ready(function(){
 
         setTimeout(function(){
             $('#waiting_text').html('We have found a partner! You are the <b>oracle</b>.');
-        }, 2000);
+        }, 1000);
 
         setTimeout(function(){
             $('#title').fadeOut(fadeS);
             $('#intro').fadeOut(fadeS);
             image_src = msg.img;
             object = msg.object;
-            console.log(object);
-            console.log(msg);
             $('#image').show();
             renderImage();
             $('#waiting_text').text('Waiting for a new question');
             $('#waiting').fadeIn(fadeS);
-            $('#object').html('<img width="35px" height="35px" src="http://mscoco.org/static/icons/' + object.category_id + '.jpg" /> ' + object.name);
-            $('#object').fadeIn(fadeS);
-            $('#object').hover(function(){
-                clearCanvas(segment_ctx, segment_canvas);
-            },
-            function(){
-                renderSegment(object.segment, scale, segment_ctx);
-            });
-        }, 3500);
+            set_object();
+            $('#score').fadeIn(fadeS);
+        }, 2000);
 
     })
-    socket.on('newquestion', function(msg) {
+    socket.on('new question', function(msg) {
         addQuestion(msg);
         $('#waiting').hide();
         $('#answer').fadeIn(1000);
@@ -105,17 +101,17 @@ $(document).ready(function(){
             $('#waiting_text').text('Your partner started guessing the object!');
             $('#waiting').show();
         } else {
-            objs = msg.objs;
-            renderSegments(objs, scale, segment_ctx);
             $('#question').hide();
             $('#guess').hide();
-            $('#object').html('<h3>Please click on one of the objects in the image below.</h3>');
+            $('#object').unbind('mouseenter mouseleave');
+            $('#object').html('<b>Please click on one of the objects in the image below.</b>');
             $('#object').show();
+            objs = msg.objs;
+            renderSegments(objs, scale, segment_ctx);
         }
     });
     socket.on('correct annotation', function(msg) {
         hideAll();
-        infoBarUp();
         $('#guessinput').val(''); 
         if (msg.partner) {
             text = 'Your partner has guessed the correct object. ';
@@ -130,28 +126,54 @@ $(document).ready(function(){
         deletegame();
     });
     socket.on('wrong annotation', function(msg) {
-        hideAll();
-        infoBarUp();
-        $('#guessinput').val(''); 
+        objs = null;
+        object = null;
+        clearCanvas(segment_ctx, segment_canvas);
+        $('#log').hide();
+        $('#waiting').hide();
+        score = 0;
+        set_score();
+        // set object
+        object = msg.object;
+        set_object();
+        renderSegment(object.segment, scale, segment_ctx);
+
+        // set message
         if (msg.partner) {
-            text = 'Your partner has guessed the wrong object.';
+            text = 'Your partner has guessed the wrong object. See his/her guess in the image on the right.';
         } else {
-            text = 'You have guessed the wrong object. ';
+            text = 'You have guessed the wrong object. The correct object is shown in the image.';
         }
         $('#title').html('<h2>Game over!</h2>');
         $('#title').fadeIn(fadeS);
         $('#intro').html(text);
         $('#intro').fadeIn(fadeS); 
         $('#p_newgame').show();
-        deletegame();
     });
 
+    function set_object() {
+        $('#object').unbind('mouseenter mouseleave');
+        $('#object').html('<img width="34px" height="34px" src="http://mscoco.org/static/icons/' + object.category_id + '.jpg" /> ' + object.category);
+        $('#object').fadeIn(fadeS);
+        $('#object').hover(function(){
+            clearCanvas(segment_ctx, segment_canvas);
+        },
+        function(){
+            renderSegment(object.segment, scale, segment_ctx);
+        });
+    }
+
+    function set_score() {
+        $('#score').html('score: <h3 style="display:inline">'+score+'</h3>');
+    }
+
     function deletegame() {
-        poly_x = null;
-        poly_y = null;
+        object = null;
         objs = null;
         $('#log').html('');
         $('#log').show();
+        score = 100;
+        set_score();
     }
 
     function hideAll() {
@@ -163,6 +185,7 @@ $(document).ready(function(){
         $('#guess').hide();
         $('#image').hide();
         $('#object').hide();
+        $('#score').hide();
     }
 
     function noPartner() {
@@ -181,12 +204,12 @@ $(document).ready(function(){
 
     function infoBarDown() {
         $('body').animate({
-            paddingTop: "120px"
+            paddingTop: "115px"
         }, 1000);
         $('#info').animate({
-            height: "60px",
+            height: "55px",
             paddingTop: "10px",
-            paddingBottom: "10px" 
+            paddingBottom: "10px"
         }, 1000);
         // $('#left').switchClass("col-sm-9", "col-sm-5", 0, "easeInOutQuad");
         // $('#right').switchClass("col-sm-3", "col-sm-7", 0, "easeInOutQuad");
@@ -194,7 +217,7 @@ $(document).ready(function(){
     }
     function infoBarUp() {
         $('body').animate({
-            paddingTop: "50px"
+            paddingTop: "60px"
         }, 1000);
         $('#info').animate({
             height: "0px",
@@ -203,15 +226,32 @@ $(document).ready(function(){
         }, 1000);
         // $('#left').switchClass("col-sm-5", "col-sm-9", 0, "easeInOutQuad");
         // $('#right').switchClass("col-sm-7", "col-sm-3", 0, "easeInOutQuad");
-
     }
 
     function addAnswer(msg){
-        $('#log').prepend('<div class="well well-sm">' + msg + '</div>');
+        if (msg == 'Yes') {
+            msg = '<span style="color: green">Yes</span>';
+        } else if (msg == 'No') {
+            msg = '<span style="color: red">No</span>';
+        } else {
+            msg = '<span style="color: blue">Not applicable</span>';
+        }
+        if (round % 2 == 0) {
+            $('#q'+round).after('<div class="well well-sm">' + msg + '</div>');
+        } else {
+            $('#q'+round).after('<div class="well well-sm" style="background-color: #fff;">' + msg + '</div>');
+        }
         scrollBottom();
+        round += 1;
     }
     function addQuestion(msg){
-        $('#log').prepend('<div class="well well-sm">' + msg + '</div>');
+        score -= 5;
+        set_score();
+        if (round % 2 == 0) {
+            $('#log').prepend('<div id="q'+round+'" class="well well-sm" style="margin-top: 10px;">' + msg + '</div>');
+        } else {
+            $('#log').prepend('<div id="q'+round+'" class="well well-sm" style="background-color: #fff;margin-top: 10px;">' + msg + '</div>');
+        }
         scrollBottom();
     }
 
@@ -254,17 +294,23 @@ $(document).ready(function(){
         return false;
     });
     $('a#newgame').click(function(event) {
+        hideAll();
+        deletegame();
         $('#p_newgame').hide();
         socket.emit('next');
         return false;
     });
     $('a#ask').click(function(event) {
-        $('#question').hide();
-        $('#waiting').fadeIn(1000);
         var msg = $('#newquestion').val();
-        $('#newquestion').val('');
-        addQuestion(msg);
-        socket.emit('newquestion', msg);
+        if (msg == '' || msg.match(/\S+/g).length < 3) {
+            alert('Please use at least 3 words for a question.');
+        } else {
+            $('#question').hide();
+            $('#waiting').fadeIn(1000);
+            $('#newquestion').val('');
+            addQuestion(msg);
+            socket.emit('newquestion', msg);
+        }
         return false;
     });
     $("#newquestion").keyup(function(event){
@@ -314,7 +360,8 @@ $(document).ready(function(){
             arr = getMousePosition(e);
             var mouseX = arr[0], mouseY = arr[1];
             var id = getObjectFromClick(mouseX, mouseY, objs, scale);
-            if (id != null) {
+            if (id != undefined) {
+                $('canvas#segment').css('cursor', 'default');
                 socket.emit('guess annotation', id);
             }
         }
@@ -338,7 +385,7 @@ $(document).ready(function(){
                 }
             }
         }
-        return null;
+        return undefined;
     }
 
     /* Render single segmentation for oracle */
@@ -378,7 +425,7 @@ $(document).ready(function(){
                 }
             }
         }
-        return null;
+        return undefined;
     }
 
     /* Render all segments for questioner */
@@ -416,7 +463,7 @@ $(document).ready(function(){
                 ctx.stroke();
             }
         }
-        if (k!= undefined) {
+        if (ind != undefined) {
             $('canvas#segment').css('cursor', 'pointer');
         } else {
             $('canvas#segment').css('cursor', 'default');
@@ -457,7 +504,7 @@ $(document).ready(function(){
     }
 
     function scrollBottom() {
-        log.scrollTop = $('#log').offset().top;
+        $('#log').scrollTop(0);
     }
 
     function resizeLog() {

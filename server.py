@@ -47,7 +47,7 @@ def new_question(sid, message):
     #                                     'q',
     #                                     message))
     # conn.commit()
-    sio.emit('newquestion', message,
+    sio.emit('new question', message,
              room=clients_partner[sid], namespace='/game')
 
 
@@ -77,15 +77,22 @@ def guess(sid):
 def guess_annotation(sid, object_id):
     did = clients_did[sid]
     obj_ind = dialogue_obj_ind[did]
-    if dialogue_pic[did].objects[obj_ind].object_id == object_id:
+    selected_obj = dialogue_pic[did].objects[obj_ind]
+    if selected_obj.object_id == object_id:
         sio.emit('correct annotation', {'partner': False},
                  room=sid, namespace='/game')
         sio.emit('correct annotation', {'partner': True},
                  room=clients_partner[sid], namespace='/game')
     else:
-        sio.emit('wrong annotation', {'partner': False},
+        guessed_obj = None
+        for obj in dialogue_pic[did].objects:
+            if obj.object_id == object_id:
+                guessed_obj = obj
+        sio.emit('wrong annotation', {'partner': False,
+                                      'object': selected_obj.to_json()},
                  room=sid, namespace='/game')
-        sio.emit('wrong annotation', {'partner': True},
+        sio.emit('wrong annotation', {'partner': True,
+                                      'object': guessed_obj.to_json()},
                  room=clients_partner[sid], namespace='/game')
     logout([sid, clients_partner[sid]])
 

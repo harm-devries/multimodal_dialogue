@@ -39,7 +39,7 @@ body{
 #no, #na {
 	margin-left: 5px;
 }
-#question, #image, #answer, #guess, #waiting, #object {
+#question, #image, #answer, #guess, #waiting, #object, #score {
 	display: none;
 }
 #log {
@@ -50,7 +50,7 @@ body{
   margin: 0;
   margin-bottom: 3px;
   margin-top: 3px;
-  padding: 3px;
+  padding: 3px 5px 3px 5px;
 }
 hr {
   background-color: #0d2c40;
@@ -65,8 +65,8 @@ h3{
 }
 .loader {
   display: inline-block;
-  width: 30px;
-  height: 30px;
+  width: 34px;
+  height: 34px;
   position: relative;
   border: 4px solid #DDD;
   top: 50%;
@@ -120,5 +120,4 @@ h3{
     height: 0%;
   }
 }
-
 
