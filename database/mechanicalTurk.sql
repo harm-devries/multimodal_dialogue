@@ -63,7 +63,7 @@ SET default_with_oids = false;
 CREATE TABLE answer (
     answer_id integer DEFAULT nextval('answer_seq'::regclass) NOT NULL,
     hit_id integer NOT NULL,
-    exchange_id integer NOT NULL,
+    question_id integer NOT NULL,
     content answer_type NOT NULL
 );
 
@@ -91,7 +91,8 @@ ALTER TABLE dialogue_seq OWNER TO fstrub;
 CREATE TABLE dialogue (
     dialogue_id integer DEFAULT nextval('dialogue_seq'::regclass) NOT NULL,
     picture_id integer NOT NULL,
-    "timestamp" date DEFAULT now() NOT NULL
+    "timestamp" date DEFAULT now() NOT NULL,
+    guess_id integer
 );
 
 
@@ -110,20 +111,6 @@ CREATE SEQUENCE exchange_seq
 
 
 ALTER TABLE exchange_seq OWNER TO fstrub;
-
---
--- Name: exchange; Type: TABLE; Schema: public; Owner: fstrub; Tablespace: 
---
-
-CREATE TABLE exchange (
-    exchange_id integer DEFAULT nextval('exchange_seq'::regclass) NOT NULL,
-    dialogue_id integer NOT NULL,
-    question_id integer NOT NULL,
-    answer_id integer DEFAULT (-1) NOT NULL
-);
-
-
-ALTER TABLE exchange OWNER TO fstrub;
 
 --
 -- Name: hit_seq; Type: SEQUENCE; Schema: public; Owner: fstrub
@@ -145,7 +132,7 @@ ALTER TABLE hit_seq OWNER TO fstrub;
 
 CREATE TABLE hit (
     hit_id integer DEFAULT nextval('hit_seq'::regclass) NOT NULL,
-    worker_id integer NOT NULL,
+    worker_amazon_id integer NOT NULL,
     is_valid boolean DEFAULT false NOT NULL,
     "timestamp" date DEFAULT now() NOT NULL,
     hit_amazon_id integer NOT NULL
@@ -186,25 +173,11 @@ CREATE TABLE object (
 ALTER TABLE object OWNER TO fstrub;
 
 --
--- Name: object_category_seq; Type: SEQUENCE; Schema: public; Owner: fstrub
---
-
-CREATE SEQUENCE object_category_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    MAXVALUE 2147483647
-    CACHE 1;
-
-
-ALTER TABLE object_category_seq OWNER TO fstrub;
-
---
 -- Name: object_category; Type: TABLE; Schema: public; Owner: fstrub; Tablespace: 
 --
 
 CREATE TABLE object_category (
-    category_id numeric DEFAULT nextval('object_category_seq'::regclass) NOT NULL,
+    category_id numeric NOT NULL,
     name character varying(50),
     supercategory_id integer NOT NULL
 );
@@ -243,12 +216,13 @@ ALTER TABLE picture_seq OWNER TO fstrub;
 --
 
 CREATE TABLE picture (
-    picture_id integer DEFAULT nextval('picture_seq'::regclass) NOT NULL,
+    picture_id integer NOT NULL,
     flickr_url text,
     file_name character varying(255),
     height integer,
     width integer,
-    coco_url text NOT NULL
+    coco_url text NOT NULL,
+    serial_id integer DEFAULT nextval('picture_seq'::regclass) NOT NULL
 );
 
 
@@ -275,7 +249,7 @@ ALTER TABLE question_seq OWNER TO fstrub;
 CREATE TABLE question (
     question_id integer DEFAULT nextval('question_seq'::regclass) NOT NULL,
     hit_id integer NOT NULL,
-    exchange_id integer NOT NULL,
+    dialogue_id integer NOT NULL,
     content text
 );
 
@@ -297,22 +271,10 @@ CREATE SEQUENCE worker_seq
 ALTER TABLE worker_seq OWNER TO fstrub;
 
 --
--- Name: worker; Type: TABLE; Schema: public; Owner: fstrub; Tablespace: 
---
-
-CREATE TABLE worker (
-    worker_id integer DEFAULT nextval('worker_seq'::regclass) NOT NULL,
-    worker_amazon_id integer NOT NULL
-);
-
-
-ALTER TABLE worker OWNER TO fstrub;
-
---
 -- Data for Name: answer; Type: TABLE DATA; Schema: public; Owner: fstrub
 --
 
-COPY answer (answer_id, hit_id, exchange_id, content) FROM stdin;
+COPY answer (answer_id, hit_id, question_id, content) FROM stdin;
 \.
 
 
@@ -320,14 +282,14 @@ COPY answer (answer_id, hit_id, exchange_id, content) FROM stdin;
 -- Name: answer_seq; Type: SEQUENCE SET; Schema: public; Owner: fstrub
 --
 
-SELECT pg_catalog.setval('answer_seq', 1, false);
+SELECT pg_catalog.setval('answer_seq', 1, true);
 
 
 --
 -- Data for Name: dialogue; Type: TABLE DATA; Schema: public; Owner: fstrub
 --
 
-COPY dialogue (dialogue_id, picture_id, "timestamp") FROM stdin;
+COPY dialogue (dialogue_id, picture_id, "timestamp", guess_id) FROM stdin;
 \.
 
 
@@ -335,15 +297,7 @@ COPY dialogue (dialogue_id, picture_id, "timestamp") FROM stdin;
 -- Name: dialogue_seq; Type: SEQUENCE SET; Schema: public; Owner: fstrub
 --
 
-SELECT pg_catalog.setval('dialogue_seq', 1, false);
-
-
---
--- Data for Name: exchange; Type: TABLE DATA; Schema: public; Owner: fstrub
---
-
-COPY exchange (exchange_id, dialogue_id, question_id, answer_id) FROM stdin;
-\.
+SELECT pg_catalog.setval('dialogue_seq', 29, true);
 
 
 --
@@ -357,7 +311,7 @@ SELECT pg_catalog.setval('exchange_seq', 1, false);
 -- Data for Name: hit; Type: TABLE DATA; Schema: public; Owner: fstrub
 --
 
-COPY hit (hit_id, worker_id, is_valid, "timestamp", hit_amazon_id) FROM stdin;
+COPY hit (hit_id, worker_amazon_id, is_valid, "timestamp", hit_amazon_id) FROM stdin;
 \.
 
 
@@ -365,7 +319,7 @@ COPY hit (hit_id, worker_id, is_valid, "timestamp", hit_amazon_id) FROM stdin;
 -- Name: hit_seq; Type: SEQUENCE SET; Schema: public; Owner: fstrub
 --
 
-SELECT pg_catalog.setval('hit_seq', 1, false);
+SELECT pg_catalog.setval('hit_seq', 14, true);
 
 
 --
@@ -382,13 +336,6 @@ COPY object (object_id, picture_id, category_id, segment, bbox, is_crowd, area) 
 
 COPY object_category (category_id, name, supercategory_id) FROM stdin;
 \.
-
-
---
--- Name: object_category_seq; Type: SEQUENCE SET; Schema: public; Owner: fstrub
---
-
-SELECT pg_catalog.setval('object_category_seq', 80, true);
 
 
 --
@@ -410,7 +357,7 @@ COPY object_supercategory (supercategory_id, name) FROM stdin;
 -- Data for Name: picture; Type: TABLE DATA; Schema: public; Owner: fstrub
 --
 
-COPY picture (picture_id, flickr_url, file_name, height, width, coco_url) FROM stdin;
+COPY picture (picture_id, flickr_url, file_name, height, width, coco_url, serial_id) FROM stdin;
 \.
 
 
@@ -418,14 +365,14 @@ COPY picture (picture_id, flickr_url, file_name, height, width, coco_url) FROM s
 -- Name: picture_seq; Type: SEQUENCE SET; Schema: public; Owner: fstrub
 --
 
-SELECT pg_catalog.setval('picture_seq', 1, false);
+SELECT pg_catalog.setval('picture_seq', 40504, true);
 
 
 --
 -- Data for Name: question; Type: TABLE DATA; Schema: public; Owner: fstrub
 --
 
-COPY question (question_id, hit_id, exchange_id, content) FROM stdin;
+COPY question (question_id, hit_id, dialogue_id, content) FROM stdin;
 \.
 
 
@@ -433,15 +380,7 @@ COPY question (question_id, hit_id, exchange_id, content) FROM stdin;
 -- Name: question_seq; Type: SEQUENCE SET; Schema: public; Owner: fstrub
 --
 
-SELECT pg_catalog.setval('question_seq', 1, false);
-
-
---
--- Data for Name: worker; Type: TABLE DATA; Schema: public; Owner: fstrub
---
-
-COPY worker (worker_id, worker_amazon_id) FROM stdin;
-\.
+SELECT pg_catalog.setval('question_seq', 2, true);
 
 
 --
@@ -465,14 +404,6 @@ ALTER TABLE ONLY answer
 
 ALTER TABLE ONLY dialogue
     ADD CONSTRAINT "Dialogue_pkey" PRIMARY KEY (dialogue_id);
-
-
---
--- Name: Exchange_pkey; Type: CONSTRAINT; Schema: public; Owner: fstrub; Tablespace: 
---
-
-ALTER TABLE ONLY exchange
-    ADD CONSTRAINT "Exchange_pkey" PRIMARY KEY (exchange_id);
 
 
 --
@@ -524,27 +455,11 @@ ALTER TABLE ONLY question
 
 
 --
--- Name: Worker_pkey; Type: CONSTRAINT; Schema: public; Owner: fstrub; Tablespace: 
+-- Name: answer_question_id_key; Type: CONSTRAINT; Schema: public; Owner: fstrub; Tablespace: 
 --
 
-ALTER TABLE ONLY worker
-    ADD CONSTRAINT "Worker_pkey" PRIMARY KEY (worker_id);
-
-
---
--- Name: Worker_worker_amazon_id_key; Type: CONSTRAINT; Schema: public; Owner: fstrub; Tablespace: 
---
-
-ALTER TABLE ONLY worker
-    ADD CONSTRAINT "Worker_worker_amazon_id_key" UNIQUE (worker_amazon_id);
-
-
---
--- Name: Worker_worker_id_key; Type: CONSTRAINT; Schema: public; Owner: fstrub; Tablespace: 
---
-
-ALTER TABLE ONLY worker
-    ADD CONSTRAINT "Worker_worker_id_key" UNIQUE (worker_id);
+ALTER TABLE ONLY answer
+    ADD CONSTRAINT answer_question_id_key UNIQUE (question_id);
 
 
 --
@@ -556,10 +471,18 @@ ALTER TABLE ONLY object_supercategory
 
 
 --
+-- Name: picture_serial_id_key; Type: CONSTRAINT; Schema: public; Owner: fstrub; Tablespace: 
+--
+
+ALTER TABLE ONLY picture
+    ADD CONSTRAINT picture_serial_id_key UNIQUE (serial_id);
+
+
+--
 -- Name: fki_answer_to_exchange_fkey; Type: INDEX; Schema: public; Owner: fstrub; Tablespace: 
 --
 
-CREATE INDEX fki_answer_to_exchange_fkey ON answer USING btree (exchange_id);
+CREATE INDEX fki_answer_to_exchange_fkey ON answer USING btree (question_id);
 
 
 --
@@ -577,6 +500,13 @@ CREATE INDEX fki_category_to_supercategory_fkey ON object_category USING btree (
 
 
 --
+-- Name: fki_dialogue_to_guess_fkey; Type: INDEX; Schema: public; Owner: fstrub; Tablespace: 
+--
+
+CREATE INDEX fki_dialogue_to_guess_fkey ON dialogue USING btree (guess_id);
+
+
+--
 -- Name: fki_dialogue_to_picture_fkey; Type: INDEX; Schema: public; Owner: fstrub; Tablespace: 
 --
 
@@ -584,31 +514,10 @@ CREATE INDEX fki_dialogue_to_picture_fkey ON dialogue USING btree (picture_id);
 
 
 --
--- Name: fki_exchange_to_answer_fkey; Type: INDEX; Schema: public; Owner: fstrub; Tablespace: 
---
-
-CREATE INDEX fki_exchange_to_answer_fkey ON exchange USING btree (answer_id);
-
-
---
--- Name: fki_exchange_to_dialogue_fkey; Type: INDEX; Schema: public; Owner: fstrub; Tablespace: 
---
-
-CREATE INDEX fki_exchange_to_dialogue_fkey ON exchange USING btree (dialogue_id);
-
-
---
--- Name: fki_exchange_to_question_fkey; Type: INDEX; Schema: public; Owner: fstrub; Tablespace: 
---
-
-CREATE INDEX fki_exchange_to_question_fkey ON exchange USING btree (question_id);
-
-
---
 -- Name: fki_hit_to_worker_fkey; Type: INDEX; Schema: public; Owner: fstrub; Tablespace: 
 --
 
-CREATE INDEX fki_hit_to_worker_fkey ON hit USING btree (worker_id);
+CREATE INDEX fki_hit_to_worker_fkey ON hit USING btree (worker_amazon_id);
 
 
 --
@@ -629,7 +538,7 @@ CREATE INDEX fki_object_to_picture_fkey ON object USING btree (picture_id);
 -- Name: fki_question_to_exchange_fkey; Type: INDEX; Schema: public; Owner: fstrub; Tablespace: 
 --
 
-CREATE INDEX fki_question_to_exchange_fkey ON question USING btree (exchange_id);
+CREATE INDEX fki_question_to_exchange_fkey ON question USING btree (dialogue_id);
 
 
 --
@@ -640,11 +549,10 @@ CREATE INDEX fki_question_to_hit_fkey ON question USING btree (hit_id);
 
 
 --
--- Name: answer_to_exchange_fkey; Type: FK CONSTRAINT; Schema: public; Owner: fstrub
+-- Name: serial_index; Type: INDEX; Schema: public; Owner: fstrub; Tablespace: 
 --
 
-ALTER TABLE ONLY answer
-    ADD CONSTRAINT answer_to_exchange_fkey FOREIGN KEY (exchange_id) REFERENCES exchange(exchange_id) ON UPDATE CASCADE ON DELETE CASCADE;
+CREATE INDEX serial_index ON picture USING btree (serial_id);
 
 
 --
@@ -656,6 +564,14 @@ ALTER TABLE ONLY answer
 
 
 --
+-- Name: answer_to_question_fkey; Type: FK CONSTRAINT; Schema: public; Owner: fstrub
+--
+
+ALTER TABLE ONLY answer
+    ADD CONSTRAINT answer_to_question_fkey FOREIGN KEY (question_id) REFERENCES question(question_id);
+
+
+--
 -- Name: category_to_supercategory_fkey; Type: FK CONSTRAINT; Schema: public; Owner: fstrub
 --
 
@@ -664,43 +580,19 @@ ALTER TABLE ONLY object_category
 
 
 --
+-- Name: dialogue_to_guess_fkey; Type: FK CONSTRAINT; Schema: public; Owner: fstrub
+--
+
+ALTER TABLE ONLY dialogue
+    ADD CONSTRAINT dialogue_to_guess_fkey FOREIGN KEY (guess_id) REFERENCES object(object_id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
 -- Name: dialogue_to_picture_fkey; Type: FK CONSTRAINT; Schema: public; Owner: fstrub
 --
 
 ALTER TABLE ONLY dialogue
     ADD CONSTRAINT dialogue_to_picture_fkey FOREIGN KEY (picture_id) REFERENCES picture(picture_id) ON UPDATE CASCADE ON DELETE CASCADE;
-
-
---
--- Name: exchange_to_answer_fkey; Type: FK CONSTRAINT; Schema: public; Owner: fstrub
---
-
-ALTER TABLE ONLY exchange
-    ADD CONSTRAINT exchange_to_answer_fkey FOREIGN KEY (answer_id) REFERENCES answer(answer_id) ON UPDATE CASCADE ON DELETE CASCADE;
-
-
---
--- Name: exchange_to_dialogue_fkey; Type: FK CONSTRAINT; Schema: public; Owner: fstrub
---
-
-ALTER TABLE ONLY exchange
-    ADD CONSTRAINT exchange_to_dialogue_fkey FOREIGN KEY (dialogue_id) REFERENCES dialogue(dialogue_id) ON UPDATE CASCADE ON DELETE CASCADE;
-
-
---
--- Name: exchange_to_question_fkey; Type: FK CONSTRAINT; Schema: public; Owner: fstrub
---
-
-ALTER TABLE ONLY exchange
-    ADD CONSTRAINT exchange_to_question_fkey FOREIGN KEY (question_id) REFERENCES question(question_id) ON UPDATE CASCADE ON DELETE CASCADE;
-
-
---
--- Name: hit_to_worker_fkey; Type: FK CONSTRAINT; Schema: public; Owner: fstrub
---
-
-ALTER TABLE ONLY hit
-    ADD CONSTRAINT hit_to_worker_fkey FOREIGN KEY (worker_id) REFERENCES worker(worker_id) ON UPDATE CASCADE;
 
 
 --
@@ -717,14 +609,6 @@ ALTER TABLE ONLY object
 
 ALTER TABLE ONLY object
     ADD CONSTRAINT object_to_picture_fkey FOREIGN KEY (picture_id) REFERENCES picture(picture_id) ON UPDATE CASCADE ON DELETE CASCADE;
-
-
---
--- Name: question_to_exchange_fkey; Type: FK CONSTRAINT; Schema: public; Owner: fstrub
---
-
-ALTER TABLE ONLY question
-    ADD CONSTRAINT question_to_exchange_fkey FOREIGN KEY (exchange_id) REFERENCES exchange(exchange_id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
