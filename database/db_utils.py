@@ -63,7 +63,7 @@ class Object():
         obj_dict = {}
         obj_dict['object_id'] = self.object_id
         obj_dict['category_id'] = self.category_id
-        obj_dict['category'] = self.category
+        obj_dict['category'] = self.category[0].upper() + self.category[1:]
         # Numeric to float
         obj_dict['area'] = float(self.area)
         obj_dict['segment'] = self.segment

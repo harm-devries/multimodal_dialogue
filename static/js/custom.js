@@ -1,15 +1,15 @@
 $(document).ready(function(){
     namespace = '/game';
-    var socket = io.connect('https://' + document.domain + ':' + location.port + namespace);
+    var socket = io.connect('http://' + document.domain + ':' + location.port + namespace);
     var image_src; //image url
     var object; // selected object for oracle
+    var correct_obj; // if flag is true, segment will be displayed in green
     var scale; // scale of image compared to original size
     var img_canvas = $('canvas#img')[0];
     var img_ctx = img_canvas.getContext("2d");
     var segment_canvas = $('canvas#segment')[0];
     var segment_ctx = segment_canvas.getContext("2d");
     var objs; // All annotations. Only defined after questioner pressed guess button
-    var no_partner = false;
     var partner_disconnect = false;
     var colors = [[255, 0, 0], [0, 255, 0], [0, 0, 255], [255, 255, 0], [255, 0, 255], 
                   [255, 0, 0], [0, 255, 0], [0, 0, 255], [255, 255, 0], [255, 0, 255], 
@@ -19,28 +19,20 @@ $(document).ready(function(){
                   [255, 0, 0], [0, 255, 0], [0, 0, 255], [255, 255, 0], [255, 0, 255]];
     var fadeS = 600;
     var round = 0;
-    var score = 100;
+    var score = 0;
 
     socket.on('disconnect', function() {
-        hideAll();
+        $('#question').fadeOut(fadeS);
+        $('#answer').fadeOut(fadeS);
         $('#waiting_text').text('Sorry! The server unexpectedly closed the connection. ');
         $('#waiting').show();
     });
     socket.on('partner_disconnect', function() {
-        hideAll();
         partner_disconnect = true;
         deletegame();
-    });
-    socket.on('no partner', function(msg) {
-        no_partner = true;
         noPartner();
-    })
+    });
     socket.on('questioner', function(msg) {
-        if (!no_partner) {
-            noPartner();
-            no_partner = false;
-        }
-
         setTimeout(function(){
             $('#waiting_text').html('We have found a partner! You are the <b>questioner</b>.');
         }, 1000);
@@ -62,11 +54,6 @@ $(document).ready(function(){
         
     })
     socket.on('answerer', function(msg) {
-        if (!no_partner) {
-            noPartner();
-            no_partner = false;
-        }
-
         setTimeout(function(){
             $('#waiting_text').html('We have found a partner! You are the <b>oracle</b>.');
         }, 1000);
@@ -76,6 +63,7 @@ $(document).ready(function(){
             $('#intro').fadeOut(fadeS);
             image_src = msg.img;
             object = msg.object;
+            correct_obj = true;
             $('#image').show();
             renderImage();
             $('#waiting_text').text('Waiting for a new question');
@@ -111,19 +99,27 @@ $(document).ready(function(){
         }
     });
     socket.on('correct annotation', function(msg) {
-        hideAll();
-        $('#guessinput').val(''); 
+        objs = null;
+        object = null;
+        clearCanvas(segment_ctx, segment_canvas);
+        $('#log').hide();
+        $('#object').hide();
+        $('#waiting').hide();
+
+        $('#info').switchClass('default', 'success', 100);
         if (msg.partner) {
-            text = 'Your partner has guessed the correct object. ';
+            text = '<i class="fa fa-check-circle fa-2x"></i> <h3 style="margin-left: 10px; display: inline">Correct!</h3>';
         } else {
-            text = 'You have guessed the correct object.';
+            text = '<i class="fa fa-check-circle fa-2x"></i> <h3 style="margin-left: 10px; display: inline">Correct!</h3>';
         }
-        $('#title').html('<h2>Congratulations!</h2>');
-        $('#title').fadeIn(fadeS);
-        $('#intro').html(text);
+        $('#intro').html('In the winning mood? Play a new game by clicking on the button below. ');
         $('#intro').fadeIn(fadeS); 
+        $('#info_text').html(text); 
+        $('#info_text').fadeIn(fadeS);
         $('#p_newgame').show();
         deletegame();
+        score += 10;
+        set_score();
     });
     socket.on('wrong annotation', function(msg) {
         objs = null;
@@ -131,23 +127,26 @@ $(document).ready(function(){
         clearCanvas(segment_ctx, segment_canvas);
         $('#log').hide();
         $('#waiting').hide();
-        score = 0;
-        set_score();
+
+        // set message
+        $('#info').switchClass('default', 'error', 100);
+        if (msg.partner) {
+            correct_obj = false;
+            text = '<i class="fa fa-times-circle fa-2x"></i> <h3 style="margin-left: 10px; display:inline">Incorrect!</h3> <span style="float:right">Your partner guessed:</span>';
+        } else {
+            text = '<i class="fa fa-times-circle fa-2x"></i> <h3 style="margin-left: 10px; display:inline">Incorrect!</h3> <span style="float: right"> The correct object was:</span>';
+            correct_obj = true;
+        }
+
         // set object
         object = msg.object;
         set_object();
         renderSegment(object.segment, scale, segment_ctx);
 
-        // set message
-        if (msg.partner) {
-            text = 'Your partner has guessed the wrong object. See his/her guess in the image on the right.';
-        } else {
-            text = 'You have guessed the wrong object. The correct object is shown in the image.';
-        }
-        $('#title').html('<h2>Game over!</h2>');
-        $('#title').fadeIn(fadeS);
-        $('#intro').html(text);
-        $('#intro').fadeIn(fadeS); 
+        $('#info_text').html(text); 
+        $('#info_text').fadeIn(fadeS);
+        $('#intro').text('Do you want revenge? Play a new game by clicking on the button below.');
+        $('#intro').fadeIn(fadeS);
         $('#p_newgame').show();
     });
 
@@ -164,7 +163,7 @@ $(document).ready(function(){
     }
 
     function set_score() {
-        $('#score').html('score: <h3 style="display:inline">'+score+'</h3>');
+        $('#score').html('Your score: <h3 style="display:inline; margin: 0">'+score+'</h3>');
     }
 
     function deletegame() {
@@ -172,12 +171,10 @@ $(document).ready(function(){
         objs = null;
         $('#log').html('');
         $('#log').show();
-        score = 100;
-        set_score();
+        clearCanvas(segment_ctx, segment_canvas);
     }
 
     function hideAll() {
-        $('#log').hide();
         $('#intro').hide();
         $('#answer').hide();
         $('#question').hide();
@@ -185,12 +182,14 @@ $(document).ready(function(){
         $('#guess').hide();
         $('#image').hide();
         $('#object').hide();
-        $('#score').hide();
+        $('#info_text').hide();
     }
 
     function noPartner() {
+        hideAll();
         $('#title').fadeOut(fadeS);
         $('#intro').fadeOut(fadeS);
+        $('#p_newgame').fadeOut(fadeS);
         if(partner_disconnect) {
             $('#waiting_text').text('Your partner disconnected. Waiting for a new partner..');
             partner_disconnect = false;
@@ -204,7 +203,7 @@ $(document).ready(function(){
 
     function infoBarDown() {
         $('body').animate({
-            paddingTop: "115px"
+            paddingTop: "110px"
         }, 1000);
         $('#info').animate({
             height: "55px",
@@ -221,8 +220,7 @@ $(document).ready(function(){
         }, 1000);
         $('#info').animate({
             height: "0px",
-            paddingTop: "0px",
-            paddingBottom: "0px" 
+            padding: "0px"
         }, 1000);
         // $('#left').switchClass("col-sm-5", "col-sm-9", 0, "easeInOutQuad");
         // $('#right').switchClass("col-sm-7", "col-sm-3", 0, "easeInOutQuad");
@@ -230,11 +228,11 @@ $(document).ready(function(){
 
     function addAnswer(msg){
         if (msg == 'Yes') {
-            msg = '<span style="color: green">Yes</span>';
+            msg = '<span style="color: #61b832">Yes</span>';
         } else if (msg == 'No') {
-            msg = '<span style="color: red">No</span>';
+            msg = '<span style="color: #de4343">No</span>';
         } else {
-            msg = '<span style="color: blue">Not applicable</span>';
+            msg = '<span style="color: #4ea5cd">Not applicable</span>';
         }
         if (round % 2 == 0) {
             $('#q'+round).after('<div class="well well-sm">' + msg + '</div>');
@@ -245,8 +243,6 @@ $(document).ready(function(){
         round += 1;
     }
     function addQuestion(msg){
-        score -= 5;
-        set_score();
         if (round % 2 == 0) {
             $('#log').prepend('<div id="q'+round+'" class="well well-sm" style="margin-top: 10px;">' + msg + '</div>');
         } else {
@@ -294,9 +290,10 @@ $(document).ready(function(){
         return false;
     });
     $('a#newgame').click(function(event) {
-        hideAll();
         deletegame();
-        $('#p_newgame').hide();
+        $('#info').switchClass('success', 'default', 0);
+        $('#info').switchClass('error', 'default', 0);
+        noPartner();
         socket.emit('next');
         return false;
     });
@@ -391,9 +388,15 @@ $(document).ready(function(){
     /* Render single segmentation for oracle */
     function renderSegment(segment, scale, ctx){
         // set color for each object
-        var r = 255;
-        var g = 0;
-        var b = 0;
+        var r, g, b;
+        if (correct_obj) {
+            r = 0;
+            g = 255;
+        } else {
+            r = 255;
+            g = 0;
+        }
+        b = 0;
         ctx.fillStyle = 'rgba('+r+','+g+','+b+',0.4)';
 
         for (j=0; j<segment.length; j++){

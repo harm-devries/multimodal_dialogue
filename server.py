@@ -142,10 +142,6 @@ def find_partner(sid):
         del clients_waiting[partnerid]
     else:
         clients_waiting[sid] = True
-        sio.emit('no partner',
-                 {},
-                 room=sid,
-                 namespace='/game')
 
 
 @sio.on('connect', namespace='/game')

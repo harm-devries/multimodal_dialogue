@@ -9,7 +9,7 @@
     <meta name="author" content="">
     <link rel="icon" href="../../favicon.ico">
 
-    <title>Visual 20Q</title>
+    <title>GuessWhat?!</title>
 
     <!-- Bootstrap core CSS -->
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
@@ -21,6 +21,7 @@
     <link href="{{ url_for('static', filename='css/jumbotron.css') }}" rel="stylesheet">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.11.3/jquery-ui.min.js"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.6.1/css/font-awesome.min.css">
     <script src="static/js/bootstrap.min.js"></script>
     <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.5/socket.io.min.js"></script>
     <script src="static/js/custom.js"></script>
@@ -40,7 +41,7 @@
   <div class="navbar navbar-default navbar-fixed-top" id="top">
     <div class="container">
       <div class="navbar-header">
-        <a class="navbar-brand" href="/">Visual 20Q</a>
+        <a class="navbar-brand" href="/"><span class="first_part">Guess</span><span class="second_part">What?!</span></a>
       </div>
         <!-- <div class="collapse navbar-collapse">
           <ul class="nav navbar-nav">
@@ -64,10 +65,12 @@
     </div>
   </div>
 
-  <div class="navbar-fixed-top" id="info">
+  <div class="default navbar-fixed-top" id="info">
     <div class="container">
       <div class="row">
         <div class="col-sm-5">
+          <div id ="info_text">
+          </div>
           <div id="waiting">
             <span class="loader"><span class="loader-inner"></span></span><span id="waiting_text"></span>
           </div>
@@ -89,7 +92,7 @@
           </div>
         </div>
         <div class="col-sm-2">
-        <div id="score">Score: <h3 style="display: inline">100</h3></div>
+        <span id="score">Your score: <h3 style="display: inline">0</h3></span>
         </div>
       </div>
     </div>
@@ -101,7 +104,7 @@
     <div class="container">
       <div class="row">
         <div class="col-sm-5" id="left">
-          <div class="page-header" id="title"><h2>The game</h2></div>
+<!--           <div class="page-header" id="title"><h2>The game</h2></div> -->
 
           <p id="intro">You are one click away from starting the multimodal dialogue game, a variant of <a href="https://en.wikipedia.org/wiki/I_spy">I spy with my little eye</a>. It is two-player guessing game where you will be either assigned the <b>spy</b> or <b>questioner</b> role. As a spy you will be assigned an object in a scene, while the questioner can ask yes/no questions to figure out which object that is. Please check out the side bar for for more information about the rules. 
           </p>
