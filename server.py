@@ -102,13 +102,14 @@ def find_partner(sid):
             dialogue = db.start_dialogue()
             clients_dialogue[sid] = dialogue
             clients_dialogue[partnerid] = dialogue
-
+            image_src = ('https://msvocds.blob.core.windows.net/imgs/'
+                         '{}.jpg').format(dialogue.picture.id)
             sio.emit('questioner',
-                     {'img': dialogue.picture.coco_url},
+                     {'img': image_src},
                      room=id,
                      namespace='/game')
             sio.emit('answerer',
-                     {'img': dialogue.picture.coco_url,
+                     {'img': image_src,
                       'object': dialogue.object.to_json()},
                      room=sid,
                      namespace='/game')
@@ -116,13 +117,15 @@ def find_partner(sid):
             dialogue = db.start_dialogue()
             clients_dialogue[sid] = dialogue
             clients_dialogue[partnerid] = dialogue
+            image_src = ('https://msvocds.blob.core.windows.net/imgs/'
+                         '{}.jpg').format(dialogue.picture.id)
             sio.emit('answerer',
-                     {'img': dialogue.picture.coco_url,
+                     {'img': image_src,
                       'object': dialogue.object.to_json()},
                      room=id,
                      namespace='/game')
             sio.emit('questioner',
-                     {'img': dialogue.picture.coco_url},
+                     {'img': image_src},
                      room=sid,
                      namespace='/game')
 
