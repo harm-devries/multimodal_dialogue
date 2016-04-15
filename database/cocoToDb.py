@@ -2,7 +2,7 @@
 import json
 import os
 import sys
-from db_utils import db_connect, parse_postgresurl
+from db_utils import DatabaseHelper
 
 # test
 
@@ -112,9 +112,7 @@ def loadPictures(cur, data):
         sys.exit()
 
 # Postgres url must be in environment variable DATABASE_URL
-database, username, password, hostname, port = parse_postgresurl(
-    os.environ["DATABASE_URL"])
-conn = db_connect(database, username, password, hostname, port)
+conn = DatabaseHelper.from_postgresurl(os.environ['DATABASE_URL']).conn
 cur = conn.cursor()
 
 training_file = '../annotations/instances_train2014.json'
