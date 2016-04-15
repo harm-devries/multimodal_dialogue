@@ -165,7 +165,9 @@ class DatabaseHelper():
 
 
 
-    def start_new_dialogue(self):
+    def start_new_dialogue(self,
+                           oracle_hit_id=None, oracle_worker_id=0,
+                           questioner_hit_id=None, questioner_worker_id=0):
 
         dialogue = None
 
@@ -189,7 +191,9 @@ class DatabaseHelper():
             object_index = randint(0, len(objects)-1)
             object_id = objects[object_index].object_id
 
-            dialogue_id = self.insert_dialogue(picture_id=picture_id, object_id=object_id)
+            dialogue_id = self.insert_dialogue(picture_id=picture_id, object_id=object_id,
+                                               oracle_hit_id=oracle_hit_id, oracle_worker_id=oracle_worker_id,
+                                               questioner_hit_id=questioner_hit_id, questioner_worker_id=questioner_worker_id)
 
             if dialogue_id is not None:
                 dialogue = Dialogue(id=dialogue_id, picture=picture, object=objects[object_index])
@@ -202,17 +206,67 @@ class DatabaseHelper():
 
 
 
-    def insert_dialogue(self,picture_id ,object_id ):
-
+    def insert_worker(self, worker_id):
         try:
+
             curr = self.conn.cursor()
-            curr.execute("INSERT INTO dialogue (picture_id,object_id) VALUES (%s,%s) "
-                         "RETURNING dialogue_id; ",
-                         (picture_id, object_id))
+            curr.execute(" INSERT INTO worker (worker_id) "
+                         "  SELECT %s "
+                         "  WHERE NOT EXISTS (SELECT 1 FROM worker WHERE worker_id=%s);",
+                         (worker_id, worker_id))
 
             self.conn.commit()
 
-            dialogue_id = curr.fetchone()[0]
+        except Exception as e:
+            print "Fail to insert new worker"
+            print e
+
+
+
+    def insert_hit(self, hit_id, worker_id):
+        try:
+
+            curr = self.conn.cursor()
+            curr.execute(" INSERT INTO hit (hit_id, worker_id) VALUES (%s,%s);", (hit_id, worker_id))
+
+            self.conn.commit()
+
+        except Exception as e:
+            print "Fail to insert new hit"
+            print e
+
+
+
+    def insert_dialogue(self, picture_id, object_id,
+                        oracle_hit_id=None, oracle_worker_id=0,
+                        questioner_hit_id=None, questioner_worker_id=0):
+
+        try:
+
+            # Insert oracle
+            if oracle_hit_id is not None and oracle_worker_id > 0:
+                self.insert_worker(worker_id=oracle_worker_id)
+                self.insert_hit(hit_id=oracle_hit_id, worker_id=oracle_worker_id)
+            else:
+                oracle_hit_id = None
+
+            # Insert questioner
+            if questioner_hit_id is not None and questioner_worker_id > 0:
+                self.insert_worker(worker_id=questioner_worker_id)
+                self.insert_hit(hit_id=questioner_hit_id, worker_id=questioner_worker_id)
+            else:
+                questioner_hit_id = None
+
+            # Insert dialogue
+            curr = self.conn.cursor()
+            curr.execute(" INSERT INTO dialogue (picture_id,object_id, oracle_hit_id, questioner_hit_id) "
+                         " VALUES (%s,%s,%s,%s) "
+                         " RETURNING dialogue_id; ",
+                         (picture_id, object_id, oracle_hit_id, questioner_hit_id))
+
+            self.conn.commit()
+
+            dialogue_id, = curr.fetchone()
 
             return dialogue_id
 
@@ -222,22 +276,15 @@ class DatabaseHelper():
 
 
 
-    def insert_question(self, hit_id, dialogue_id, message, worker_id = None):
+    def insert_question(self, dialogue_id, message):
 
         try:
             curr = self.conn.cursor()
 
-            # Create a new hit
-            curr.execute("INSERT INTO hit (hit_amazon_id,worker_amazon_id) VALUES (%s,%s) "
-                         "RETURNING hit_id; ",
-                         (hit_id, worker_id))
-
-            hit_sql_id, = curr.fetchone()
-
             # Append a new question to the dialogue
-            curr.execute("INSERT INTO question (hit_id,dialogue_id,content) VALUES (%s,%s,%s) "
+            curr.execute("INSERT INTO question (dialogue_id,content) VALUES (%s,%s) "
                          "RETURNING question_id; ",
-                         (hit_sql_id, dialogue_id, message))
+                         (dialogue_id, message))
 
             self.conn.commit()
 
@@ -246,33 +293,25 @@ class DatabaseHelper():
             return question_id
 
         except Exception as e:
-            print "Fail to insert new dialogue"
+            print "Fail to insert new question"
             print e
 
 
 
-    def insert_answer(self, hit_id, question_id, message, worker_id = None):
+    def insert_answer(self, question_id, message):
 
         assert message == "Yes" or message == "No" or message == "N/A"
 
         try:
             curr = self.conn.cursor()
 
-            # Create a new hit
-            curr.execute("INSERT INTO hit (hit_amazon_id,worker_amazon_id) VALUES (%s,%s) "
-                         "RETURNING hit_id; ",
-                         (hit_id, worker_id))
-
-            hit_sql_id, = curr.fetchone()
-
-            # Append a new question to the answer
-            curr.execute("INSERT INTO answer (hit_id,question_id,content) VALUES (%s,%s,%s) ",
-                         (hit_sql_id, question_id, message))
+            # Append a new answer to the question
+            curr.execute("INSERT INTO answer (question_id,content) VALUES (%s,%s) ", (question_id, message))
 
             self.conn.commit()
 
         except Exception as e:
-            print "Fail to insert new dialogue"
+            print "Fail to insert new answer"
             print e
 
 
@@ -282,26 +321,25 @@ class DatabaseHelper():
         try:
             curr = self.conn.cursor()
 
-            # Create a new hit
+            # Insert new guess
             curr.execute("INSERT INTO guess (dialogue_id, object_id) VALUES (%s,%s)", (dialogue_id, object_id))
 
             self.conn.commit()
 
         except Exception as e:
-            print "Fail to insert new dialogue"
+            print "Fail to insert new guess"
             print e
 
 
 
 if __name__ == '__main__':
 
-    import os
-    db = DatabaseHelper.from_postgresurl(os.environ['DATABASE_URL'])
+    db = DatabaseHelper(database="testdb", username="fstrub", password="21914218820*I!", hostname="localhost", port="5432")
+    dialogue = db.start_new_dialogue(oracle_hit_id=randint(1, 10000), oracle_worker_id=randint(1, 4),
+                                     questioner_hit_id=randint(1, 10000), questioner_worker_id=randint(1, 4))
 
-    dialogue = db.start_new_dialogue()
-
-    question_id = db.insert_question(hit_id=randint(0, 10000000), worker_id=2, dialogue_id=dialogue.id, message="Is it a car?")
-    db.insert_answer(hit_id = randint(0, 10000000), worker_id=3, question_id=question_id, message="No")
+    question_id = db.insert_question(dialogue_id=dialogue.id, message="Is it a car?")
+    db.insert_answer(question_id=question_id, message="No")
 
     db.insert_guess(dialogue_id=dialogue.id, object_id=7385L)
 
