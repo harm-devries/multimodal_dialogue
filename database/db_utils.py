@@ -1,10 +1,10 @@
 """Helper functions to connect to postgres database."""
+import os
 import psycopg2
 import psycopg2.extras
 import urlparse
 
 from repoze.lru import lru_cache
-
 from random import randint
 
 
@@ -76,6 +76,7 @@ class Object:
 
 
 class Dialogue:
+    """Dialogue wrapper."""
     def __init__(self, id, picture, object):
         self.id = id
         self.picture = picture
@@ -86,7 +87,6 @@ class DatabaseHelper():
     """Database helper for multimodal dialogue project."""
 
     def __init__(self, database, username, password, hostname, port):
-
         """Connect to postgresql database."""
         try:
             self.conn = psycopg2.connect(database=database,
@@ -96,9 +96,7 @@ class DatabaseHelper():
                                          port=port)
         except Exception as e:
             print "Unable to connect to database:"
-            print e.msg
-
-
+            print e
 
     @classmethod
     def from_postgresurl(cls, db_url):
@@ -112,8 +110,6 @@ class DatabaseHelper():
         return cls(url.path[1:], url.username, url.password,
                    url.hostname, url.port)
 
-
-
     def get_picture(self, picture_id):
         """Fetch image by its id."""
 
@@ -121,18 +117,18 @@ class DatabaseHelper():
 
         try:
             cur = self.conn.cursor()
-            cur.execute(' SELECT coco_url FROM picture '
-                        ' WHERE picture_id = %s', [picture_id])
+            cur.execute(" SELECT coco_url FROM picture "
+                        " WHERE picture_id = %s", [picture_id])
 
             coco_url, = cur.fetchone()
 
             cur = self.conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-            cur.execute((' SELECT '
-                         ' o.object_id, o.category_id, c.name, o.segment, '
-                         ' o.area FROM object AS o, object_category AS c '
-                         ' WHERE o.category_id = c.category_id AND '
-                         ' o.picture_id = %s '
-                         ' ORDER BY o.area ASC'), [picture_id])
+            cur.execute((" SELECT "
+                         " o.object_id, o.category_id, c.name, o.segment, "
+                         " o.area FROM object AS o, object_category AS c "
+                         " WHERE o.category_id = c.category_id AND "
+                         " o.picture_id = %s "
+                         " ORDER BY o.area ASC"), [picture_id])
 
             rows = cur.fetchall()
             objects = []
@@ -141,18 +137,18 @@ class DatabaseHelper():
                              row['name'], row['segment'], row['area'])
                 objects.append(obj)
 
-            picture = Picture(picture_id=picture_id, url=coco_url, objects=objects)
+            picture = Picture(picture_id=picture_id, url=coco_url,
+                              objects=objects)
 
         except Exception as e:
-            print "Unable to get annotations"
+            print "Unable to fetch picture"
             print e
 
         return picture
 
-
-
     @lru_cache(maxsize=1)
     def get_max_picture_id(self):
+        """Return max serial_id."""
         try:
             curr = self.conn.cursor()
             curr.execute("SELECT MAX(serial_id) FROM picture;")
@@ -163,12 +159,9 @@ class DatabaseHelper():
             print "Fail to retrieve the number of picture --> abort"
             print e
 
-
-
-    def start_new_dialogue(self,
-                           oracle_hit_id=None, oracle_worker_id=0,
-                           questioner_hit_id=None, questioner_worker_id=0):
-
+    def start_dialogue(self, oracle_hit_id=None, oracle_worker_id=None,
+                       questioner_hit_id=None, questioner_worker_id=None):
+        """Start new dialogue. """
         dialogue = None
 
         # Pick a random picture
@@ -179,90 +172,67 @@ class DatabaseHelper():
         try:
             curr = self.conn.cursor()
 
-            curr.execute("SELECT picture_id FROM picture WHERE serial_id = %s;", [picture_serial_id])
+            curr.execute("SELECT picture_id FROM picture WHERE serial_id = %s",
+                         [picture_serial_id])
 
             picture_id, = curr.fetchone()
 
             # retrieve all id from object rel
-            picture = self.get_picture(picture_id=picture_id)
+            picture = self.get_picture(picture_id)
 
             # randomly picked one object
             objects = picture.objects
             object_index = randint(0, len(objects)-1)
             object_id = objects[object_index].object_id
 
-            dialogue_id = self.insert_dialogue(picture_id=picture_id, object_id=object_id,
-                                               oracle_hit_id=oracle_hit_id, oracle_worker_id=oracle_worker_id,
-                                               questioner_hit_id=questioner_hit_id, questioner_worker_id=questioner_worker_id)
+            dialogue_id = self.insert_dialogue(
+                picture_id=picture_id,
+                object_id=object_id,
+                oracle_hit_id=oracle_hit_id,
+                oracle_worker_id=oracle_worker_id,
+                questioner_hit_id=questioner_hit_id,
+                questioner_worker_id=questioner_worker_id)
 
             if dialogue_id is not None:
-                dialogue = Dialogue(id=dialogue_id, picture=picture, object=objects[object_index])
+                dialogue = Dialogue(id=dialogue_id, picture=picture,
+                                    object=objects[object_index])
 
         except Exception as e:
-            print("Fail to start a new dialogue -> could not find object for picture (serial):" + str(picture_serial_id))
+            print("Fail to start a new dialogue -> could not find object"
+                  "for picture (serial):" + str(picture_serial_id))
             print e
 
         return dialogue
 
-
-
-    def insert_worker(self, worker_id):
-        try:
-
-            curr = self.conn.cursor()
-            curr.execute(" INSERT INTO worker (worker_id) "
-                         "  SELECT %s "
-                         "  WHERE NOT EXISTS (SELECT 1 FROM worker WHERE worker_id=%s);",
-                         (worker_id, worker_id))
-
-            self.conn.commit()
-
-        except Exception as e:
-            print "Fail to insert new worker"
-            print e
-
-
-
-    def insert_hit(self, hit_id, worker_id):
-        try:
-
-            curr = self.conn.cursor()
-            curr.execute(" INSERT INTO hit (hit_id, worker_id) VALUES (%s,%s);", (hit_id, worker_id))
-
-            self.conn.commit()
-
-        except Exception as e:
-            print "Fail to insert new hit"
-            print e
-
-
-
     def insert_dialogue(self, picture_id, object_id,
                         oracle_hit_id=None, oracle_worker_id=0,
                         questioner_hit_id=None, questioner_worker_id=0):
-
         try:
-
             # Insert oracle
             if oracle_hit_id is not None and oracle_worker_id > 0:
                 self.insert_worker(worker_id=oracle_worker_id)
-                self.insert_hit(hit_id=oracle_hit_id, worker_id=oracle_worker_id)
+                self.insert_hit(hit_id=oracle_hit_id,
+                                worker_id=oracle_worker_id)
             else:
                 oracle_hit_id = None
 
             # Insert questioner
             if questioner_hit_id is not None and questioner_worker_id > 0:
                 self.insert_worker(worker_id=questioner_worker_id)
-                self.insert_hit(hit_id=questioner_hit_id, worker_id=questioner_worker_id)
+                self.insert_hit(hit_id=questioner_hit_id,
+                                worker_id=questioner_worker_id)
             else:
                 questioner_hit_id = None
 
+            print(picture_id, object_id, oracle_hit_id, questioner_hit_id)
             # Insert dialogue
             curr = self.conn.cursor()
-            curr.execute(" INSERT INTO dialogue (picture_id,object_id, oracle_hit_id, questioner_hit_id) "
+            curr.execute("INSERT INTO dialogue (picture_id,object_id, "
+                         "oracle_hit_id, questioner_hit_id) "
                          " VALUES (%s,%s,%s,%s) "
                          " RETURNING dialogue_id; ",
-                         (picture_id, object_id, oracle_hit_id, questioner_hit_id))
+                         (picture_id, object_id, oracle_hit_id,
+                          questioner_hit_id))
 
             self.conn.commit()
 
@@ -274,7 +244,32 @@ class DatabaseHelper():
             print "Fail to insert new dialogue"
             print e
 
+    def insert_worker(self, worker_id):
+        try:
+            curr = self.conn.cursor()
+            curr.execute("INSERT INTO worker (worker_id) "
+                         "SELECT %s "
+                         "WHERE NOT EXISTS"
+                         "(SELECT 1 FROM worker WHERE worker_id=%s);",
+                         (worker_id, worker_id))
 
+            self.conn.commit()
+        except Exception as e:
+            print "Fail to insert new worker"
+            print e
+
+    def insert_hit(self, hit_id, worker_id):
+        try:
+
+            curr = self.conn.cursor()
+            curr.execute("INSERT INTO hit (hit_id, worker_id) "
+                         "VALUES (%s,%s);", (hit_id, worker_id))
+
+            self.conn.commit()
+
+        except Exception as e:
+            print "Fail to insert new hit"
+            print e
 
     def insert_question(self, dialogue_id, message):
 
@@ -282,8 +277,8 @@ class DatabaseHelper():
             curr = self.conn.cursor()
 
             # Append a new question to the dialogue
-            curr.execute("INSERT INTO question (dialogue_id,content) VALUES (%s,%s) "
-                         "RETURNING question_id; ",
+            curr.execute("INSERT INTO question (dialogue_id, content) "
+                         "VALUES (%s,%s) RETURNING question_id; ",
                          (dialogue_id, message))
 
             self.conn.commit()
@@ -296,9 +291,7 @@ class DatabaseHelper():
             print "Fail to insert new question"
             print e
 
-
-
-    def insert_answer(self, question_id, message):
+    def insert_answer(self, dialogue_id, message):
 
         assert message == "Yes" or message == "No" or message == "N/A"
 
@@ -306,23 +299,21 @@ class DatabaseHelper():
             curr = self.conn.cursor()
 
             # Append a new answer to the question
-            curr.execute("INSERT INTO answer (question_id,content) VALUES (%s,%s) ", (question_id, message))
-
+            curr.execute("INSERT INTO answer (question_id, content)"
+                         "VALUES (%s,%s) ", (question_id, message))
             self.conn.commit()
 
         except Exception as e:
             print "Fail to insert new answer"
             print e
 
-
-
     def insert_guess(self, dialogue_id, object_id):
-
         try:
             curr = self.conn.cursor()
 
             # Insert new guess
-            curr.execute("INSERT INTO guess (dialogue_id, object_id) VALUES (%s,%s)", (dialogue_id, object_id))
+            curr.execute("INSERT INTO guess (dialogue_id, object_id)"
+                         "VALUES (%s,%s)", (dialogue_id, object_id))
 
             self.conn.commit()
 
@@ -331,20 +322,19 @@ class DatabaseHelper():
             print e
 
 
-
 if __name__ == '__main__':
 
-    db = DatabaseHelper(database="testdb", username="fstrub", password="21914218820*I!", hostname="localhost", port="5432")
-    dialogue = db.start_new_dialogue(oracle_hit_id=randint(1, 10000), oracle_worker_id=randint(1, 4),
-                                     questioner_hit_id=randint(1, 10000), questioner_worker_id=randint(1, 4))
+    # db = DatabaseHelper(database="testdb",
+    #                     username="fstrub",
+    #                     password="21914218820*I!",
+    #                     hostname="localhost",
+    #                     port="5432")
 
-    question_id = db.insert_question(dialogue_id=dialogue.id, message="Is it a car?")
+    db = DatabaseHelper.from_postgresurl(os.environ['DATABASE_URL'])
+
+    dialogue = db.start_dialogue()
+
+    question_id = db.insert_question(dialogue_id=dialogue.id,
+                                     message="Is it a car?")
     db.insert_answer(question_id=question_id, message="No")
-
     db.insert_guess(dialogue_id=dialogue.id, object_id=7385L)
-
-
-
-
-
-

@@ -337,7 +337,7 @@ $(document).ready(function(){
         return false;
     });
     $('a#na').click(function(event) {
-        msg = 'Not applicable'
+        msg = 'N/A'
         addAnswer(msg);
         $('#answer').hide();
         $('#waiting').fadeIn(1000);
