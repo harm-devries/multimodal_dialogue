@@ -131,9 +131,9 @@ SET default_with_oids = false;
 
 CREATE TABLE answer (
     answer_id integer DEFAULT nextval('answer_seq'::regclass) NOT NULL,
-    hit_id integer NOT NULL,
     question_id integer NOT NULL,
-    content answer_type NOT NULL
+    content answer_type NOT NULL,
+    "timestamp" time without time zone DEFAULT now() NOT NULL
 );
 
 
@@ -161,7 +161,9 @@ CREATE TABLE dialogue (
     dialogue_id integer DEFAULT nextval('dialogue_seq'::regclass) NOT NULL,
     picture_id integer NOT NULL,
     "timestamp" timestamp without time zone DEFAULT now() NOT NULL,
-    object_id integer
+    object_id integer,
+    oracle_hit_id integer DEFAULT (-1),
+    questioner_hit_id integer DEFAULT (-1)
 );
 
 
@@ -216,10 +218,9 @@ ALTER TABLE hit_seq OWNER TO fstrub;
 
 CREATE TABLE hit (
     hit_id integer DEFAULT nextval('hit_seq'::regclass) NOT NULL,
-    worker_amazon_id integer NOT NULL,
+    worker_id integer NOT NULL,
     is_valid boolean DEFAULT false NOT NULL,
-    "timestamp" timestamp without time zone DEFAULT now() NOT NULL,
-    hit_amazon_id integer NOT NULL
+    "timestamp" timestamp without time zone DEFAULT now() NOT NULL
 );
 
 
@@ -332,20 +333,31 @@ ALTER TABLE question_seq OWNER TO fstrub;
 
 CREATE TABLE question (
     question_id integer DEFAULT nextval('question_seq'::regclass) NOT NULL,
-    hit_id integer NOT NULL,
     dialogue_id integer NOT NULL,
     content text,
-    "order" integer
+    "order" integer,
+    "timestamp" timestamp without time zone DEFAULT now() NOT NULL
 );
 
 
 ALTER TABLE question OWNER TO fstrub;
 
 --
+-- Name: worker; Type: TABLE; Schema: public; Owner: fstrub; Tablespace: 
+--
+
+CREATE TABLE worker (
+    worker_id integer NOT NULL
+);
+
+
+ALTER TABLE worker OWNER TO fstrub;
+
+--
 -- Data for Name: answer; Type: TABLE DATA; Schema: public; Owner: fstrub
 --
 
-COPY answer (answer_id, hit_id, question_id, content) FROM stdin;
+COPY answer (answer_id, question_id, content, "timestamp") FROM stdin;
 \.
 
 
@@ -360,7 +372,7 @@ SELECT pg_catalog.setval('answer_seq', 1, false);
 -- Data for Name: dialogue; Type: TABLE DATA; Schema: public; Owner: fstrub
 --
 
-COPY dialogue (dialogue_id, picture_id, "timestamp", object_id) FROM stdin;
+COPY dialogue (dialogue_id, picture_id, "timestamp", object_id, oracle_hit_id, questioner_hit_id) FROM stdin;
 \.
 
 
@@ -390,7 +402,7 @@ SELECT pg_catalog.setval('guess_seq', 1, false);
 -- Data for Name: hit; Type: TABLE DATA; Schema: public; Owner: fstrub
 --
 
-COPY hit (hit_id, worker_amazon_id, is_valid, "timestamp", hit_amazon_id) FROM stdin;
+COPY hit (hit_id, worker_id, is_valid, "timestamp") FROM stdin;
 \.
 
 
@@ -451,7 +463,7 @@ SELECT pg_catalog.setval('picture_seq', 1, false);
 -- Data for Name: question; Type: TABLE DATA; Schema: public; Owner: fstrub
 --
 
-COPY question (question_id, hit_id, dialogue_id, content, "order") FROM stdin;
+COPY question (question_id, dialogue_id, content, "order", "timestamp") FROM stdin;
 \.
 
 
@@ -460,6 +472,14 @@ COPY question (question_id, hit_id, dialogue_id, content, "order") FROM stdin;
 --
 
 SELECT pg_catalog.setval('question_seq', 1, false);
+
+
+--
+-- Data for Name: worker; Type: TABLE DATA; Schema: public; Owner: fstrub
+--
+
+COPY worker (worker_id) FROM stdin;
+\.
 
 
 --
@@ -476,14 +496,6 @@ ALTER TABLE ONLY answer
 
 ALTER TABLE ONLY dialogue
     ADD CONSTRAINT "Dialogue_pkey" PRIMARY KEY (dialogue_id);
-
-
---
--- Name: Hit_hit_amazon_id_key; Type: CONSTRAINT; Schema: public; Owner: fstrub; Tablespace: 
---
-
-ALTER TABLE ONLY hit
-    ADD CONSTRAINT "Hit_hit_amazon_id_key" UNIQUE (hit_amazon_id);
 
 
 --
@@ -559,17 +571,18 @@ ALTER TABLE ONLY picture
 
 
 --
+-- Name: worker_pkey; Type: CONSTRAINT; Schema: public; Owner: fstrub; Tablespace: 
+--
+
+ALTER TABLE ONLY worker
+    ADD CONSTRAINT worker_pkey PRIMARY KEY (worker_id);
+
+
+--
 -- Name: fki_answer_to_exchange_fkey; Type: INDEX; Schema: public; Owner: fstrub; Tablespace: 
 --
 
 CREATE INDEX fki_answer_to_exchange_fkey ON answer USING btree (question_id);
-
-
---
--- Name: fki_answer_to_hit; Type: INDEX; Schema: public; Owner: fstrub; Tablespace: 
---
-
-CREATE INDEX fki_answer_to_hit ON answer USING btree (hit_id);
 
 
 --
@@ -611,7 +624,7 @@ CREATE INDEX fki_guess_to_object_fkey ON guess USING btree (object_id);
 -- Name: fki_hit_to_worker_fkey; Type: INDEX; Schema: public; Owner: fstrub; Tablespace: 
 --
 
-CREATE INDEX fki_hit_to_worker_fkey ON hit USING btree (worker_amazon_id);
+CREATE INDEX fki_hit_to_worker_fkey ON hit USING btree (worker_id);
 
 
 --
@@ -629,6 +642,13 @@ CREATE INDEX fki_object_to_picture_fkey ON object USING btree (picture_id);
 
 
 --
+-- Name: fki_oracle_to_worker_fkey; Type: INDEX; Schema: public; Owner: fstrub; Tablespace: 
+--
+
+CREATE INDEX fki_oracle_to_worker_fkey ON dialogue USING btree (oracle_hit_id);
+
+
+--
 -- Name: fki_question_to_exchange_fkey; Type: INDEX; Schema: public; Owner: fstrub; Tablespace: 
 --
 
@@ -636,10 +656,10 @@ CREATE INDEX fki_question_to_exchange_fkey ON question USING btree (dialogue_id)
 
 
 --
--- Name: fki_question_to_hit_fkey; Type: INDEX; Schema: public; Owner: fstrub; Tablespace: 
+-- Name: fki_questioner_to_worker_fkey; Type: INDEX; Schema: public; Owner: fstrub; Tablespace: 
 --
 
-CREATE INDEX fki_question_to_hit_fkey ON question USING btree (hit_id);
+CREATE INDEX fki_questioner_to_worker_fkey ON dialogue USING btree (questioner_hit_id);
 
 
 --
@@ -661,14 +681,6 @@ CREATE TRIGGER guess_order BEFORE INSERT OR UPDATE ON guess FOR EACH ROW EXECUTE
 --
 
 CREATE TRIGGER question_order BEFORE INSERT OR UPDATE ON question FOR EACH ROW EXECUTE PROCEDURE question_order();
-
-
---
--- Name: answer_to_hit_fkey; Type: FK CONSTRAINT; Schema: public; Owner: fstrub
---
-
-ALTER TABLE ONLY answer
-    ADD CONSTRAINT answer_to_hit_fkey FOREIGN KEY (hit_id) REFERENCES hit(hit_id) ON UPDATE CASCADE;
 
 
 --
@@ -720,6 +732,14 @@ ALTER TABLE ONLY guess
 
 
 --
+-- Name: hit_to_worker_fkey; Type: FK CONSTRAINT; Schema: public; Owner: fstrub
+--
+
+ALTER TABLE ONLY hit
+    ADD CONSTRAINT hit_to_worker_fkey FOREIGN KEY (worker_id) REFERENCES worker(worker_id);
+
+
+--
 -- Name: object_to_category_fkey; Type: FK CONSTRAINT; Schema: public; Owner: fstrub
 --
 
@@ -736,6 +756,14 @@ ALTER TABLE ONLY object
 
 
 --
+-- Name: oracle_to_hit_fkey; Type: FK CONSTRAINT; Schema: public; Owner: fstrub
+--
+
+ALTER TABLE ONLY dialogue
+    ADD CONSTRAINT oracle_to_hit_fkey FOREIGN KEY (oracle_hit_id) REFERENCES hit(hit_id);
+
+
+--
 -- Name: question_to_dialogue_fkey; Type: FK CONSTRAINT; Schema: public; Owner: fstrub
 --
 
@@ -744,11 +772,11 @@ ALTER TABLE ONLY question
 
 
 --
--- Name: question_to_hit_fkey; Type: FK CONSTRAINT; Schema: public; Owner: fstrub
+-- Name: questioner_to_hit_fkey; Type: FK CONSTRAINT; Schema: public; Owner: fstrub
 --
 
-ALTER TABLE ONLY question
-    ADD CONSTRAINT question_to_hit_fkey FOREIGN KEY (hit_id) REFERENCES hit(hit_id) ON UPDATE CASCADE;
+ALTER TABLE ONLY dialogue
+    ADD CONSTRAINT questioner_to_hit_fkey FOREIGN KEY (questioner_hit_id) REFERENCES hit(hit_id);
 
 
 --
