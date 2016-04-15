@@ -39,6 +39,75 @@ CREATE TYPE answer_type AS ENUM (
 ALTER TYPE answer_type OWNER TO fstrub;
 
 --
+-- Name: guess_order(); Type: FUNCTION; Schema: public; Owner: fstrub
+--
+
+CREATE FUNCTION guess_order() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+begin
+    new.order:= next_guess(new.dialogue_id);
+    return new;
+end $$;
+
+
+ALTER FUNCTION public.guess_order() OWNER TO fstrub;
+
+--
+-- Name: next_guess(integer); Type: FUNCTION; Schema: public; Owner: fstrub
+--
+
+CREATE FUNCTION next_guess(integer) RETURNS integer
+    LANGUAGE sql
+    AS $_$
+SELECT COALESCE(((SELECT MAX(q.order) FROM guess AS q WHERE q.dialogue_id = $1) +1), 0)  ;
+$_$;
+
+
+ALTER FUNCTION public.next_guess(integer) OWNER TO fstrub;
+
+--
+-- Name: next_order(integer); Type: FUNCTION; Schema: public; Owner: fstrub
+--
+
+CREATE FUNCTION next_order(integer) RETURNS integer
+    LANGUAGE sql
+    AS $_$
+SELECT COALESCE(((SELECT MAX(q.order) FROM question AS q WHERE q.dialogue_id = $1) +1), 0)  ;
+$_$;
+
+
+ALTER FUNCTION public.next_order(integer) OWNER TO fstrub;
+
+--
+-- Name: next_order2(integer); Type: FUNCTION; Schema: public; Owner: fstrub
+--
+
+CREATE FUNCTION next_order2(integer) RETURNS integer
+    LANGUAGE sql
+    AS $_$
+SELECT 1 + (SELECT MAX(q.order) FROM question AS q WHERE q.dialogue_id = $1);
+$_$;
+
+
+ALTER FUNCTION public.next_order2(integer) OWNER TO fstrub;
+
+--
+-- Name: question_order(); Type: FUNCTION; Schema: public; Owner: fstrub
+--
+
+CREATE FUNCTION question_order() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+begin
+    new.order:= next_order(new.dialogue_id);
+    return new;
+end $$;
+
+
+ALTER FUNCTION public.question_order() OWNER TO fstrub;
+
+--
 -- Name: answer_seq; Type: SEQUENCE; Schema: public; Owner: fstrub
 --
 
@@ -91,26 +160,41 @@ ALTER TABLE dialogue_seq OWNER TO fstrub;
 CREATE TABLE dialogue (
     dialogue_id integer DEFAULT nextval('dialogue_seq'::regclass) NOT NULL,
     picture_id integer NOT NULL,
-    "timestamp" date DEFAULT now() NOT NULL,
-    guess_id integer
+    "timestamp" timestamp without time zone DEFAULT now() NOT NULL,
+    object_id integer
 );
 
 
 ALTER TABLE dialogue OWNER TO fstrub;
 
 --
--- Name: exchange_seq; Type: SEQUENCE; Schema: public; Owner: fstrub
+-- Name: guess_seq; Type: SEQUENCE; Schema: public; Owner: fstrub
 --
 
-CREATE SEQUENCE exchange_seq
+CREATE SEQUENCE guess_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
-    MAXVALUE 2147483647
+    NO MAXVALUE
     CACHE 1;
 
 
-ALTER TABLE exchange_seq OWNER TO fstrub;
+ALTER TABLE guess_seq OWNER TO fstrub;
+
+--
+-- Name: guess; Type: TABLE; Schema: public; Owner: fstrub; Tablespace: 
+--
+
+CREATE TABLE guess (
+    guess_id integer DEFAULT nextval('guess_seq'::regclass) NOT NULL,
+    "order" integer NOT NULL,
+    object_id integer NOT NULL,
+    "timestamp" timestamp without time zone DEFAULT now(),
+    dialogue_id integer NOT NULL
+);
+
+
+ALTER TABLE guess OWNER TO fstrub;
 
 --
 -- Name: hit_seq; Type: SEQUENCE; Schema: public; Owner: fstrub
@@ -134,7 +218,7 @@ CREATE TABLE hit (
     hit_id integer DEFAULT nextval('hit_seq'::regclass) NOT NULL,
     worker_amazon_id integer NOT NULL,
     is_valid boolean DEFAULT false NOT NULL,
-    "timestamp" date DEFAULT now() NOT NULL,
+    "timestamp" timestamp without time zone DEFAULT now() NOT NULL,
     hit_amazon_id integer NOT NULL
 );
 
@@ -250,25 +334,12 @@ CREATE TABLE question (
     question_id integer DEFAULT nextval('question_seq'::regclass) NOT NULL,
     hit_id integer NOT NULL,
     dialogue_id integer NOT NULL,
-    content text
+    content text,
+    "order" integer
 );
 
 
 ALTER TABLE question OWNER TO fstrub;
-
---
--- Name: worker_seq; Type: SEQUENCE; Schema: public; Owner: fstrub
---
-
-CREATE SEQUENCE worker_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    MAXVALUE 2147483647
-    CACHE 1;
-
-
-ALTER TABLE worker_seq OWNER TO fstrub;
 
 --
 -- Data for Name: answer; Type: TABLE DATA; Schema: public; Owner: fstrub
@@ -282,14 +353,14 @@ COPY answer (answer_id, hit_id, question_id, content) FROM stdin;
 -- Name: answer_seq; Type: SEQUENCE SET; Schema: public; Owner: fstrub
 --
 
-SELECT pg_catalog.setval('answer_seq', 1, true);
+SELECT pg_catalog.setval('answer_seq', 1, false);
 
 
 --
 -- Data for Name: dialogue; Type: TABLE DATA; Schema: public; Owner: fstrub
 --
 
-COPY dialogue (dialogue_id, picture_id, "timestamp", guess_id) FROM stdin;
+COPY dialogue (dialogue_id, picture_id, "timestamp", object_id) FROM stdin;
 \.
 
 
@@ -297,14 +368,22 @@ COPY dialogue (dialogue_id, picture_id, "timestamp", guess_id) FROM stdin;
 -- Name: dialogue_seq; Type: SEQUENCE SET; Schema: public; Owner: fstrub
 --
 
-SELECT pg_catalog.setval('dialogue_seq', 29, true);
+SELECT pg_catalog.setval('dialogue_seq', 1, false);
 
 
 --
--- Name: exchange_seq; Type: SEQUENCE SET; Schema: public; Owner: fstrub
+-- Data for Name: guess; Type: TABLE DATA; Schema: public; Owner: fstrub
 --
 
-SELECT pg_catalog.setval('exchange_seq', 1, false);
+COPY guess (guess_id, "order", object_id, "timestamp", dialogue_id) FROM stdin;
+\.
+
+
+--
+-- Name: guess_seq; Type: SEQUENCE SET; Schema: public; Owner: fstrub
+--
+
+SELECT pg_catalog.setval('guess_seq', 1, false);
 
 
 --
@@ -319,7 +398,7 @@ COPY hit (hit_id, worker_amazon_id, is_valid, "timestamp", hit_amazon_id) FROM s
 -- Name: hit_seq; Type: SEQUENCE SET; Schema: public; Owner: fstrub
 --
 
-SELECT pg_catalog.setval('hit_seq', 14, true);
+SELECT pg_catalog.setval('hit_seq', 1, false);
 
 
 --
@@ -365,14 +444,14 @@ COPY picture (picture_id, flickr_url, file_name, height, width, coco_url, serial
 -- Name: picture_seq; Type: SEQUENCE SET; Schema: public; Owner: fstrub
 --
 
-SELECT pg_catalog.setval('picture_seq', 40504, true);
+SELECT pg_catalog.setval('picture_seq', 1, false);
 
 
 --
 -- Data for Name: question; Type: TABLE DATA; Schema: public; Owner: fstrub
 --
 
-COPY question (question_id, hit_id, dialogue_id, content) FROM stdin;
+COPY question (question_id, hit_id, dialogue_id, content, "order") FROM stdin;
 \.
 
 
@@ -380,14 +459,7 @@ COPY question (question_id, hit_id, dialogue_id, content) FROM stdin;
 -- Name: question_seq; Type: SEQUENCE SET; Schema: public; Owner: fstrub
 --
 
-SELECT pg_catalog.setval('question_seq', 2, true);
-
-
---
--- Name: worker_seq; Type: SEQUENCE SET; Schema: public; Owner: fstrub
---
-
-SELECT pg_catalog.setval('worker_seq', 1, false);
+SELECT pg_catalog.setval('question_seq', 1, false);
 
 
 --
@@ -463,6 +535,14 @@ ALTER TABLE ONLY answer
 
 
 --
+-- Name: guess_pkey; Type: CONSTRAINT; Schema: public; Owner: fstrub; Tablespace: 
+--
+
+ALTER TABLE ONLY guess
+    ADD CONSTRAINT guess_pkey PRIMARY KEY (guess_id);
+
+
+--
 -- Name: object_supercategory_pkey; Type: CONSTRAINT; Schema: public; Owner: fstrub; Tablespace: 
 --
 
@@ -503,7 +583,7 @@ CREATE INDEX fki_category_to_supercategory_fkey ON object_category USING btree (
 -- Name: fki_dialogue_to_guess_fkey; Type: INDEX; Schema: public; Owner: fstrub; Tablespace: 
 --
 
-CREATE INDEX fki_dialogue_to_guess_fkey ON dialogue USING btree (guess_id);
+CREATE INDEX fki_dialogue_to_guess_fkey ON dialogue USING btree (object_id);
 
 
 --
@@ -511,6 +591,20 @@ CREATE INDEX fki_dialogue_to_guess_fkey ON dialogue USING btree (guess_id);
 --
 
 CREATE INDEX fki_dialogue_to_picture_fkey ON dialogue USING btree (picture_id);
+
+
+--
+-- Name: fki_guess_to_dialogue_fkey; Type: INDEX; Schema: public; Owner: fstrub; Tablespace: 
+--
+
+CREATE INDEX fki_guess_to_dialogue_fkey ON guess USING btree (dialogue_id);
+
+
+--
+-- Name: fki_guess_to_object_fkey; Type: INDEX; Schema: public; Owner: fstrub; Tablespace: 
+--
+
+CREATE INDEX fki_guess_to_object_fkey ON guess USING btree (object_id);
 
 
 --
@@ -556,6 +650,20 @@ CREATE INDEX serial_index ON picture USING btree (serial_id);
 
 
 --
+-- Name: guess_order; Type: TRIGGER; Schema: public; Owner: fstrub
+--
+
+CREATE TRIGGER guess_order BEFORE INSERT OR UPDATE ON guess FOR EACH ROW EXECUTE PROCEDURE guess_order();
+
+
+--
+-- Name: question_order; Type: TRIGGER; Schema: public; Owner: fstrub
+--
+
+CREATE TRIGGER question_order BEFORE INSERT OR UPDATE ON question FOR EACH ROW EXECUTE PROCEDURE question_order();
+
+
+--
 -- Name: answer_to_hit_fkey; Type: FK CONSTRAINT; Schema: public; Owner: fstrub
 --
 
@@ -584,7 +692,7 @@ ALTER TABLE ONLY object_category
 --
 
 ALTER TABLE ONLY dialogue
-    ADD CONSTRAINT dialogue_to_guess_fkey FOREIGN KEY (guess_id) REFERENCES object(object_id) ON UPDATE CASCADE ON DELETE CASCADE;
+    ADD CONSTRAINT dialogue_to_guess_fkey FOREIGN KEY (object_id) REFERENCES object(object_id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -593,6 +701,22 @@ ALTER TABLE ONLY dialogue
 
 ALTER TABLE ONLY dialogue
     ADD CONSTRAINT dialogue_to_picture_fkey FOREIGN KEY (picture_id) REFERENCES picture(picture_id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: guess_to_dialogue_fkey; Type: FK CONSTRAINT; Schema: public; Owner: fstrub
+--
+
+ALTER TABLE ONLY guess
+    ADD CONSTRAINT guess_to_dialogue_fkey FOREIGN KEY (dialogue_id) REFERENCES dialogue(dialogue_id);
+
+
+--
+-- Name: guess_to_object_fkey; Type: FK CONSTRAINT; Schema: public; Owner: fstrub
+--
+
+ALTER TABLE ONLY guess
+    ADD CONSTRAINT guess_to_object_fkey FOREIGN KEY (object_id) REFERENCES object(object_id);
 
 
 --
@@ -609,6 +733,14 @@ ALTER TABLE ONLY object
 
 ALTER TABLE ONLY object
     ADD CONSTRAINT object_to_picture_fkey FOREIGN KEY (picture_id) REFERENCES picture(picture_id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: question_to_dialogue_fkey; Type: FK CONSTRAINT; Schema: public; Owner: fstrub
+--
+
+ALTER TABLE ONLY question
+    ADD CONSTRAINT question_to_dialogue_fkey FOREIGN KEY (dialogue_id) REFERENCES dialogue(dialogue_id);
 
 
 --
