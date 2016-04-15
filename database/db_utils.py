@@ -8,11 +8,11 @@ from repoze.lru import lru_cache
 from random import randint
 
 
-class Picture():
+class Picture:
     """A picture object."""
 
-    def __init__(self, picture_id = None, url = None, objects = []):
-        self.id = id
+    def __init__(self, picture_id, url, objects):
+        self.id = picture_id
         self.coco_url = url
         self.objects = objects
 
@@ -25,12 +25,10 @@ class Picture():
         return pic_dict
 
 
-
-
-class Object():
+class Object:
     """Object wrapper"""
 
-    def __init__(self, object_id = None, category_id = None, category = None, segment = None, area = None):
+    def __init__(self, object_id, category_id, category, segment, area ):
         self.object_id = object_id
         self.category_id = category_id
         self.category = category
@@ -77,16 +75,11 @@ class Object():
         return obj_dict
 
 
-class Dialogue():
-    def __init__(self, id = None, picture = None, object = None):
-        assert id and picture and object
-        self.id      = id
+class Dialogue:
+    def __init__(self, id, picture, object):
+        self.id = id
         self.picture = picture
-        self.object  = object
-
-
-
-
+        self.object = object
 
 
 class DatabaseHelper():
@@ -107,7 +100,6 @@ class DatabaseHelper():
 
 
 
-
     @classmethod
     def from_postgresurl(cls, db_url):
         """Return DatabaseHelper from postgresurl.
@@ -121,85 +113,41 @@ class DatabaseHelper():
                    url.hostname, url.port)
 
 
-###### WARNING this function does not work (category name is ignored) -> cf get_picture_for_dialogue
-    # def get_picture(self, id):
-    #     """Fetch image by its id."""
-    #     try:
-    #         cur = self.conn.cursor()
-    #         cur.execute('SELECT coco_url FROM picture '
-    #                     'WHERE picture_id = %s', [id])
-    #         if cur.rowcount == 0:
-    #             return None
-    #         coco_url, = cur.fetchone()
-    #         cur.close()
-    #     except Exception as e:
-    #         print "Unable to get image url from picture id"
-    #         print e
-    #     try:
-    #         cur = self.conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-    #         cur.execute(('SELECT '
-    #                      'o.object_id, o.category_id, c.name, o.segment, '
-    #                      'o.area FROM object AS o, object_category AS c '
-    #                      'WHERE o.category_id = c.category_id AND '
-    #                      'o.picture_id = %s '
-    #                      'ORDER BY o.area ASC'), [id])
-    #         rows = cur.fetchall()
-    #         objs = []
-    #         for row in rows:
-    #             obj = Object(row['object_id'], row['category_id'],
-    #                          row['name'], row['segment'], row['area'])
-    #             objs.append(obj)
-    #
-    #     except Exception as e:
-    #         print "Unable to get annotations"
-    #         print e
-    #
-    #
-    #     return pic
 
-
-
-
-    def get_picture_for_dialogue(self, dialogue_id = None, picture_id = None, object_id = None):
+    def get_picture(self, picture_id):
         """Fetch image by its id."""
 
-        assert dialogue_id and picture_id and object_id
-
-        dialogue = None
+        picture = None
 
         try:
             cur = self.conn.cursor()
+            cur.execute(' SELECT coco_url FROM picture '
+                        ' WHERE picture_id = %s', [picture_id])
 
-            cur.execute(' SELECT '
-                        ' p.coco_url,'                     #picture info
-                        ' o.object_id, o.segment, o.area,'  #object info
-                        ' c.category_id, c.name'          #category info
-                        ' FROM picture p'
-                        '   INNER JOIN  '
-                        '      (SELECT * FROM object WHERE picture_id =  %s) o'
-                        '   ON p.picture_id = o.picture_id'
-                        '   INNER JOIN '
-                        '      object_category c '
-                        '   ON c.category_id = o.category_id'
-                        ' WHERE o.object_id = %s' , (picture_id, object_id))
+            coco_url, = cur.fetchone()
 
+            cur = self.conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+            cur.execute((' SELECT '
+                         ' o.object_id, o.category_id, c.name, o.segment, '
+                         ' o.area FROM object AS o, object_category AS c '
+                         ' WHERE o.category_id = c.category_id AND '
+                         ' o.picture_id = %s '
+                         ' ORDER BY o.area ASC'), [picture_id])
 
-            if cur.rowcount == 0: return None
+            rows = cur.fetchall()
+            objects = []
+            for row in rows:
+                obj = Object(row['object_id'], row['category_id'],
+                             row['name'], row['segment'], row['area'])
+                objects.append(obj)
 
-            row = cur.fetchone()
-
-
-            picture = Picture(picture_id = id, url = row[0])
-            object = Object(object_id = row[1], segment = row[2], area = float(row[3]), category_id = int(row[4]),category = row[5])
-
-            dialogue = Dialogue(id = dialogue_id, picture = picture, object = object)
+            picture = Picture(picture_id=picture_id, url=coco_url, objects=objects)
 
         except Exception as e:
-            print "Unable to get information for dialogue"
+            print "Unable to get annotations"
             print e
 
-        return dialogue
-
+        return picture
 
 
 
@@ -217,7 +165,6 @@ class DatabaseHelper():
 
 
 
-
     def start_new_dialogue(self):
 
         dialogue = None
@@ -232,20 +179,20 @@ class DatabaseHelper():
 
             curr.execute("SELECT picture_id FROM picture WHERE serial_id = %s;", [picture_serial_id])
 
-            picture_id = curr.fetchone()[0]
+            picture_id, = curr.fetchone()
 
-            #retrieve all id from object rel
-            curr.execute("SELECT object_id FROM object WHERE picture_id = %s;", [picture_id])
-            objects = curr.fetchall()
+            # retrieve all id from object rel
+            picture = self.get_picture(picture_id=picture_id)
 
-            #randomly picked one id (there are not contiguous)
-            object_id = long(objects[randint(0, curr.rowcount)-1][0])
+            # randomly picked one object
+            objects = picture.objects
+            object_index = randint(0, len(objects)-1)
+            object_id = objects[object_index].object_id
 
-
-            dialogue_id = self.insert_dialogue(picture_id = picture_id, object_id = object_id)
+            dialogue_id = self.insert_dialogue(picture_id=picture_id, object_id=object_id)
 
             if dialogue_id is not None:
-                dialogue = self.get_picture_for_dialogue(dialogue_id, picture_id, object_id)
+                dialogue = Dialogue(id=dialogue_id, picture=picture, object=objects[object_index])
 
         except Exception as e:
             print("Fail to start a new dialogue -> could not find object for picture (serial):" + str(picture_serial_id))
@@ -255,16 +202,13 @@ class DatabaseHelper():
 
 
 
-
-    def insert_dialogue(self, picture_id = None, object_id = None):
-
-        assert picture_id and object_id
+    def insert_dialogue(self,picture_id ,object_id ):
 
         try:
             curr = self.conn.cursor()
-            curr.execute(   "INSERT INTO dialogue (picture_id,guess_id) VALUES (%s,%s) "
-                            "RETURNING dialogue_id; ",
-                            (picture_id, object_id))
+            curr.execute("INSERT INTO dialogue (picture_id,object_id) VALUES (%s,%s) "
+                         "RETURNING dialogue_id; ",
+                         (picture_id, object_id))
 
             self.conn.commit()
 
@@ -272,36 +216,32 @@ class DatabaseHelper():
 
             return dialogue_id
 
-
         except Exception as e:
             print "Fail to insert new dialogue"
             print e
 
 
 
-    def insert_question(self, hit_id = None, worker_id = None, dialogue_id = None, message = None):
-
-        assert hit_id and dialogue_id and message
+    def insert_question(self, hit_id, dialogue_id, message, worker_id = None):
 
         try:
             curr = self.conn.cursor()
 
-            #Create a new hit
-            curr.execute(   "INSERT INTO hit (hit_amazon_id,worker_amazon_id) VALUES (%s,%s) "
-                            "RETURNING hit_id; ",
-                            (hit_id, worker_id))
+            # Create a new hit
+            curr.execute("INSERT INTO hit (hit_amazon_id,worker_amazon_id) VALUES (%s,%s) "
+                         "RETURNING hit_id; ",
+                         (hit_id, worker_id))
 
-            hit_sql_id = curr.fetchone()[0]
+            hit_sql_id, = curr.fetchone()
 
-
-            #Append a new question to the dialogue
-            curr.execute(   "INSERT INTO question (hit_id,dialogue_id,content) VALUES (%s,%s,%s) "
-                            "RETURNING question_id; ",
-                            (hit_sql_id, dialogue_id, message))
+            # Append a new question to the dialogue
+            curr.execute("INSERT INTO question (hit_id,dialogue_id,content) VALUES (%s,%s,%s) "
+                         "RETURNING question_id; ",
+                         (hit_sql_id, dialogue_id, message))
 
             self.conn.commit()
 
-            question_id = curr.fetchone()[0]
+            question_id, = curr.fetchone()
 
             return question_id
 
@@ -310,25 +250,24 @@ class DatabaseHelper():
             print e
 
 
-    def insert_answer(self, hit_id = None, worker_id = None, question_id = None, message = None):
 
-        assert hit_id and question_id and message
+    def insert_answer(self, hit_id, question_id, message, worker_id = None):
+
         assert message == "Yes" or message == "No" or message == "N/A"
 
         try:
             curr = self.conn.cursor()
 
-            #Create a new hit
-            curr.execute(   "INSERT INTO hit (hit_amazon_id,worker_amazon_id) VALUES (%s,%s) "
-                            "RETURNING hit_id; ",
-                            (hit_id, worker_id))
+            # Create a new hit
+            curr.execute("INSERT INTO hit (hit_amazon_id,worker_amazon_id) VALUES (%s,%s) "
+                         "RETURNING hit_id; ",
+                         (hit_id, worker_id))
 
-            hit_sql_id = curr.fetchone()[0]
+            hit_sql_id, = curr.fetchone()
 
-
-            #Append a new question to the answer
-            curr.execute(   "INSERT INTO answer (hit_id,question_id,content) VALUES (%s,%s,%s) ",
-                            (hit_sql_id, question_id, message))
+            # Append a new question to the answer
+            curr.execute("INSERT INTO answer (hit_id,question_id,content) VALUES (%s,%s,%s) ",
+                         (hit_sql_id, question_id, message))
 
             self.conn.commit()
 
@@ -337,16 +276,34 @@ class DatabaseHelper():
             print e
 
 
+
+    def insert_guess(self, dialogue_id, object_id):
+
+        try:
+            curr = self.conn.cursor()
+
+            # Create a new hit
+            curr.execute("INSERT INTO guess (dialogue_id, object_id) VALUES (%s,%s)", (dialogue_id, object_id))
+
+            self.conn.commit()
+
+        except Exception as e:
+            print "Fail to insert new dialogue"
+            print e
+
+
+
 if __name__ == '__main__':
 
     import os
     db = DatabaseHelper.from_postgresurl(os.environ['DATABASE_URL'])
 
-
     dialogue = db.start_new_dialogue()
 
-    question_id = db.insert_question(hit_id = randint(0, 10000000), worker_id = 2, dialogue_id = dialogue.id, message = "Is it a car?")
-    db.insert_answer(hit_id = randint(0, 10000000), worker_id = 3, question_id = question_id, message = "No")
+    question_id = db.insert_question(hit_id=randint(0, 10000000), worker_id=2, dialogue_id=dialogue.id, message="Is it a car?")
+    db.insert_answer(hit_id = randint(0, 10000000), worker_id=3, question_id=question_id, message="No")
+
+    db.insert_guess(dialogue_id=dialogue.id, object_id=7385L)
 
 
 
