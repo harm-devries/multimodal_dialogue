@@ -23,8 +23,8 @@ clients_partner = {}  # Socketid of client's partner
 clients_dialogue = {}  # Dialogue client is involved in
 
 """ Database connection """
-print os.environ['DATABASE_URL']
-db = DatabaseHelper.from_postgresurl(os.environ['DATABASE_URL'])
+db = DatabaseHelper.from_postgresurl(
+    os.environ['HEROKU_POSTGRESQL_SILVER_URL'])
 
 
 @app.route('/')
@@ -40,7 +40,7 @@ def game():
 @sio.on('newquestion', namespace='/game')
 def new_question(sid, message):
     dialogue = clients_dialogue[sid]
-    dialogue.last_question_id = db.insert_answer(dialogue.id, message)
+    dialogue.last_question_id = db.insert_question(dialogue.id, message)
     sio.emit('new question', message,
              room=clients_partner[sid], namespace='/game')
 

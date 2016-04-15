@@ -292,7 +292,6 @@ class DatabaseHelper():
             print e
 
     def insert_answer(self, dialogue_id, message):
-
         assert message == "Yes" or message == "No" or message == "N/A"
 
         try:
@@ -330,7 +329,8 @@ if __name__ == '__main__':
     #                     hostname="localhost",
     #                     port="5432")
 
-    db = DatabaseHelper.from_postgresurl(os.environ['DATABASE_URL'])
+    db = DatabaseHelper.from_postgresurl(
+        os.environ['HEROKU_POSTGRESQL_SILVER_URL'])
 
     dialogue = db.start_dialogue()
 

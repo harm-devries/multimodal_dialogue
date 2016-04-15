@@ -1,6 +1,5 @@
 html, body {
   height: 100%;
-  font-weight: 500;
   color: #0d2c40;
 }
 body{
@@ -10,6 +9,7 @@ body{
   top:50px;
   height: 0;
   border-bottom: 1px solid #DDD;
+  font-weight: 500;
   /*padding-top: 10px;
   padding-bottom: 10px;*/
 }
@@ -75,10 +75,6 @@ hr {
   border-color: #0d2c40;
   margin-bottom: 5px;
   margin-top: 5px;
-}
-h3{
-	margin: 0;
-  font-size: 140%;
 }
 .loader {
   display: inline-block;
