@@ -8,6 +8,9 @@ from repoze.lru import lru_cache
 from random import randint
 
 
+global MIN_AREA
+MIN_AREA = 50
+
 class Picture:
     """A picture object."""
 
@@ -123,12 +126,13 @@ class DatabaseHelper():
             coco_url, = cur.fetchone()
 
             cur = self.conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-            cur.execute((" SELECT "
-                         " o.object_id, o.category_id, c.name, o.segment, "
-                         " o.area FROM object AS o, object_category AS c "
-                         " WHERE o.category_id = c.category_id AND "
-                         " o.picture_id = %s "
-                         " ORDER BY o.area ASC"), [picture_id])
+
+            cur.execute((' SELECT '
+                         ' o.object_id, o.category_id, c.name, o.segment, '
+                         ' o.area FROM object AS o, object_category AS c '
+                         ' WHERE o.category_id = c.category_id AND '
+                         ' o.picture_id = %s AND o.area > %s '
+                         ' ORDER BY o.area ASC'), [picture_id, MIN_AREA])
 
             rows = cur.fetchall()
             objects = []
