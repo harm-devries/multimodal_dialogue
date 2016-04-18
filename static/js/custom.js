@@ -66,6 +66,12 @@ $(document).ready(function(){
             correct_obj = true;
             $('#image').show();
             renderImage();
+            $('#image').hover(function(){
+               clearCanvas(segment_ctx, segment_canvas);
+            },
+            function(){
+               renderSegment(object.segment, scale, segment_ctx);
+            });
             $('#waiting_text').text('Waiting for a new question');
             $('#waiting').fadeIn(fadeS);
             set_object();
