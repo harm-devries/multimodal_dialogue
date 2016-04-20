@@ -72,21 +72,28 @@
           <div id ="info_text">
           </div>
           <div id="waiting">
-            <span class="loader"><span class="loader-inner"></span></span><span id="waiting_text"></span>
+            <div class="row">
+              <div class="col-sm-1" id="w_time"></div>
+              <div class="col-sm-10"><span class="loader"><span class="loader-inner"></span></span><span id="waiting_text"></span></div>
+            </div>
           </div>
           <div id="question">
             <div class="row">
-              <div class="col-sm-10"><input autocomplete="off" type="text" id="newquestion" placeholder="Ask a new question" class="form-control"></div>
+              <div class="col-sm-1" id="q_time"></div>
+              <div class="col-sm-9"><input autocomplete="off" type="text" id="newquestion" placeholder="Ask a new question" class="form-control"></div>
               <div clas="col-sm-1"><a class="btn btn-success" id="ask" type="submit">Ask</a></div>
             </div>
           </div>
           <div id="answer">
-            <a id="yes" class="btn btn-success">Yes</a> <a id="no" class="btn btn-danger">No</a> <a id="na" class="btn btn-info">Not applicable</a>
+            <div class="row">
+              <div class="col-sm-1" id="a_time"></div>
+              <div class="col-sm-11"><a id="yes" class="btn btn-success">Yes</a> <a id="no" class="btn btn-danger">No</a> <a id="na" class="btn btn-info">Not applicable</a></div>
+            </div>
           </div>
         </div>
         <div class="col-sm-5">
           <div id="guess">
-            <a class="btn btn-primary" id="guessbtn">Guess the object/person!</a>
+            <a class="btn btn-primary" id="guessbtn">GuessWhat!</a>
           </div>
           <div id="object">
           </div>

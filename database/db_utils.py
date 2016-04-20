@@ -295,7 +295,7 @@ class DatabaseHelper():
             print "Fail to insert new question"
             print e
 
-    def insert_answer(self, dialogue_id, message):
+    def insert_answer(self, question_id, message):
         assert message == "Yes" or message == "No" or message == "N/A"
 
         try:

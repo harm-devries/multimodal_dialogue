@@ -149,4 +149,15 @@ hr {
 #p_newgame{
   margin-top: 30px;
 }
+#q_time, #a_time, #w_time, #g_time {
+  line-height: 35px;
+  font-size: 175%;
+}
+#score, #waiting_text, #object {
+  line-height: 35px;
+}
+
+.error a, .success a{
+  color: #fff;
+}
 

@@ -37,6 +37,15 @@ def game():
     return render_template('game.html')
 
 
+@sio.on('timeout', namespace='/game')
+def time_out(sid):
+    partnerid = clients_partner[sid]
+    logout([sid, partnerid])
+    find_partner(partnerid)
+    sio.emit('partner timeout', '',
+             room=partnerid, namespace='/game')
+
+
 @sio.on('newquestion', namespace='/game')
 def new_question(sid, message):
     dialogue = clients_dialogue[sid]
@@ -150,8 +159,8 @@ def disconnect(sid):
                  room=partnerid,
                  namespace='/game')
 
-        find_partner(partnerid)
         logout([sid, partnerid])
+        find_partner(partnerid)
 
 
 def logout(sids):

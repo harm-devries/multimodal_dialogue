@@ -51,10 +51,17 @@ def loadCategories(cur, data):
         sys.exit()
 
 
-def loadPictures(cur, data):
-    # 2 Insert pictures
+def loadPictures(cur, data, min_objects=3, min_area=50):
+    # Insert pictures
     print("inserting picture...")
     pictures = data["images"]
+
+    # Count number of objects in each image
+    imgNrOfObjects = {img['id']: 0 for img in data['images']}
+    for ann in data['annotations']:
+        if ann['area'] > min_area:
+            imgNrOfObjects[ann['image_id']] += 1
+
     try:
         # split list into smaller chunk to perform a multiple insert SQL query
         # (http://stackoverflow.com/questions/8134602/psycopg2-insert-multiple-rows-with-one-query)
@@ -62,13 +69,13 @@ def loadPictures(cur, data):
             queries = []
             # build tuples to insert
             for picture in oneChunk:
-                queries.append((
-                    picture["id"],
-                    picture["coco_url"],
-                    picture["flickr_url"],
-                    picture["file_name"],
-                    picture["height"],
-                    picture["width"]))
+                if imgNrOfObjects[picture['id']] >= min_objects:
+                    queries.append((picture["id"],
+                                    picture["coco_url"],
+                                    picture["flickr_url"],
+                                    picture["file_name"],
+                                    picture["height"],
+                                    picture["width"]))
 
             args_str = ','.join(
                 cur.mogrify("(%s,%s,%s,%s,%s,%s)", q) for q in queries)
@@ -89,15 +96,17 @@ def loadPictures(cur, data):
         for oneChunk in chunks(annotations, 500):
             queries = []
             for oneAnnotation in oneChunk:
-                queries.append((
-                    oneAnnotation["id"],
-                    oneAnnotation["image_id"],
-                    oneAnnotation["category_id"],
-                    json.dumps(oneAnnotation["segmentation"]),
-                    json.dumps(oneAnnotation["bbox"]),
-                    bool(oneAnnotation["iscrowd"]),
-                    oneAnnotation["area"],
-                ))
+                if (imgNrOfObjects[oneAnnotation['image_id']] >= min_objects and
+                        oneAnnotation['area'] >= min_area):
+                    queries.append((
+                        oneAnnotation["id"],
+                        oneAnnotation["image_id"],
+                        oneAnnotation["category_id"],
+                        json.dumps(oneAnnotation["segmentation"]),
+                        json.dumps(oneAnnotation["bbox"]),
+                        bool(oneAnnotation["iscrowd"]),
+                        oneAnnotation["area"],
+                    ))
 
             args_str = ','.join(
                 cur.mogrify("(%s,%s,%s,%s,%s,%s,%s)", q) for q in queries)
