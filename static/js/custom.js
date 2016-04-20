@@ -126,7 +126,7 @@ $(document).ready(function(){
         } else {
             text = '<i class="fa fa-check-circle fa-2x"></i> <h3 style="margin-left: 10px; display: inline">Correct!</h3>';
         }
-        $('#intro').html('In the winning mood? Play a new game by clicking on the button below.');
+        $('#intro').html('In a winning mood? Play a new game by clicking on the button below.');
         $('#intro').fadeIn(fadeS); 
         $('#info_text').html(text); 
         $('#info_text').fadeIn(fadeS);

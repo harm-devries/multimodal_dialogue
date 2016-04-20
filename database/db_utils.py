@@ -8,9 +8,6 @@ from repoze.lru import lru_cache
 from random import randint
 
 
-global MIN_AREA
-MIN_AREA = 50
-
 class Picture:
     """A picture object."""
 
@@ -120,19 +117,20 @@ class DatabaseHelper():
 
         try:
             cur = self.conn.cursor()
-            cur.execute(" SELECT coco_url FROM picture "
-                        " WHERE picture_id = %s", [picture_id])
+            cur.execute("SELECT coco_url FROM picture "
+                        "WHERE picture_id = %s", [picture_id])
 
             coco_url, = cur.fetchone()
+            cur.close()
 
             cur = self.conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
-            cur.execute((' SELECT '
-                         ' o.object_id, o.category_id, c.name, o.segment, '
-                         ' o.area FROM object AS o, object_category AS c '
-                         ' WHERE o.category_id = c.category_id AND '
-                         ' o.picture_id = %s AND o.area >= %s'
-                         ' ORDER BY o.area ASC'), [picture_id, MIN_AREA])
+            cur.execute(("SELECT "
+                         "o.object_id, o.category_id, c.name, o.segment, "
+                         "o.area FROM object AS o, object_category AS c "
+                         "WHERE o.category_id = c.category_id AND "
+                         "o.picture_id = %s "
+                         "ORDER BY o.area ASC"), [picture_id])
 
             rows = cur.fetchall()
             objects = []
@@ -238,13 +236,15 @@ class DatabaseHelper():
                          (picture_id, object_id, oracle_hit_id,
                           questioner_hit_id))
 
-            self.conn.commit()
+            curr.commit()
 
             dialogue_id, = curr.fetchone()
 
             return dialogue_id
 
         except Exception as e:
+            if curr is not None:
+                curr.rollback()
             print "Fail to insert new dialogue"
             print e
 
@@ -257,8 +257,10 @@ class DatabaseHelper():
                          "(SELECT 1 FROM worker WHERE worker_id=%s);",
                          (worker_id, worker_id))
 
-            self.conn.commit()
+            curr.commit()
         except Exception as e:
+            if curr is not None:
+                curr.rollback()
             print "Fail to insert new worker"
             print e
 
@@ -269,9 +271,10 @@ class DatabaseHelper():
             curr.execute("INSERT INTO hit (hit_id, worker_id) "
                          "VALUES (%s,%s);", (hit_id, worker_id))
 
-            self.conn.commit()
-
+            curr.commit()
         except Exception as e:
+            if curr is not None:
+                curr.rollback()
             print "Fail to insert new hit"
             print e
 
@@ -285,13 +288,15 @@ class DatabaseHelper():
                          "VALUES (%s,%s) RETURNING question_id; ",
                          (dialogue_id, message))
 
-            self.conn.commit()
+            curr.commit()
 
             question_id, = curr.fetchone()
 
             return question_id
 
         except Exception as e:
+            if curr is not None:
+                curr.rollback()
             print "Fail to insert new question"
             print e
 
@@ -304,9 +309,10 @@ class DatabaseHelper():
             # Append a new answer to the question
             curr.execute("INSERT INTO answer (question_id, content)"
                          "VALUES (%s,%s) ", (question_id, message))
-            self.conn.commit()
-
+            curr.commit()
         except Exception as e:
+            if curr is not None:
+                curr.rollback()
             print "Fail to insert new answer"
             print e
 
@@ -318,9 +324,11 @@ class DatabaseHelper():
             curr.execute("INSERT INTO guess (dialogue_id, object_id)"
                          "VALUES (%s,%s)", (dialogue_id, object_id))
 
-            self.conn.commit()
+            curr.commit()
 
         except Exception as e:
+            if curr is not None:
+                curr.rollback()
             print "Fail to insert new guess"
             print e
 

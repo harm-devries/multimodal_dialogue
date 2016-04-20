@@ -3,6 +3,7 @@ import random
 import socketio
 from flask import Flask, render_template
 from database.db_utils import DatabaseHelper
+from queue import 
 # from flask.ext.login import LoginManager, UserMixin, login_required
 
 # set this to 'threading', 'eventlet', or 'gevent'
@@ -18,7 +19,7 @@ app.wsgi_app = socketio.Middleware(sio, app.wsgi_app)
 app.config['SECRET_KEY'] = 'spywithmylittleeye!'
 
 """ Dictionaries for dialogue info that remains in RAM """
-clients_waiting = {}  # Is client waiting?
+queue = Queue()  # Is client waiting?
 clients_partner = {}  # Socketid of client's partner
 clients_dialogue = {}  # Dialogue client is involved in
 
