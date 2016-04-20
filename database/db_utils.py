@@ -131,7 +131,7 @@ class DatabaseHelper():
                          ' o.object_id, o.category_id, c.name, o.segment, '
                          ' o.area FROM object AS o, object_category AS c '
                          ' WHERE o.category_id = c.category_id AND '
-                         ' o.picture_id = %s '
+                         ' o.picture_id = %s AND o.area >= %s'
                          ' ORDER BY o.area ASC'), [picture_id, MIN_AREA])
 
             rows = cur.fetchall()
