@@ -236,7 +236,7 @@ class DatabaseHelper():
                          (picture_id, object_id, oracle_hit_id,
                           questioner_hit_id))
 
-            curr.commit()
+            self.conn.commit()
 
             dialogue_id, = curr.fetchone()
 
@@ -256,7 +256,7 @@ class DatabaseHelper():
                          "(SELECT 1 FROM worker WHERE worker_id=%s);",
                          (worker_id, worker_id))
 
-            curr.commit()
+            self.conn.commit()
         except Exception as e:
             self.conn.rollback()
             print "Fail to insert new worker"
@@ -269,7 +269,7 @@ class DatabaseHelper():
             curr.execute("INSERT INTO hit (hit_id, worker_id) "
                          "VALUES (%s,%s);", (hit_id, worker_id))
 
-            curr.commit()
+            self.conn.commit()
         except Exception as e:
             if curr is not None:
                 curr.rollback()
@@ -286,7 +286,7 @@ class DatabaseHelper():
                          "VALUES (%s,%s) RETURNING question_id; ",
                          (dialogue_id, message))
 
-            curr.commit()
+            self.conn.commit()
 
             question_id, = curr.fetchone()
 
@@ -306,7 +306,7 @@ class DatabaseHelper():
             # Append a new answer to the question
             curr.execute("INSERT INTO answer (question_id, content)"
                          "VALUES (%s,%s) ", (question_id, message))
-            curr.commit()
+            self.conn.commit()
         except Exception as e:
             self.conn.rollback()
             print "Fail to insert new answer"
@@ -320,7 +320,7 @@ class DatabaseHelper():
             curr.execute("INSERT INTO guess (dialogue_id, object_id)"
                          "VALUES (%s,%s)", (dialogue_id, object_id))
 
-            curr.commit()
+            self.conn.commit()
 
         except Exception as e:
             self.conn.rollback()
