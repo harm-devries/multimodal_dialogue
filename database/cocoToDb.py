@@ -7,9 +7,6 @@ from collections import Counter
 from db_utils import DatabaseHelper
 
 
-ANNOTATION_AREA_MIN = 50
-PICTURE_ANNOTATION_MIN = 3
-PICTURE_ANNOTATION_MAX = 20
 # to check the database :
 # SELECT MIN(count), MAX(count) FROM ( SELECT COUNT(*) FROM object GROUP BY picture_id ) t
 # SELECT MIN(area) FROM object
@@ -59,7 +56,7 @@ def loadCategories(cur, data):
 
 
 
-def loadPictures(cur, data):
+def loadPictures(cur, data, min_area=50, min_object=3, max_object=20):
 
     # filtering pictures
     print("filtering picture/annotation...")
@@ -67,17 +64,12 @@ def loadPictures(cur, data):
 
     objCounter = Counter()
     for oneAnnotation in annotations:
-        if oneAnnotation["area"] > ANNOTATION_AREA_MIN:
+        if oneAnnotation["area"] > min_area:
             objCounter[oneAnnotation["image_id"]] += 1
 
     print("inserting picture...")
     pictures = data["images"]
 
-    # Count number of objects in each image
-    imgNrOfObjects = {img['id']: 0 for img in data['images']}
-    for ann in data['annotations']:
-        if ann['area'] > min_area:
-            imgNrOfObjects[ann['image_id']] += 1
 
     try:
         # split list into smaller chunk to perform a multiple insert SQL query
@@ -87,7 +79,8 @@ def loadPictures(cur, data):
             # build tuples to insert
             for picture in oneChunk:
 
-                if PICTURE_ANNOTATION_MIN <= objCounter[picture["id"]] <= PICTURE_ANNOTATION_MAX:
+                if min_object <= objCounter[picture["id"]] <= max_object:
+
                     queries.append((
                         picture["id"],
                         picture["coco_url"],
@@ -115,8 +108,10 @@ def loadPictures(cur, data):
         for oneChunk in chunks(annotations, 500):
             queries = []
             for oneAnnotation in oneChunk:
-                if PICTURE_ANNOTATION_MIN <= objCounter[oneAnnotation["image_id"]] <= PICTURE_ANNOTATION_MAX \
-                        and oneAnnotation["area"] > ANNOTATION_AREA_MIN:
+
+                if min_object <= objCounter[oneAnnotation["image_id"]] <= max_object \
+                        and oneAnnotation["area"] > min_object:
+
                     queries.append((
                         oneAnnotation["id"],
                         oneAnnotation["image_id"],
