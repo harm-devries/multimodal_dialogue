@@ -110,7 +110,7 @@ def loadPictures(cur, data, min_area=50, min_object=3, max_object=20):
             for oneAnnotation in oneChunk:
 
                 if min_object <= objCounter[oneAnnotation["image_id"]] <= max_object \
-                        and oneAnnotation["area"] > min_object:
+                        and oneAnnotation["area"] > min_area:
 
                     queries.append((
                         oneAnnotation["id"],
