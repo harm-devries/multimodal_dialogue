@@ -2,8 +2,17 @@
 import json
 import os
 import sys
+from collections import Counter
+
 from db_utils import DatabaseHelper
 
+
+ANNOTATION_AREA_MIN = 50
+PICTURE_ANNOTATION_MIN = 3
+PICTURE_ANNOTATION_MAX = 20
+# to check the database :
+# SELECT MIN(count), MAX(count) FROM ( SELECT COUNT(*) FROM object GROUP BY picture_id ) t
+# SELECT MIN(area) FROM object
 
 def chunks(l, n):
     """Yield successive n-sized chunks from l."""
@@ -24,8 +33,6 @@ def loadCategories(cur, data):
     try:
         i = 0
         for name, index in supercategory.iteritems():
-            print i
-            i = i + 1
             cur.execute(
                 "INSERT INTO object_supercategory (supercategory_id,name)"
                 "VALUES (%s,%s)", (index, name))
@@ -51,8 +58,18 @@ def loadCategories(cur, data):
         sys.exit()
 
 
-def loadPictures(cur, data, min_objects=3, min_area=50):
-    # Insert pictures
+
+def loadPictures(cur, data):
+
+    # filtering pictures
+    print("filtering picture/annotation...")
+    annotations = data["annotations"]
+
+    objCounter = Counter()
+    for oneAnnotation in annotations:
+        if oneAnnotation["area"] > ANNOTATION_AREA_MIN:
+            objCounter[oneAnnotation["image_id"]] += 1
+
     print("inserting picture...")
     pictures = data["images"]
 
@@ -69,13 +86,15 @@ def loadPictures(cur, data, min_objects=3, min_area=50):
             queries = []
             # build tuples to insert
             for picture in oneChunk:
-                if imgNrOfObjects[picture['id']] >= min_objects:
-                    queries.append((picture["id"],
-                                    picture["coco_url"],
-                                    picture["flickr_url"],
-                                    picture["file_name"],
-                                    picture["height"],
-                                    picture["width"]))
+
+                if PICTURE_ANNOTATION_MIN <= objCounter[picture["id"]] <= PICTURE_ANNOTATION_MAX:
+                    queries.append((
+                        picture["id"],
+                        picture["coco_url"],
+                        picture["flickr_url"],
+                        picture["file_name"],
+                        picture["height"],
+                        picture["width"]))
 
             args_str = ','.join(
                 cur.mogrify("(%s,%s,%s,%s,%s,%s)", q) for q in queries)
@@ -96,8 +115,8 @@ def loadPictures(cur, data, min_objects=3, min_area=50):
         for oneChunk in chunks(annotations, 500):
             queries = []
             for oneAnnotation in oneChunk:
-                if (imgNrOfObjects[oneAnnotation['image_id']] >= min_objects and
-                        oneAnnotation['area'] >= min_area):
+                if PICTURE_ANNOTATION_MIN <= objCounter[oneAnnotation["image_id"]] <= PICTURE_ANNOTATION_MAX \
+                        and oneAnnotation["area"] > ANNOTATION_AREA_MIN:
                     queries.append((
                         oneAnnotation["id"],
                         oneAnnotation["image_id"],
