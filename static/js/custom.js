@@ -1,6 +1,6 @@
 $(document).ready(function(){
     namespace = '/game';
-    var socket = io.connect('http://' + document.domain + ':' + location.port + namespace);
+    var socket = io.connect('https://' + document.domain + ':' + location.port + namespace);
     var image_src; //image url
     var object; // selected object for oracle
     var correct_obj; // if flag is true, segment will be displayed in green
