@@ -229,7 +229,7 @@ class DatabaseHelper():
             print(picture_id, object_id, oracle_hit_id, questioner_hit_id)
             # Insert dialogue
             curr = self.conn.cursor()
-            curr.execute("INSERT INTO dialogue (picture_id,object_id, "
+            curr.execute("INSERT INTO dialogue (picture_id, object_id, "
                          "oracle_hit_id, questioner_hit_id) "
                          " VALUES (%s,%s,%s,%s) "
                          " RETURNING dialogue_id; ",
@@ -243,8 +243,7 @@ class DatabaseHelper():
             return dialogue_id
 
         except Exception as e:
-            if curr is not None:
-                curr.rollback()
+            self.conn.rollback()
             print "Fail to insert new dialogue"
             print e
 
@@ -259,8 +258,7 @@ class DatabaseHelper():
 
             curr.commit()
         except Exception as e:
-            if curr is not None:
-                curr.rollback()
+            self.conn.rollback()
             print "Fail to insert new worker"
             print e
 
@@ -295,8 +293,7 @@ class DatabaseHelper():
             return question_id
 
         except Exception as e:
-            if curr is not None:
-                curr.rollback()
+            self.conn.rollback()
             print "Fail to insert new question"
             print e
 
@@ -311,8 +308,7 @@ class DatabaseHelper():
                          "VALUES (%s,%s) ", (question_id, message))
             curr.commit()
         except Exception as e:
-            if curr is not None:
-                curr.rollback()
+            self.conn.rollback()
             print "Fail to insert new answer"
             print e
 
@@ -327,8 +323,7 @@ class DatabaseHelper():
             curr.commit()
 
         except Exception as e:
-            if curr is not None:
-                curr.rollback()
+            self.conn.rollback()
             print "Fail to insert new guess"
             print e
 
