@@ -126,11 +126,17 @@ $(document).ready(function(){
         } else {
             text = '<i class="fa fa-check-circle fa-2x"></i> <h3 style="margin-left: 10px; display: inline">Correct!</h3>';
         }
-        $('#intro').html('In a winning mood? Play a new game by clicking on the button below.');
-        $('#intro').fadeIn(fadeS); 
+        // set object
+        correct_obj = true;
+        object = msg.object;
+        set_object();
+        renderSegment(object.segment, scale, segment_ctx);
+
+        $('#newgame_text').html('<p style="font-weight: 600; margin-bottom: 20px">In a winning mood?</p>');
         $('#info_text').html(text); 
         $('#info_text').fadeIn(fadeS);
         $('#p_newgame').show();
+        $('#p_newplayergame').show();
         deletegame();
         score += 10;
         set_score();
@@ -160,9 +166,9 @@ $(document).ready(function(){
 
         $('#info_text').html(text); 
         $('#info_text').fadeIn(fadeS);
-        $('#intro').text('Do you want revenge? Play a new game by clicking on the button below.');
-        $('#intro').fadeIn(fadeS);
+        $('#newgame_text').html('<p style="font-weight: 600; margin-bottom: 20px">Do you want revenge?</p>');
         $('#p_newgame').show();
+        $('#p_newplayergame').show();
     });
 
     function wait_for_question() {
@@ -185,6 +191,7 @@ $(document).ready(function(){
     }
 
     function wait_for_guess() {
+        $('#answer').hide();
         $('#waiting_text').text('Your partner started guessing..');
         $('#waiting').show();
         time = guess_time;
@@ -274,6 +281,7 @@ $(document).ready(function(){
         $('#title').fadeOut(fadeS);
         $('#intro').fadeOut(fadeS);
         $('#p_newgame').fadeOut(fadeS);
+        $('#p_newplayergame').fadeOut(fadeS);
         var msg;
         if(partner_disconnect) {
             msg = 'Your partner disconnected. Searching for a new one..';
@@ -382,6 +390,14 @@ $(document).ready(function(){
         $('#info').switchClass('error', 'default', 0);
         noPartner();
         socket.emit('next');
+        return false;
+    });
+    $('a#newplayergame').click(function(event) {
+        deletegame();
+        $('#info').switchClass('success', 'default', 0);
+        $('#info').switchClass('error', 'default', 0);
+        noPartner();
+        socket.emit('next new');
         return false;
     });
     $('a#ask').click(function(event) {

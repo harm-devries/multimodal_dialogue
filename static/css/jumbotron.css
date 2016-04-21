@@ -55,7 +55,7 @@ body{
 #no, #na {
 	margin-left: 5px;
 }
-#question, #image, #answer, #guess, #waiting, #object, #info_text, #score {
+#question, #image, #answer, #guess, #waiting, #object, #info_text, #score, #p_newplayergame {
 	display: none;
 }
 #log {
