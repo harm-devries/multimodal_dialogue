@@ -7,11 +7,14 @@ from database.db_utils import DatabaseHelper
 # from flask.ext.login import LoginManager, UserMixin, login_required
 
 # set this to 'threading', 'eventlet', or 'gevent'
-async_mode = 'gevent'
+async_mode = 'eventlet'
 
 if async_mode == 'gevent':
     from gevent import monkey
     monkey.patch_all()
+if async_mode == 'eventlet':
+    import eventlet
+    eventlet.monkey_patch()
 
 sio = socketio.Server(logger=True, async_mode=async_mode)
 app = Flask(__name__)
