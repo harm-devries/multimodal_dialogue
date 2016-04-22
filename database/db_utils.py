@@ -327,6 +327,38 @@ class DatabaseHelper():
             print "Fail to insert new guess"
             print e
 
+    def insert_name(self, name):
+        try:
+            curr = self.conn.cursor()
+
+            # Insert new guess
+            curr.execute("INSERT INTO player"
+                         "(name) "
+                         "SELECT %s WHERE "
+                         "NOT EXISTS ("
+                         "SELECT name FROM player "
+                         "WHERE name = %s);", [name, name])
+
+            self.conn.commit()
+
+        except Exception as e:
+            self.conn.rollback()
+            print "Fail to insert new player"
+            print e
+
+    def update_score(self, name):
+        try:
+            curr = self.conn.cursor()
+
+            # Insert new guess
+            curr.execute("UPDATE player SET score = score + 10 WHERE name = %s", [name])
+
+            self.conn.commit()
+
+        except Exception as e:
+            self.conn.rollback()
+            print "Fail to update score"
+            print e
 
 if __name__ == '__main__':
 

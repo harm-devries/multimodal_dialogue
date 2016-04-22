@@ -133,7 +133,7 @@ def loadPictures(cur, data, min_area=50, min_object=3, max_object=20):
         sys.exit()
 
 # Postgres url must be in environment variable DATABASE_URL
-conn = DatabaseHelper.from_postgresurl(os.environ['DATABASE_URL']).conn
+conn = DatabaseHelper.from_postgresurl(os.environ['HEROKU_POSTGRESQL_SILVER_URL']).conn
 cur = conn.cursor()
 
 training_file = '../annotations/instances_train2014.json'

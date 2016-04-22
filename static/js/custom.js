@@ -1,6 +1,6 @@
 $(document).ready(function(){
     namespace = '/game';
-    var socket = io.connect('https://' + document.domain + ':' + location.port + namespace);
+    var socket = io.connect('http://' + document.domain + ':' + location.port + namespace);
     var image_src; //image url
     var object; // selected object for oracle
     var correct_obj; // if flag is true, segment will be displayed in green
@@ -30,13 +30,13 @@ $(document).ready(function(){
     var guess_time = 30;
 
 
-    socket.on('disconnect', function() {
-        $('#question').hide();
-        $('#answer').hide();
-        $('#waiting').hide();
-        $('#info_text').text('Sorry! The server unexpectedly closed the connection. ');
-        $('#info_text').show();
-    });
+    // socket.on('disconnect', function() {
+    //     $('#question').hide();
+    //     $('#answer').hide();
+    //     $('#waiting').hide();
+    //     $('#info_text').text('Sorry! The server unexpectedly closed the connection. ');
+    //     $('#info_text').show();
+    // });
     socket.on('partner_disconnect', function() {
         partner_disconnect = true;
         deletegame();
@@ -306,8 +306,8 @@ $(document).ready(function(){
             paddingTop: "10px",
             paddingBottom: "10px"
         }, 1000);
-        // $('#left').switchClass("col-sm-9", "col-sm-5", 0, "easeInOutQuad");
-        // $('#right').switchClass("col-sm-3", "col-sm-7", 0, "easeInOutQuad");
+        $('#left').switchClass("col-sm-6", "col-sm-5", 0, "easeInOutQuad");
+        $('#right').switchClass("col-sm-6", "col-sm-7", 0, "easeInOutQuad");
 
     }
     function infoBarUp() {
@@ -388,6 +388,8 @@ $(document).ready(function(){
         deletegame();
         $('#info').switchClass('success', 'default', 0);
         $('#info').switchClass('error', 'default', 0);
+        $('#name_div').hide();
+        socket.emit('name', $('#name').val());
         noPartner();
         socket.emit('next');
         return false;

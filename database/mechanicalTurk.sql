@@ -161,7 +161,7 @@ CREATE TABLE dialogue (
     dialogue_id integer DEFAULT nextval('dialogue_seq'::regclass) NOT NULL,
     picture_id integer NOT NULL,
     "timestamp" timestamp without time zone DEFAULT now() NOT NULL,
-    object_id integer,
+    object_id bigint,
     oracle_hit_id integer,
     questioner_hit_id integer
 );
@@ -190,7 +190,7 @@ ALTER TABLE guess_seq OWNER TO ojhcjubujbtgoz;
 CREATE TABLE guess (
     guess_id integer DEFAULT nextval('guess_seq'::regclass) NOT NULL,
     "order" integer NOT NULL,
-    object_id integer NOT NULL,
+    object_id bigint NOT NULL,
     "timestamp" timestamp without time zone DEFAULT now(),
     dialogue_id integer NOT NULL
 );
@@ -352,6 +352,14 @@ CREATE TABLE worker (
 
 
 ALTER TABLE worker OWNER TO ojhcjubujbtgoz;
+
+CREATE TABLE player (
+    name character varying(255),
+    score integer DEFAULT 0
+);
+
+
+ALTER TABLE player OWNER TO ojhcjubujbtgoz;
 
 --
 -- Data for Name: answer; Type: TABLE DATA; Schema: public; Owner: ojhcjubujbtgoz

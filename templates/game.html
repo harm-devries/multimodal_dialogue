@@ -110,7 +110,7 @@
     <!-- Example row of columns -->
     <div class="container">
       <div class="row">
-        <div class="col-sm-5" id="left">
+        <div class="col-sm-6" id="left">
 <!--           <div class="page-header" id="title"><h2>The game</h2></div> -->
 
           <div id="intro" style="font-weight: 400">
@@ -122,7 +122,7 @@
             <li>You will be shown an image of a scene with multiple objects. </li>
             <li>One of the objects will be assigned as the target which the questioner should predict.</li>
             <li>Your job is to help the questioner by answering his questions with Yes, No or Not Applicable. </li>
-            <li>You will receive $0.10 if the questioner guesses the target correctly. </li>
+            <li>You will receive 10 points if the questioner guesses the target correctly. </li>
             </ul>
 
             <h3>Questioner</h3>
@@ -130,15 +130,22 @@
             <li>You will be shown an image of a scene with multiple objects. </li>
             <li>One of the objects will be assigned as the target (but not visible to you). </li>
             <li>Your job is to guess that object by asking yes or no questions to the oracle. </li>
-            <li>You will receive $0.10 if you guess the object correctly. </li>
+            <li>You will receive 10 points if you guess the object correctly. </li>
             </ul>
           </div>
-          <div class="well" id="p_newgame"><span id="newgame_text"></span><a class="btn btn-success" id="newgame" role="button">Start a new game &raquo;</a></div>
+          <div class="well" id="p_newgame"><span id="newgame_text"></span>
+          <div class="row">
+            <div class="col-sm-7" id="name_div"><input placeholder="Fill in your name" type="input" type="text" autocomplete="off" id="name" class="form-control" /></div>
+            <div class="col-sm-5">
+              <a class="btn btn-success" id="newgame" role="button">Start a new game &raquo;</a>
+            </div>
+          </div>
+          </div>
 
           <div class="well" id="p_newplayergame" style="margin-top: 50px"><p style="font-weight: 600; margin-bottom: 20px">Are you not satisfied with your current partner?</p><a class="btn btn-info" id="newplayergame" role="button">Play a new game with another player &raquo;</a></div>
           <div id="log"></div>
         </div>
-        <div class="col-sm-7" id ="right">
+        <div class="col-sm-6" id ="right">
           <div style="position: relative;" id="image">
           <canvas id="img" width="100" height="100" 
            style="position: absolute; left: 0; top: 0; z-index: 0;"></canvas>

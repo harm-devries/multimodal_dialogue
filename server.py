@@ -53,9 +53,9 @@ def time_out(sid):
     player = players[sid]
     partnerid = player.partner_sid
     delete_game([sid, partnerid])
-    find_partner(partnerid)
     sio.emit('partner timeout', '',
              room=partnerid, namespace='/game')
+    find_partner(partnerid)
 
 
 @sio.on('newquestion', namespace='/game')
@@ -94,6 +94,8 @@ def guess_annotation(sid, object_id):
     db.insert_guess(dialogue.id, object_id)
     selected_obj = dialogue.object
     if selected_obj.object_id == object_id:
+        db.update_score(player.name)
+        db.update_score(players[player.partner_sid].name)
         sio.emit('correct annotation', {'partner': False,
                                         'object': selected_obj.to_json()},
                  room=sid, namespace='/game')
@@ -121,11 +123,22 @@ def find_new_player(sid):
     find_partner(sid)
 
 
+@sio.on('name', namespace='/game')
+def set_name(sid, name):
+    player = players[sid]
+    player.name = name
+    db.insert_name(name)
+
+
 @sio.on('next', namespace='/game')
 def find_partner(sid):
     partner = False
     player = players[sid]
     banned_players = []
+
+    print 'before'
+    for x in queue:
+        print x.sid
 
     while len(queue) > 0:
         p = queue.pop()
@@ -137,6 +150,10 @@ def find_partner(sid):
 
     for p in banned_players:
         queue.appendleft(p)
+
+    print 'after'
+    for x in queue:
+        print x.sid
 
     if partner:
         partner.partner_sid = player.sid
