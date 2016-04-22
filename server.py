@@ -138,26 +138,16 @@ def set_name(sid, name):
 def find_partner(sid):
     partner = False
     player = players[sid]
-    banned_players = []
 
     print 'before'
     for x in queue:
         print x.sid
 
-    while len(queue) > 0:
-        p = queue.pop()
-        if player.sid in p.ban_sid or p.sid in player.ban_sid:
-            banned_players.append(p)
-        else:
-            partner = p
-            break
+    if len(queue) > 0:
+        partner = queue.pop()
 
-    for p in banned_players:
-        queue.appendleft(p)
-
-    print 'after'
-    for x in queue:
-        print x.sid
+    # for p in banned_players:
+    #     queue.appendleft(p)
 
     if partner:
         partner.partner_sid = player.sid
