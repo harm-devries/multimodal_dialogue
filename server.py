@@ -31,6 +31,7 @@ class Player():
         self.sid = sid
         self.ban_sid = []
         self.partner_sid = None
+        self.name = ''
 
 
 """ Database connection """
