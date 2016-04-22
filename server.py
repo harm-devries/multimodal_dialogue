@@ -139,9 +139,9 @@ def find_partner(sid):
     partner = False
     player = players[sid]
 
-    print 'before'
-    for x in queue:
-        print x.sid
+    # print 'before'
+    # for x in queue:
+    #     print x.sid
 
     if len(queue) > 0:
         partner = queue.pop()
