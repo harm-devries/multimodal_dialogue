@@ -220,9 +220,10 @@ def disconnect(sid):
 
 def delete_game(sids):
     for sid in sids:
-        player = players[sid]
-        if player.partner_sid is not None:
-            player.previous_sid = player.partner_sid
-            player.partner_sid = None
+        if sid in players:
+            player = players[sid]
+            if player.partner_sid is not None:
+                player.previous_sid = player.partner_sid
+                player.partner_sid = None
         if sid in clients_dialogue:
-            del clients_dialogue[sid]
+                del clients_dialogue[sid]
