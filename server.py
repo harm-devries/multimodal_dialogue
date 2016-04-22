@@ -208,7 +208,8 @@ def disconnect(sid):
 
         delete_game([sid, partnerid])
         find_partner(partnerid)
-    queue.remove(player)
+    if player in queue:
+        queue.remove(player)
     del players[sid]
 
 
