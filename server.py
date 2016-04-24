@@ -6,25 +6,27 @@ from flask import Flask, render_template
 from database.db_utils import DatabaseHelper
 # from flask.ext.login import LoginManager, UserMixin, login_required
 
-# set this to 'threading', 'eventlet', or 'gevent'
-async_mode = 'gevent'
 
-if async_mode == 'gevent':
-    from gevent import monkey
-    monkey.patch_all()
-if async_mode == 'eventlet':
-    import eventlet
-    eventlet.monkey_patch()
+if __name__ == '__main__':
+	# set this to 'threading', 'eventlet', or 'gevent'
+	async_mode = 'gevent'
 
-sio = socketio.Server(logger=True, async_mode=async_mode)
-app = Flask(__name__)
-app.wsgi_app = socketio.Middleware(sio, app.wsgi_app)
-app.config['SECRET_KEY'] = 'spywithmylittleeye!'
+	if async_mode == 'gevent':
+	    from gevent import monkey
+	    monkey.patch_all()
+	if async_mode == 'eventlet':
+	    import eventlet
+	    eventlet.monkey_patch()
 
-""" Dictionaries for dialogue info that remains in RAM """
-queue = deque()
-players = {}  # indexed by socket id
-clients_dialogue = {}  # Dialogue client is involved in
+	sio = socketio.Server(logger=True, async_mode=async_mode)
+	app = Flask(__name__)
+	app.wsgi_app = socketio.Middleware(sio, app.wsgi_app)
+	app.config['SECRET_KEY'] = 'spywithmylittleeye!'
+
+	""" Dictionaries for dialogue info that remains in RAM """
+	queue = deque()
+	players = {}  # indexed by socket id
+	clients_dialogue = {}  # Dialogue client is involved in
 
 
 class Player():
