@@ -8,25 +8,25 @@ from database.db_utils import DatabaseHelper
 
 
 if __name__ == '__main__':
-	# set this to 'threading', 'eventlet', or 'gevent'
-	async_mode = 'gevent'
+    # set this to 'threading', 'eventlet', or 'gevent'
+    async_mode = 'gevent'
 
-	if async_mode == 'gevent':
-	    from gevent import monkey
-	    monkey.patch_all()
-	if async_mode == 'eventlet':
-	    import eventlet
-	    eventlet.monkey_patch()
+    if async_mode == 'gevent':
+        from gevent import monkey
+        monkey.patch_all()
+    if async_mode == 'eventlet':
+        import eventlet
+        eventlet.monkey_patch()
 
-	sio = socketio.Server(logger=True, async_mode=async_mode)
-	app = Flask(__name__)
-	app.wsgi_app = socketio.Middleware(sio, app.wsgi_app)
-	app.config['SECRET_KEY'] = 'spywithmylittleeye!'
+    sio = socketio.Server(logger=True, async_mode=async_mode)
+    app = Flask(__name__)
+    app.wsgi_app = socketio.Middleware(sio, app.wsgi_app)
+    app.config['SECRET_KEY'] = 'spywithmylittleeye!'
 
-	""" Dictionaries for dialogue info that remains in RAM """
-	queue = deque()
-	players = {}  # indexed by socket id
-	clients_dialogue = {}  # Dialogue client is involved in
+    """ Dictionaries for dialogue info that remains in RAM """
+    queue = deque()
+    players = {}  # indexed by socket id
+    clients_dialogue = {}  # Dialogue client is involved in
 
 
 class Player():
