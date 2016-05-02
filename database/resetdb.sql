@@ -7,6 +7,9 @@ TRUNCATE question CASCADE;
 TRUNCATE answer CASCADE;
 TRUNCATE hit CASCADE;
 TRUNCATE guess CASCADE;
+TRUNCATE report_dialogue CASCADE;
+TRUNCATE report_worker CASCADE;
+TRUNCATE player CASCADE;
 
 ALTER SEQUENCE answer_seq RESTART;
 ALTER SEQUENCE dialogue_seq RESTART;
@@ -15,4 +18,5 @@ ALTER SEQUENCE object_seq RESTART;
 ALTER SEQUENCE picture_seq RESTART;
 ALTER SEQUENCE question_seq RESTART;
 ALTER SEQUENCE guess_seq RESTART;
-
+ALTER SEQUENCE report_dialogue_report_dialogue_id_seq RESTART;
+ALTER SEQUENCE report_worker_report_worker_id_seq RESTART;

@@ -110,17 +110,18 @@ class DatabaseHelper():
         return cls(url.path[1:], url.username, url.password,
                    url.hostname, url.port)
 
-    def get_picture(self, picture_id):
+
+
+    def get_random_picture(self, difficulty=1):
         """Fetch image by its id."""
 
         picture = None
 
         try:
             cur = self.conn.cursor()
-            cur.execute("SELECT coco_url FROM picture "
-                        "WHERE picture_id = %s", [picture_id])
+            cur.execute("SELECT picture_id,coco_url FROM picture WHERE difficulty = %s ORDER BY RANDOM() LIMIT 1", [difficulty])
 
-            coco_url, = cur.fetchone()
+            picture_id, coco_url, = cur.fetchone()
             cur.close()
 
             cur = self.conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
@@ -148,47 +149,26 @@ class DatabaseHelper():
 
         return picture
 
-    @lru_cache(maxsize=1)
-    def get_max_picture_id(self):
-        """Return max serial_id."""
-        try:
-            curr = self.conn.cursor()
-            curr.execute("SELECT MAX(serial_id) FROM picture;")
 
-            return curr.fetchone()[0]
 
-        except Exception as e:
-            print "Fail to retrieve the number of picture --> abort"
-            print e
+
 
     def start_dialogue(self, oracle_hit_id=None, oracle_worker_id=None,
                        questioner_hit_id=None, questioner_worker_id=None):
         """Start new dialogue. """
         dialogue = None
 
-        # Pick a random picture
-        max_picture_id = self.get_max_picture_id()
-        picture_serial_id = randint(1, max_picture_id)
-
-        # Pick a random object
         try:
-            curr = self.conn.cursor()
+            # Pick a random picture
+            picture = self.get_random_picture()
 
-            curr.execute("SELECT picture_id FROM picture WHERE serial_id = %s",
-                         [picture_serial_id])
-
-            picture_id, = curr.fetchone()
-
-            # retrieve all id from object rel
-            picture = self.get_picture(picture_id)
-
-            # randomly picked one object
+            # Pick a random object
             objects = picture.objects
             object_index = randint(0, len(objects)-1)
             object_id = objects[object_index].object_id
 
             dialogue_id = self.insert_dialogue(
-                picture_id=picture_id,
+                picture_id=picture.id,
                 object_id=object_id,
                 oracle_hit_id=oracle_hit_id,
                 oracle_worker_id=oracle_worker_id,
@@ -200,8 +180,7 @@ class DatabaseHelper():
                                     object=objects[object_index])
 
         except Exception as e:
-            print("Fail to start a new dialogue -> could not find object"
-                  "for picture (serial):" + str(picture_serial_id))
+            print("Fail to start a new dialogue -> could not find object")
             print e
 
         return dialogue
@@ -226,7 +205,6 @@ class DatabaseHelper():
             else:
                 questioner_hit_id = None
 
-            print(picture_id, object_id, oracle_hit_id, questioner_hit_id)
             # Insert dialogue
             curr = self.conn.cursor()
             curr.execute("INSERT INTO dialogue (picture_id, object_id, "
@@ -305,8 +283,13 @@ class DatabaseHelper():
 
             # Append a new answer to the question
             curr.execute("INSERT INTO answer (question_id, content)"
-                         "VALUES (%s,%s) ", (question_id, message))
+                         "VALUES (%s,%s) RETURNING answer_id;", (question_id, message))
             self.conn.commit()
+
+            answer_id, = curr.fetchone()
+
+            return answer_id
+
         except Exception as e:
             self.conn.rollback()
             print "Fail to insert new answer"
@@ -346,6 +329,58 @@ class DatabaseHelper():
             print "Fail to insert new player"
             print e
 
+
+
+    def insert_report_worker(self, dialogue_id, from_worker_id, to_worker_id, from_oracle, content = None,
+                             too_slow=False, harassment=False, bad_player=False):
+        try:
+            curr = self.conn.cursor()
+
+            # Insert new guess
+            curr.execute(" INSERT INTO report_worker "
+                         " (dialogue_id, from_worker_id, to_worker_id, from_oracle, content, too_slow, harassment, bad_player) "
+                         " VALUES (%s,%s,%s,%s,%s,%s,%s,%s) ",
+                         [dialogue_id, from_worker_id, to_worker_id, from_oracle, content, too_slow, harassment, bad_player])
+
+        except Exception as e:
+            self.conn.rollback()
+            print "Fail to insert report  to blame worker ("+str(to_worker_id)+") for dialogue ("+str(dialogue_id)+")"
+            print e
+
+    #TODO use trigger to compute from_oracle on the fly
+    def insert_report_dialogue(self, dialogue_id, worker_id, from_oracle, content = None,
+                             picture_too_hard=False, object_too_hard=False):
+        try:
+            curr = self.conn.cursor()
+
+            # Insert new guess
+            curr.execute(" INSERT INTO report_dialogue "
+                         " (dialogue_id, worker_id, from_oracle, content, picture_too_hard, object_too_hard) "
+                         " VALUES (%s,%s,%s,%s,%s,%s) ",
+                         [dialogue_id, worker_id, from_oracle, content, picture_too_hard, object_too_hard])
+
+        except Exception as e:
+            self.conn.rollback()
+            print "Fail to insert report from worker ("+str(worker_id)+") for dialogue ("+str(dialogue_id)+")"
+            print e
+
+    def update_answer(self, answer_id, message):
+
+        assert message == "Yes" or message == "No" or message == "N/A"
+
+        try:
+            curr = self.conn.cursor()
+
+            # Insert new guess
+            curr.execute("UPDATE answer SET content = %s WHERE answer_id = %s", [message,answer_id])
+
+            self.conn.commit()
+
+        except Exception as e:
+            self.conn.rollback()
+            print "Fail to update answer"
+            print e
+
     def update_score(self, name):
         try:
             curr = self.conn.cursor()
@@ -362,18 +397,21 @@ class DatabaseHelper():
 
 if __name__ == '__main__':
 
-    # db = DatabaseHelper(database="testdb",
-    #                     username="fstrub",
-    #                     password="21914218820*I!",
-    #                     hostname="localhost",
-    #                     port="5432")
-
     db = DatabaseHelper.from_postgresurl(
         os.environ['HEROKU_POSTGRESQL_SILVER_URL'])
 
-    dialogue = db.start_dialogue()
+    dialogue = db.start_dialogue(oracle_hit_id=10, oracle_worker_id=10,
+                       questioner_hit_id=20, questioner_worker_id=20)
 
     question_id = db.insert_question(dialogue_id=dialogue.id,
                                      message="Is it a car?")
-    db.insert_answer(question_id=question_id, message="No")
-    db.insert_guess(dialogue_id=dialogue.id, object_id=7385L)
+
+    answer_id = db.insert_answer(question_id=question_id, message="No")
+    db.update_answer(answer_id=answer_id, message="Yes")
+    db.insert_guess(dialogue_id=dialogue.id, object_id=dialogue.object.object_id)
+
+    db.insert_report_dialogue(dialogue_id=dialogue.id, worker_id=10, from_oracle=True,
+                              content = None,picture_too_hard=False, object_too_hard=True)
+
+    db.insert_report_worker(dialogue_id=dialogue.id, from_worker_id=20, to_worker_id=10, from_oracle=False,
+                            content ="keep insulting me - no question", too_slow=False, harassment=True, bad_player=True)
