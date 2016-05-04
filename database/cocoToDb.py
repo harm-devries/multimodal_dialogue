@@ -28,7 +28,6 @@ def loadCategories(cur, data):
     # 1 create supercategory table
     print("inserting supercategories...")
     try:
-        i = 0
         for name, index in supercategory.iteritems():
             cur.execute(
                 "INSERT INTO object_supercategory (supercategory_id,name)"
