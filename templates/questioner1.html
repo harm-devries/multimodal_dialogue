@@ -1,0 +1,79 @@
+{% extends "main.html" %}
+
+{% block includes %}
+<script src="{{ url_for('static', filename='js/image_utils.js') }}"></script>
+<script src="{{ url_for('static', filename='js/questioner.js') }}"></script>
+<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.5/socket.io.min.js"></script>
+{% endblock %}
+
+{% block infobar %}
+<div class="default navbar-fixed-top" id="info">
+    <div class="container">
+      <div class="row">
+        <div class="col-sm-5">
+          <div id ="info_text">
+          </div>
+          <div id="waiting">
+            <div class="row">
+              <div class="col-sm-1" id="w_time"></div>
+              <div class="col-sm-10"><span class="loader"><span class="loader-inner"></span></span><span id="waiting_text"></span></div>
+            </div>
+          </div>
+          <div id="question">
+            <div class="row">
+              <div class="col-sm-1" id="q_time"></div>
+              <div class="col-sm-9"><input autocomplete="off" type="text" id="newquestion" placeholder="Ask a new question" class="form-control"></div>
+              <div clas="col-sm-1"><a class="btn btn-success" id="ask" type="submit">Ask</a></div>
+            </div>
+          </div>
+        </div>
+        <div class="col-sm-5">
+          <div id="guess">
+            <a class="btn btn-primary" id="guessbtn">GuessWhat!</a>
+          </div>
+          <div id="object">
+          </div>
+        </div>
+        <div class="col-sm-2">
+        <span id="score">Your score: <h3 style="display: inline">0</h3></span>
+        </div>
+      </div>
+    </div>
+ </div>
+{% endblock %}
+
+{% block body %}
+
+<div class="container">
+  <div class="row">
+    <div class="col-sm-6" id="left">
+
+      <div id="intro" style="font-weight: 400">
+        <p>GuessWhat?! is a two player guessing game. 
+        Your role is the oracle.</p>
+
+        <h3>Questioner</h3>
+        <ul>
+        <li>You will be shown an image of a scene with multiple objects. </li>
+        <li>One of the objects will be assigned as the target (but not visible to you). </li>
+        <li>Your job is to guess that object by asking yes or no questions to the oracle. </li>
+        <li>You will receive 10 points if you guess the object correctly. </li>
+        </ul>
+
+      </div>
+      <p id="p_newgame"><span id="newgame_text"></span>
+          <a class="btn btn-success" id="newgame" role="button">Start a new game &raquo;</a>
+      </p>
+      <div id="log"></div>
+    </div>
+    <div class="col-sm-6" id ="right">
+      <div style="position: relative;" id="image">
+      <canvas id="img" width="100" height="100" 
+       style="position: absolute; left: 0; top: 0; z-index: 0;"></canvas>
+      <canvas id="segment" width="100" height="100" 
+         style="position: absolute; left: 0; top: 0; z-index: 1;"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

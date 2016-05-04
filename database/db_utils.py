@@ -11,8 +11,10 @@ from random import randint
 class Picture:
     """A picture object."""
 
-    def __init__(self, picture_id, url, objects):
+    def __init__(self, picture_id, url, width, height, objects):
         self.id = picture_id
+        self.width = width
+        self.height = height
         self.coco_url = url
         self.objects = objects
 
@@ -20,6 +22,8 @@ class Picture:
         """Convert picture object into json serializable dictionary"""
         pic_dict = {}
         pic_dict['picture_id'] = self.id
+        pic_dict['width'] = self.width
+        pic_dict['height'] = self.height
         pic_dict['coco_url'] = self.coco_url
         pic_dict['objects'] = [obj.to_json() for obj in self.objects]
         return pic_dict
@@ -110,6 +114,20 @@ class DatabaseHelper():
         return cls(url.path[1:], url.username, url.password,
                    url.hostname, url.port)
 
+    def get_conversation(self, dialogue_id):
+        try:
+            cur = self.conn.cursor()
+            cur.execute("SELECT q.content, a.content FROM question AS q, answer AS a "
+                        "WHERE a.question_id = q.question_id and q.dialogue_id = %s "
+                        "ORDER BY q.timestamp DESC", [dialogue_id])
+
+            rows = cur.fetchall()
+            qas = [dict(question=row[0], answer=row[1]) for row in rows]
+            cur.close()
+        except Exception as e:
+            print e
+        return qas
+
     def get_picture(self, picture_id):
         """Fetch image by its id."""
 
@@ -117,10 +135,10 @@ class DatabaseHelper():
 
         try:
             cur = self.conn.cursor()
-            cur.execute("SELECT coco_url FROM picture "
+            cur.execute("SELECT coco_url, width, height FROM picture "
                         "WHERE picture_id = %s", [picture_id])
 
-            coco_url, = cur.fetchone()
+            coco_url, width, height = cur.fetchone()
             cur.close()
 
             cur = self.conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
@@ -139,8 +157,7 @@ class DatabaseHelper():
                              row['name'], row['segment'], row['area'])
                 objects.append(obj)
 
-            picture = Picture(picture_id=picture_id, url=coco_url,
-                              objects=objects)
+            picture = Picture(picture_id, coco_url, width, height, objects)
 
         except Exception as e:
             print "Unable to fetch picture"
@@ -184,7 +201,7 @@ class DatabaseHelper():
 
             # randomly picked one object
             objects = picture.objects
-            object_index = randint(0, len(objects)-1)
+            object_index = randint(0, len(objects) - 1)
             object_id = objects[object_index].object_id
 
             dialogue_id = self.insert_dialogue(

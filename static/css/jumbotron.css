@@ -10,6 +10,7 @@ body{
   height: 0;
   border-bottom: 1px solid #DDD;
   font-weight: 500;
+  z-index: 0;
   /*padding-top: 10px;
   padding-bottom: 10px;*/
 }
@@ -37,14 +38,14 @@ body{
   font-weight: 700;
 }
 .navbar-header a .second_part{
-  color: orange !important;
+  color: #f2b632 !important;
   font-family: Abril Fatface;
   font-size: 30px;
   font-style: normal;
   font-weight: 700;
 }
 .navbar-header a:hover .first_part{
-  color: orange !important;
+  color: #f2b632 !important;
 }
 .navbar-header a:hover .second_part{
   color: #fff !important;
@@ -156,8 +157,27 @@ hr {
 #score, #waiting_text, #object {
   line-height: 35px;
 }
-
 .error a, .success a{
   color: #fff;
 }
-
+.well {
+  background-color: #e8edf3;
+}
+#top.navbar-default .navbar-nav>li>a {
+    color: #fff;
+}
+#top.navbar-default .navbar-nav>li>a:hover,
+#top.navbar-default .navbar-nav>li>a:focus {
+    color: #f2b632;
+}
+#top.navbar-default .navbar-nav>.active>a,
+#top.navbar-default .navbar-nav>.active>a:hover,
+#top.navbar-default .navbar-nav>.active>a:focus {
+    color: #f2b632;
+}
+#top.navbar-default .navbar-nav>.active>a,
+#top.navbar-default .navbar-nav>.active>a:hover,
+#top.navbar-default .navbar-nav>.active>a:focus {
+    color: #fff;
+    background-color: #f2b632;
+}
