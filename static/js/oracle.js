@@ -1,16 +1,15 @@
 $(document).ready(function() {
-    namespace = '/game';
+    namespace = '/oracle';
     var socket = io.connect('http://' + document.domain + ':' + location.port + namespace);
-    var image_src; //image url
+    var img; //image url
     var object; // selected object for oracle
     var correct_obj; // if flag is true, segment will be displayed in green
     var show_obj = true; // if true, segment will be displayed
-    var scale; // scale of image compared to original size
+    var scale;
     var img_canvas = $('canvas#img')[0];
     var img_ctx = img_canvas.getContext("2d");
     var segment_canvas = $('canvas#segment')[0];
     var segment_ctx = segment_canvas.getContext("2d");
-    var objs; // All annotations. Only defined after questioner pressed guess button
     var partner_disconnect = false;
     var partner_timeout = false;
     var colors = [[255, 0, 0], [0, 255, 0], [0, 0, 255], [255, 255, 0], [255, 0, 255], 
@@ -28,7 +27,6 @@ $(document).ready(function() {
     var answer_time = 30;
     var question_time = 90;
     var guess_time = 30;
-
 
     // socket.on('disconnect', function() {
     //     $('#question').hide();
@@ -48,40 +46,22 @@ $(document).ready(function() {
         noPartner();
     });
 
-    socket.on('questioner', function(msg) {
-        setTimeout(function(){
-            $('#info_text').html('<span class="loader"><span class="loader-inner"></span></span> We have found a partner! You are the <b style="font-weight: 700">questioner</b>.');
-        }, 1000);
-        
-        setTimeout(function(){
-            $('#title').fadeOut(fadeS);
-            $('#intro').fadeOut(fadeS);
-            $('#info_text').hide();
-            $('#waiting_text').text('Waiting for an answer..');
-            $('#waiting').hide();
-            image_src = msg.img;
-            $('#image').show();
-            renderImage();
-            show_question_form();
-            $('#score').fadeIn(fadeS);
-        }, 2000);
-        
-    })
     socket.on('answerer', function(msg) {
         setTimeout(function(){
-            $('#info_text').html('<span class="loader"><span class="loader-inner"></span></span> We have found a partner! You are the <b style="font-weight: 700">oracle</b>.');
+            $('#info_text').html('<span class="loader"><span class="loader-inner"></span></span> We have found a partner!');
         }, 1000);
 
         setTimeout(function(){
             $('#title').fadeOut(fadeS);
             $('#intro').fadeOut(fadeS);
             $('#info_text').hide();
-            image_src = msg.img;
+            img = msg.img;
             object = msg.object;
             correct_obj = true;
             show_obj = true;
             $('#image').show();
-            renderImage();
+
+            renderImageAndSegment();
             $('#waiting_text').text('Waiting for a new question');
             wait_for_question();
             set_object();
@@ -92,25 +72,8 @@ $(document).ready(function() {
         addQuestion(msg);
         show_answer_form();
     });
-    socket.on('new answer', function(msg) {
-        addAnswer(msg);
-        show_question_form();
-    });
     socket.on('all annotations', function(msg) {
-        if (msg.partner) {
-            wait_for_guess();
-        } else {
-            $('#question').hide();
-            $('#guess').hide();
-            $('#object').html('<span id="g_time" style="margin-right: 20px"></span><b>Please click on one of the objects.</b>');
-            $('#object').show();
-            time = guess_time;
-            clearInterval(timer_id);
-            set_time('#g_time');
-            timer_id = setInterval(set_time.bind(null, '#g_time'), 1000);
-            objs = msg.objs;
-            renderSegments(objs, scale, segment_ctx);
-        }
+        wait_for_guess();
     });
     socket.on('correct annotation', function(msg) {
         objs = null;
@@ -122,11 +85,8 @@ $(document).ready(function() {
         $('#waiting').hide();
 
         $('#info').switchClass('default', 'success', 100);
-        if (msg.partner) {
-            text = '<i class="fa fa-check-circle fa-2x"></i> <h3 style="margin-left: 10px; display: inline">Correct!</h3>';
-        } else {
-            text = '<i class="fa fa-check-circle fa-2x"></i> <h3 style="margin-left: 10px; display: inline">Correct!</h3>';
-        }
+        text = '<i class="fa fa-check-circle fa-2x"></i> <h3 style="margin-left: 10px; display: inline">Correct!</h3>';
+        
         // set object
         correct_obj = true;
         show_obj = true;
@@ -134,15 +94,15 @@ $(document).ready(function() {
         set_object();
         renderSegment(object.segment, scale, segment_ctx);
 
-        $('#newgame_text').html('<p style="font-weight: 600; margin-bottom: 20px">In a winning mood?</p>');
+        $('#newgame_text').html('<h3 style="margin-bottom:20px">In a winning mood?</h3>');
         $('#info_text').html(text); 
         $('#info_text').fadeIn(fadeS);
         $('#p_newgame').show();
-        $('#p_newplayergame').show();
         deletegame();
         score += 10;
         set_score();
     });
+
     socket.on('wrong annotation', function(msg) {
         objs = null;
         object = null;
@@ -153,13 +113,8 @@ $(document).ready(function() {
 
         // set message
         $('#info').switchClass('default', 'error', 100);
-        if (msg.partner) {
-            correct_obj = false;
-            text = '<i class="fa fa-times-circle fa-2x"></i> <h3 style="margin-left: 10px; display:inline">Incorrect!</h3> <span style="float: right; line-height: 35px;">Your partner guessed:</span>';
-        } else {
-            text = '<i class="fa fa-times-circle fa-2x"></i> <h3 style="margin-left: 10px; display:inline">Incorrect!</h3> <span style="float: right; line-height: 35px;">The correct object was:</span>';
-            correct_obj = true;
-        }
+        correct_obj = false;
+        text = '<i class="fa fa-times-circle fa-2x"></i> <h3 style="margin-left: 10px; display:inline">Incorrect!</h3> <span style="float: right; line-height: 35px;">Your partner guessed:</span>';
 
         // set object
         show_obj = true;
@@ -169,7 +124,7 @@ $(document).ready(function() {
 
         $('#info_text').html(text); 
         $('#info_text').fadeIn(fadeS);
-        $('#newgame_text').html('<p style="font-weight: 600; margin-bottom: 20px">Do you want revenge?</p>');
+        $('#newgame_text').html('<h3 style="margin-bottom:20px">Try it one more time?</h3>');
         $('#p_newgame').show();
         $('#p_newplayergame').show();
     });
@@ -183,16 +138,6 @@ $(document).ready(function() {
         timer_id = setInterval(set_time.bind(null, '#w_time'), 1000);
     }
 
-    function wait_for_answer() {
-        $('#question').hide();
-        $('#waiting').show();
-        $('#newquestion').val('');
-        time = answer_time;
-        clearInterval(timer_id);
-        set_time('#w_time');
-        timer_id = setInterval(set_time.bind(null, '#w_time'), 1000);
-    }
-
     function wait_for_guess() {
         $('#answer').hide();
         $('#waiting_text').text('Your partner started guessing..');
@@ -201,17 +146,6 @@ $(document).ready(function() {
         clearInterval(timer_id);
         set_time('#w_time');
         timer_id = setInterval(set_time.bind(null, '#w_time'), 1000);
-    }
-
-    function show_question_form() {
-        $('#waiting').hide();
-        $('#question').fadeIn(1000);
-        $('#guess').show();
-        $('#newquestion').focus();
-        time = question_time;
-        clearInterval(timer_id);
-        set_time('#q_time');
-        timer_id = setInterval(set_time.bind(null, '#q_time'), 1000);
     }
 
     function show_answer_form() {
@@ -232,7 +166,7 @@ $(document).ready(function() {
             socket.emit('timeout');
             clearInterval(timer_id);
             setTimeout(function(){
-                window.location = '/game';
+                window.location = '/oracle';
             }, 1000);
         }
     }
@@ -248,7 +182,7 @@ $(document).ready(function() {
             } else {
                 $(this).text('Hide');
                 show_obj = true;
-                renderSegment(object.segment, scale, segment_ctx);
+                renderSegment(object.segment, scale, segment_ctx, correct_obj);
             }
         })
         $('#object').append(link);
@@ -354,50 +288,15 @@ $(document).ready(function() {
     // the data is displayed in the "Received" section of the page
     // handlers for the different forms in the page
     // these send data to the server in a variety of ways
-    $('a#guessbtn').click(function(event) {
-        $('#guessbtn').attr('disabled', false); 
-        socket.emit('guess');
-        return false;
-    });
     $('a#newgame').click(function(event) {
         deletegame();
         $('#info').switchClass('success', 'default', 0);
         $('#info').switchClass('error', 'default', 0);
         $('#name_div').hide();
-        socket.emit('name', $('#name').val());
         noPartner();
-        socket.emit('next');
+        socket.emit('next questioner');
         return false;
-    });
-    $('a#newplayergame').click(function(event) {
-        deletegame();
-        $('#info').switchClass('success', 'default', 0);
-        $('#info').switchClass('error', 'default', 0);
-        noPartner();
-        socket.emit('next new');
-        return false;
-    });
-    $('a#ask').click(function(event) {
-        var msg = $('#newquestion').val();
-        if (msg == '' || msg.match(/\S+/g).length < 3) {
-            alert('Please use at least 3 words for a question.');
-        } else {
-            wait_for_answer();
-            addQuestion(msg);
-            socket.emit('newquestion', msg);
-        }
-        return false;
-    });
-    $("#newquestion").keyup(function(event){
-        if(event.keyCode == 13){
-            $("a#ask").click();
-        }
-    });
-    $("#guessinput").keyup(function(event){
-        if(event.keyCode == 13){
-            $("a#guessbtn").click();
-        }
-    });    
+    });  
     $('a#yes').click(function(event) {
         wait_for_question();
         msg = 'Yes';
@@ -420,23 +319,19 @@ $(document).ready(function() {
         socket.emit('new answer', msg);
         return false;
     });
-    $('canvas#segment').mousemove(function (e) {
-        if(objs != null) {
-            arr = getMousePosition(e);
-            var mouseX = arr[0], mouseY = arr[1];
-            clearCanvas(segment_ctx, segment_canvas);
-            renderSegments(objs, scale, segment_ctx, mouseX, mouseY);
-        }
+
+    function renderImageAndSegment() {
+        scale = get_scale($('#image').width(), img.width, $('.center-container').height() - 30, img.height);
+        var new_width = parseInt(img.width*scale);
+        var new_height = parseInt(img.height*scale);
+        set_canvas_size(img_canvas, new_width, new_height);
+        renderImage(img_canvas, img_ctx, img.src, new_width, new_height);
+        set_canvas_size(segment_canvas, new_width, new_height);
+        renderSegment(object.segment, scale, segment_ctx, correct_obj);
+    }
+
+    $(window).resize(function() {
+        renderImageAndSegment();
+        resizeLog();
     });
-    segment_canvas.addEventListener('click', function(e) {
-        if(objs != null) {
-            arr = getMousePosition(e);
-            var mouseX = arr[0], mouseY = arr[1];
-            var id = getObjectFromClick(mouseX, mouseY, objs, scale);
-            if (id != undefined) {
-                $('canvas#segment').css('cursor', 'default');
-                socket.emit('guess annotation', id);
-            }
-        }
-    }, false);
 });
