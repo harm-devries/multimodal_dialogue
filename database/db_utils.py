@@ -113,13 +113,13 @@ class DatabaseHelper():
         return cls(url.path[1:], url.username, url.password,
                    url.hostname, url.port)
 
-
     def get_conversation(self, dialogue_id):
         try:
             cur = self.conn.cursor()
-            cur.execute("SELECT q.content, a.content FROM question AS q, answer AS a "
-                        "WHERE a.question_id = q.question_id and q.dialogue_id = %s "
-                        "ORDER BY q.timestamp DESC", [dialogue_id])
+            cur.execute("SELECT q.content, a.content FROM question AS q, "
+                        "answer AS a WHERE a.question_id = q.question_id "
+                        "AND q.dialogue_id = %s ORDER BY q.timestamp DESC; ",
+                        [dialogue_id])
 
             rows = cur.fetchall()
             qas = [dict(question=row[0], answer=row[1]) for row in rows]
@@ -150,7 +150,7 @@ class DatabaseHelper():
                          "o.area FROM object AS o, object_category AS c "
                          "WHERE o.category_id = c.category_id AND "
                          "o.picture_id = %s "
-                         "ORDER BY o.area ASC"), [picture_id])
+                         "ORDER BY o.area ASC; "), [picture_id])
 
             rows = cur.fetchall()
             objects = []
@@ -167,8 +167,7 @@ class DatabaseHelper():
 
         return picture
 
-    def start_dialogue(self, oracle_hit_id=None, oracle_worker_id=None,
-                       questioner_hit_id=None, questioner_worker_id=None):
+    def start_dialogue(self, oracle_session_id, questioner_session_id):
         """Start new dialogue. """
         dialogue = None
 
@@ -184,10 +183,8 @@ class DatabaseHelper():
             dialogue_id = self.insert_dialogue(
                 picture_id=picture.id,
                 object_id=object_id,
-                oracle_hit_id=oracle_hit_id,
-                oracle_worker_id=oracle_worker_id,
-                questioner_hit_id=questioner_hit_id,
-                questioner_worker_id=questioner_worker_id)
+                oracle_session_id=oracle_session_id,
+                questioner_session_id=questioner_session_id)
 
             if dialogue_id is not None:
                 dialogue = Dialogue(id=dialogue_id, picture=picture,
@@ -200,33 +197,17 @@ class DatabaseHelper():
         return dialogue
 
     def insert_dialogue(self, picture_id, object_id,
-                        oracle_hit_id=None, oracle_worker_id=0,
-                        questioner_hit_id=None, questioner_worker_id=0):
+                        oracle_session_id,
+                        questioner_session_id):
         try:
-            # Insert oracle
-            if oracle_hit_id is not None and oracle_worker_id > 0:
-                self.insert_worker(worker_id=oracle_worker_id)
-                self.insert_hit(hit_id=oracle_hit_id,
-                                worker_id=oracle_worker_id)
-            else:
-                oracle_hit_id = None
-
-            # Insert questioner
-            if questioner_hit_id is not None and questioner_worker_id > 0:
-                self.insert_worker(worker_id=questioner_worker_id)
-                self.insert_hit(hit_id=questioner_hit_id,
-                                worker_id=questioner_worker_id)
-            else:
-                questioner_hit_id = None
-
             # Insert dialogue
             curr = self.conn.cursor()
             curr.execute("INSERT INTO dialogue (picture_id, object_id, "
-                         "oracle_hit_id, questioner_hit_id) "
-                         " VALUES (%s,%s,%s,%s) "
+                         "oracle_session_id, questioner_session_id, status) "
+                         " VALUES (%s,%s,%s,%s, 'ongoing') "
                          " RETURNING dialogue_id; ",
-                         (picture_id, object_id, oracle_hit_id,
-                          questioner_hit_id))
+                         (picture_id, object_id, oracle_session_id,
+                          questioner_session_id))
 
             self.conn.commit()
 
@@ -239,34 +220,50 @@ class DatabaseHelper():
             print "Fail to insert new dialogue"
             print e
 
-    def insert_worker(self, worker_id):
+    def update_dialogue_status(self, dialogue_id, status):
         try:
+            # Insert dialogue
             curr = self.conn.cursor()
-            curr.execute("INSERT INTO worker (worker_id) "
-                         "SELECT %s "
-                         "WHERE NOT EXISTS"
-                         "(SELECT 1 FROM worker WHERE worker_id=%s);",
-                         (worker_id, worker_id))
+            curr.execute("UPDATE dialogue "
+                         "SET status = %s, end_timestamp = NOW() "
+                         "WHERE dialogue_id = %s;",
+                         [status, dialogue_id])
 
             self.conn.commit()
+
         except Exception as e:
             self.conn.rollback()
-            print "Fail to insert new worker"
+            print "Fail to update dialogue status"
             print e
 
-    def insert_hit(self, hit_id, worker_id):
-        try:
+    # def insert_worker(self, worker_id):
+    #     try:
+    #         curr = self.conn.cursor()
+    #         curr.execute("INSERT INTO worker (worker_id) "
+    #                      "SELECT %s "
+    #                      "WHERE NOT EXISTS"
+    #                      "(SELECT 1 FROM worker WHERE worker_id=%s);",
+    #                      (worker_id, worker_id))
 
-            curr = self.conn.cursor()
-            curr.execute("INSERT INTO hit (hit_id, worker_id) "
-                         "VALUES (%s,%s);", (hit_id, worker_id))
+    #         self.conn.commit()
+    #     except Exception as e:
+    #         self.conn.rollback()
+    #         print "Fail to insert new worker"
+    #         print e
 
-            self.conn.commit()
-        except Exception as e:
-            if curr is not None:
-                curr.rollback()
-            print "Fail to insert new hit"
-            print e
+    # def insert_hit(self, hit_id, worker_id):
+    #     try:
+
+    #         curr = self.conn.cursor()
+    #         curr.execute("INSERT INTO hit (hit_id, worker_id) "
+    #                      "VALUES (%s,%s);", (hit_id, worker_id))
+
+    #         self.conn.commit()
+    #     except Exception as e:
+    #         if curr is not None:
+    #             curr.rollback()
+    #         print "Fail to insert new hit"
+    #         print e
 
     def insert_question(self, dialogue_id, message):
 
@@ -297,7 +294,8 @@ class DatabaseHelper():
 
             # Append a new answer to the question
             curr.execute("INSERT INTO answer (question_id, content)"
-                         "VALUES (%s,%s) RETURNING answer_id;", (question_id, message))
+                         "VALUES (%s,%s) RETURNING answer_id;",
+                         (question_id, message))
             self.conn.commit()
 
             answer_id, = curr.fetchone()
@@ -315,7 +313,7 @@ class DatabaseHelper():
 
             # Insert new guess
             curr.execute("INSERT INTO guess (dialogue_id, object_id)"
-                         "VALUES (%s,%s)", (dialogue_id, object_id))
+                         "VALUES (%s,%s);", (dialogue_id, object_id))
 
             self.conn.commit()
 
@@ -324,24 +322,76 @@ class DatabaseHelper():
             print "Fail to insert new guess"
             print e
 
-    # def insert_name(self, name):
-    #     try:
-    #         curr = self.conn.cursor()
+    def insert_session(self, player):
+        try:
+            curr = self.conn.cursor()
 
-    #         # Insert new guess
-    #         curr.execute("INSERT INTO player"
-    #                      "(name) "
-    #                      "SELECT %s WHERE "
-    #                      "NOT EXISTS ("
-    #                      "SELECT name FROM player "
-    #                      "WHERE name = %s);", [name, name])
+            curr.execute("INSERT INTO session"
+                         "(socket_id, assignment_id, hit_id, worker_id,"
+                         " role, ip) VALUES(%s, %s, %s, %s, %s, %s) "
+                         " RETURNING id;",
+                         [player.sid,
+                          player.assignment_id,
+                          player.hit_id,
+                          player.worker_id,
+                          player.role,
+                          player.ip])
+            self.conn.commit()
+            session_id, = curr.fetchone()
 
-    #         self.conn.commit()
+            return session_id
 
-    #     except Exception as e:
-    #         self.conn.rollback()
-    #         print "Fail to insert new player"
-    #         print e
+        except Exception as e:
+            self.conn.rollback()
+            print "Fail to insert new session"
+            print e
+
+    def end_session(self, session_id):
+        try:
+            curr = self.conn.cursor()
+            curr.execute("UPDATE session "
+                         "SET end_timestamp = NOW() "
+                         "WHERE id = %s; ",
+                         [session_id])
+            self.conn.commit()
+
+        except Exception as e:
+            self.conn.rollback()
+            print "Fail to end session, id = ", session_id
+            print e
+
+    def insert_into_queue(self, player):
+        try:
+            curr = self.conn.cursor()
+
+            # Insert new guess
+            curr.execute("INSERT INTO queue_event"
+                         "(session_id)"
+                         " VALUES(%s) RETURNING id;",
+                         [player.session_id])
+            self.conn.commit()
+            queue_id, = curr.fetchone()
+            return queue_id
+        except Exception as e:
+            self.conn.rollback()
+            print "Fail to insert queue"
+            print e
+
+    def remove_from_queue(self, player, reason):
+        try:
+            curr = self.conn.cursor()
+
+            # Insert new guess
+            curr.execute("UPDATE queue_event "
+                         "SET end_timestamp = NOW(), reason = %s "
+                         "WHERE id = %s",
+                         [reason, player.queue_id])
+            self.conn.commit()
+            player.queue_id = None
+        except Exception as e:
+            self.conn.rollback()
+            print "Fail to remove from queue"
+            print e
 
     def insert_report_worker(self, dialogue_id, from_worker_id,
                              to_worker_id, from_oracle, content=None,
@@ -367,25 +417,25 @@ class DatabaseHelper():
             print e
 
     # TODO use trigger to compute from_oracle on the fly
-    def insert_report_dialogue(self, dialogue_id, worker_id, from_oracle,
-                               content=None, picture_too_hard=False,
-                               object_too_hard=False):
-        try:
-            curr = self.conn.cursor()
+    # def insert_report_dialogue(self, dialogue_id, worker_id, from_oracle,
+    #                            content=None, picture_too_hard=False,
+    #                            object_too_hard=False):
+    #     try:
+    #         curr = self.conn.cursor()
 
-            # Insert new guess
-            curr.execute("INSERT INTO report_dialogue "
-                         "(dialogue_id, worker_id, from_oracle, content, "
-                         "picture_too_hard, object_too_hard) "
-                         "VALUES (%s,%s,%s,%s,%s,%s) ",
-                         [dialogue_id, worker_id, from_oracle, content,
-                          picture_too_hard, object_too_hard])
+    #         # Insert new guess
+    #         curr.execute("INSERT INTO report_dialogue "
+    #                      "(dialogue_id, worker_id, from_oracle, content, "
+    #                      "picture_too_hard, object_too_hard) "
+    #                      "VALUES (%s,%s,%s,%s,%s,%s) ",
+    #                      [dialogue_id, worker_id, from_oracle, content,
+    #                       picture_too_hard, object_too_hard])
 
-        except Exception as e:
-            self.conn.rollback()
-            print("Fail to insert report from worker (" + str(worker_id) +
-                  ") for dialogue (" + str(dialogue_id) + ")")
-            print e
+    #     except Exception as e:
+    #         self.conn.rollback()
+    #         print("Fail to insert report from worker (" + str(worker_id) +
+    #               ") for dialogue (" + str(dialogue_id) + ")")
+    #         print e
 
     def update_answer(self, answer_id, message):
 
