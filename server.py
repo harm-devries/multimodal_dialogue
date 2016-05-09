@@ -73,7 +73,7 @@ def oracle():
     if not ('hitId' in request.args and 'assignmentId' in request.args):
         return render_template('error.html', msg='Missing mturk parameters.')
 
-    assignment_id = request['assignmentId']
+    assignment_id = request.args['assignmentId']
 
     if len(players) > 1000:
         msg = ('Sorry, there are currently'
@@ -105,7 +105,7 @@ def questioner1():
     if not ('hitId' in request.args and 'assignmentId' in request.args):
         return render_template('error.html', msg='Missing mturk parameters.')
 
-    assignment_id = request['assignmentId']
+    assignment_id = request.args['assignmentId']
 
     if len(players) > 1000:
         msg = ('Sorry, there are currently'
