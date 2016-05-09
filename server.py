@@ -9,7 +9,7 @@ from players import Oracle, Questioner1, Questioner2
 # from flask.ext.login import LoginManager, UserMixin, login_required
 
 # set this to 'threading', 'eventlet', or 'gevent'
-async_mode = 'gevent'
+async_mode = 'eventlet'
 
 if async_mode == 'gevent':
     from gevent import monkey
