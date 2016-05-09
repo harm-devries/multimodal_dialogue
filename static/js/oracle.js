@@ -321,13 +321,15 @@ $(document).ready(function() {
     });
 
     function renderImageAndSegment() {
-        scale = get_scale($('#image').width(), img.width, $('.center-container').height() - 30, img.height);
-        var new_width = parseInt(img.width*scale);
-        var new_height = parseInt(img.height*scale);
-        set_canvas_size(img_canvas, new_width, new_height);
-        renderImage(img_canvas, img_ctx, img.src, new_width, new_height);
-        set_canvas_size(segment_canvas, new_width, new_height);
-        renderSegment(object.segment, scale, segment_ctx, correct_obj);
+        if (img != undefined) {
+            scale = get_scale($('#image').width(), img.width, $('.center-container').height() - 30, img.height);
+            var new_width = parseInt(img.width*scale);
+            var new_height = parseInt(img.height*scale);
+            set_canvas_size(img_canvas, new_width, new_height);
+            renderImage(img_canvas, img_ctx, img.src, new_width, new_height);
+            set_canvas_size(segment_canvas, new_width, new_height);
+            renderSegment(object.segment, scale, segment_ctx, correct_obj);
+        }
     }
 
     $(window).resize(function() {
