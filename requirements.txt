@@ -11,6 +11,7 @@ Flask==0.10.1
 Flask-WTF==0.9.5
 fuzzywuzzy==0.10.0
 gevent==1.1.0
+gevent-socketio==0.3.6
 gevent-websocket==0.9.5
 gitdb==0.6.4
 GitPython==1.0.2
