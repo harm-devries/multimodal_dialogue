@@ -144,6 +144,12 @@ def show_dialogue(id):
                            image=image)
 
 
+@app.route('/stats')
+def stats():
+    msg = '\n'.join([', '.join([x.sid, x.worker_id]) for x in players.itervalues()])
+    return render_template('error.html', msg=msg)
+
+
 @sio.on('timeout', namespace='/oracle')
 def time_out(sid):
     player = players[sid]
