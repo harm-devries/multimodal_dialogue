@@ -37,7 +37,7 @@
           </div>
         </div>
         <div class="col-sm-2">
-        <span id="score">Your score: <h3 style="display: inline">0</h3></span>
+        <a id="report_user" class="btn btn-error">Report player</a>
         </div>
       </div>
     </div>
@@ -65,9 +65,15 @@
       </div>
       {% if accepted_hit %}
       <p id="p_newgame"><span id="newgame_text"></span>
-          <a class="btn btn-success" id="newgame" role="button">Start a new game &raquo;</a>
+        <a class="btn btn-success" id="newgame" role="button">Start the game &raquo;</a>
       </p>
       {% endif %}
+      <p id="p_submit">
+        <form id="mturk_form" method="POST" action="https://workersandbox.mturk.com/mturk/externalSubmit">
+          <input type="hidden" id="assignmentId" name="assignmentId" value="{{ assignmentId }}">
+          <input id="submitButton" type="submit" name="Submit" value="Complete HIT">
+        </form>
+      </p>
       <div id="log"></div>
     </div>
     <div class="col-sm-6" id ="right">

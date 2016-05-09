@@ -96,11 +96,9 @@ $(document).ready(function() {
         set_object();
         renderSegment(object.segment, scale, segment_ctx);
 
-        $('#newgame_text').html('<h3 style="margin-bottom:20px">In a winning mood?</h3>');
         $('#info_text').html(text); 
         $('#info_text').fadeIn(fadeS);
-        $('#p_newgame').show();
-        $('#p_newplayergame').show();
+        $('#p_submit').show();
         deletegame();
         score += 10;
         set_score();
