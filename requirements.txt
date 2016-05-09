@@ -1,10 +1,10 @@
 eventlet==0.18.4
 Flask==0.10.1
-gunicorn
+gunicorn==19.4
 Jinja2==2.8
 MarkupSafe==0.23
 numpy==1.10.4
 psycopg2==2.6.1
 python-engineio==0.9.0
-python-socketio
+python-socketio==1.2
 user-agents==1.0.1
