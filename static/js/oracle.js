@@ -1,6 +1,6 @@
 $(document).ready(function() {
     namespace = '/oracle';
-    var socket = io.connect('https://' + document.domain + ':' + location.port + namespace);
+    var socket = io.connect('http://' + document.domain + ':' + location.port + namespace);
     var img; //image url
     var object; // selected object for oracle
     var correct_obj; // if flag is true, segment will be displayed in green
@@ -65,7 +65,7 @@ $(document).ready(function() {
             $('#waiting_text').text('Waiting for a new question');
             wait_for_question();
             set_object();
-            $('#score').fadeIn(fadeS);
+            $('#report').fadeIn(fadeS);
         }, 2000);
     })
     socket.on('new question', function(msg) {
@@ -96,7 +96,7 @@ $(document).ready(function() {
 
         $('#info_text').html(text); 
         $('#info_text').fadeIn(fadeS);
-        $('#p_submit').show();
+        $('#mturk_form').show();
         deletegame();
         score += 10;
         set_score();
@@ -165,7 +165,7 @@ $(document).ready(function() {
             socket.emit('timeout');
             clearInterval(timer_id);
             setTimeout(function(){
-                window.location = '/oracle';
+                window.location.reload(false);
             }, 1000);
         }
     }
@@ -173,13 +173,13 @@ $(document).ready(function() {
     function set_object() {
         $('#segment_canvas').unbind('mouseenter mouseleave');
         $('#object').html('<img width="34px" height="34px" src="http://mscoco.org/static/icons/' + object.category_id + '.jpg" /> ' + object.category);
-        var link = $('<a style="margin-left: 20px" href="#">Hide</a>').click(function(event) {
-            if($(this).text() == 'Hide') {
-                $(this).text('Show');
+        var link = $('<a style="margin-left: 20px" href="#">Hide mask</a>').click(function(event) {
+            if($(this).text() == 'Hide mask') {
+                $(this).text('Show mask');
                 show_obj = false;
                 clearCanvas(segment_ctx, segment_canvas);
             } else {
-                $(this).text('Hide');
+                $(this).text('Hide mask');
                 show_obj = true;
                 renderSegment(object.segment, scale, segment_ctx, correct_obj);
             }
@@ -199,6 +199,7 @@ $(document).ready(function() {
         $('#log').html('');
         $('#log').show();
         clearCanvas(segment_ctx, segment_canvas);
+        $('#report').hide();
     }
 
     function hideAll() {

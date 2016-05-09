@@ -56,7 +56,7 @@ body{
 #no, #na {
 	margin-left: 5px;
 }
-#question, #image, #answer, #guess, #waiting, #object, #info_text, #score, #p_submit {
+#question, #image, #answer, #guess, #waiting, #object, #info_text, #score, #p_submit, #mturk_form, #report {
 	display: none;
 }
 #log {
