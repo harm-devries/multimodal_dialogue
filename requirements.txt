@@ -3,4 +3,5 @@ Flask==0.10.1
 gunicorn==19.4
 numpy==1.10.4
 psycopg2==2.6.1
+python-socketio==1.2
 user-agents==1.0.1
