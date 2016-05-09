@@ -146,7 +146,7 @@ def show_dialogue(id):
 
 @app.route('/stats')
 def stats():
-    msg = '\n'.join([', '.join([x.sid, x.worker_id]) for x in players.itervalues()])
+    msg = '<br />'.join([', '.join([x.sid, x.worker_id, str(x.sid in sio.eio.sockets.keys())]) for x in players.itervalues()])
     return render_template('error.html', msg=msg)
 
 
