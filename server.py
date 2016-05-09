@@ -73,6 +73,8 @@ def oracle():
     if not ('hitId' in request.args and 'assignmentId' in request.args):
         return render_template('error.html', msg='Missing mturk parameters.')
 
+    assignment_id = request['assignmentId']
+
     if len(players) > 1000:
         msg = ('Sorry, there are currently'
                'more than 1000 players.')
@@ -89,7 +91,8 @@ def oracle():
                 return render_template('error.html', msg=msg)
 
     return render_template('oracle.html',
-                           accepted_hit=accepted_hit)
+                           accepted_hit=accepted_hit,
+                           assignmentId=assignment_id)
 
 
 @app.route('/questioner1')
@@ -101,6 +104,8 @@ def questioner1():
 
     if not ('hitId' in request.args and 'assignmentId' in request.args):
         return render_template('error.html', msg='Missing mturk parameters.')
+
+    assignment_id = request['assignmentId']
 
     if len(players) > 1000:
         msg = ('Sorry, there are currently'
@@ -118,7 +123,8 @@ def questioner1():
                 return render_template('error.html', msg=msg)
 
     return render_template('questioner1.html',
-                           accepted_hit=accepted_hit)
+                           accepted_hit=accepted_hit,
+                           assignmentId=assignment_id)
 
 
 @app.route('/questioner2')
