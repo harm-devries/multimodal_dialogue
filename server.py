@@ -71,14 +71,15 @@ def oracle():
         return render_template('error.html', msg=msg)
 
     if not ('hitId' in request.args and 'assignmentId' in request.args):
-        return render_template('error.html', msg='Missing mturk parameters.')
+        return render_template('error.html', title='Oracle - ',
+                               msg='Missing mturk parameters.')
 
     assignment_id = request.args['assignmentId']
 
     if len(players) > 1000:
         msg = ('Sorry, there are currently'
                'more than 1000 players.')
-        return render_template('error.html', title='Too many players',
+        return render_template('error.html', title='Oracle - ',
                                msg=msg)
 
     accepted_hit = False
@@ -88,9 +89,11 @@ def oracle():
             if player.worker_id == request.args['workerId']:
                 msg = ('You are allowed to play at most '
                        'one game at the same time.')
-                return render_template('error.html', msg=msg)
+                return render_template('error.html', title='Oracle - ', 
+                                       msg=msg)
 
     return render_template('oracle.html',
+                           title='Oracle - ',
                            accepted_hit=accepted_hit,
                            assignmentId=assignment_id)
 
@@ -100,17 +103,17 @@ def questioner1():
     if not check_browser(request.user_agent.string):
         # Handler for IE users if IE is not supported.
         msg = 'Your browswer is not supported.'
-        return render_template('error.html', msg=msg)
+        return render_template('error.html', title='Questioner - ', msg=msg)
 
     if not ('hitId' in request.args and 'assignmentId' in request.args):
-        return render_template('error.html', msg='Missing mturk parameters.')
+        return render_template('error.html', title='Questioner - ', msg='Missing mturk parameters.')
 
     assignment_id = request.args['assignmentId']
 
     if len(players) > 1000:
         msg = ('Sorry, there are currently'
                'more than 1000 players.')
-        return render_template('error.html', title='Too many players',
+        return render_template('error.html', title='Questioner - ',
                                msg=msg)
 
     accepted_hit = False
@@ -120,9 +123,11 @@ def questioner1():
             if player.worker_id == request.args['workerId']:
                 msg = ('You are allowed to play at most '
                        'one game at the same time.')
-                return render_template('error.html', msg=msg)
+                return render_template('error.html', title='Questioner - ',
+                                       msg=msg)
 
     return render_template('questioner1.html',
+                           title='Questioner - ',
                            accepted_hit=accepted_hit,
                            assignmentId=assignment_id)
 
@@ -191,9 +196,9 @@ def guess(sid):
     player = players[sid]
     dialogue = player.dialogue
     objs = [obj.to_json() for obj in dialogue.picture.objects]
-    sio.emit('all annotations', {'partner': False, 'objs': objs},
+    sio.emit('all annotations', {'objs': objs},
              room=sid, namespace=player.namespace)
-    sio.emit('all annotations', {'partner': True},
+    sio.emit('start guessing', '',
              room=player.partner.sid, namespace='/oracle')
 
 
@@ -205,22 +210,18 @@ def guess_annotation(sid, object_id):
     selected_obj = dialogue.object
     if selected_obj.object_id == object_id:
         db.update_dialogue_status(dialogue.id, 'success')
-        sio.emit('correct annotation', {'partner': False,
-                                        'object': selected_obj.to_json()},
+        sio.emit('correct annotation', {'object': selected_obj.to_json()},
                  room=sid, namespace=player.namespace)
-        sio.emit('correct annotation', {'partner': True,
-                                        'object': selected_obj.to_json()},
+        sio.emit('correct annotation', {'object': selected_obj.to_json()},
                  room=player.partner.sid, namespace='/oracle')
     else:
         db.update_dialogue_status(dialogue.id, 'failure')
         for obj in dialogue.picture.objects:
             if obj.object_id == object_id:
                 guessed_obj = obj
-        sio.emit('wrong annotation', {'partner': False,
-                                      'object': selected_obj.to_json()},
+        sio.emit('wrong annotation', {'object': selected_obj.to_json()},
                  room=sid, namespace=player.namespace)
-        sio.emit('wrong annotation', {'partner': True,
-                                      'object': guessed_obj.to_json()},
+        sio.emit('wrong annotation', {'object': guessed_obj.to_json()},
                  room=player.partner.sid, namespace='/oracle')
     delete_game([player, player.partner])
 

@@ -3,12 +3,11 @@ html, body {
   color: #0d2c40;
 }
 body{
-  padding-top: 50px;
+  padding-top: 60px;
 }
 #info {
   top:50px;
   height: 0;
-  border-bottom: 1px solid #DDD;
   font-weight: 500;
   z-index: 0;
   /*padding-top: 10px;
@@ -56,7 +55,7 @@ body{
 #no, #na {
 	margin-left: 5px;
 }
-#question, #image, #answer, #guess, #waiting, #object, #info_text, #score, #p_submit, #mturk_form, #report {
+#question, #image, #answer, #guess, #waiting, #object, #info_text, #p_submit, #mturk_form, #report {
 	display: none;
 }
 #log {
@@ -162,6 +161,9 @@ hr {
 }
 .well {
   background-color: #e8edf3;
+}
+#top.navbar-default{
+  border: 0;
 }
 #top.navbar-default .navbar-nav>li>a {
     color: #fff;

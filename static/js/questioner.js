@@ -1,6 +1,6 @@
 $(document).ready(function() {
     namespace = '/questioner1';
-    var socket = io.connect('https://' + document.domain + ':' + location.port + namespace);
+    var socket = io.connect('http://' + document.domain + ':' + location.port + namespace);
     var img; //image url
     var object; // selected object for oracle
     var correct_obj; // if flag is true, segment will be displayed in green
@@ -43,7 +43,6 @@ $(document).ready(function() {
     });
 
     socket.on('questioner', function(msg) {
-        console.log('questioner');
         setTimeout(function(){
             $('#info_text').html('<span class="loader"><span class="loader-inner"></span></span> We have found a partner!');
         }, 1000);
@@ -78,12 +77,9 @@ $(document).ready(function() {
         renderSegments(objs, scale, segment_ctx);
     });
     socket.on('correct annotation', function(msg) {
-        objs = null;
-        object = null;
+        deletegame();
         clearInterval(timer_id);
-        clearCanvas(segment_ctx, segment_canvas);
         $('#log').hide();
-        $('#object').hide();
         $('#waiting').hide();
 
         $('#info').switchClass('default', 'success', 100);
@@ -94,20 +90,18 @@ $(document).ready(function() {
         show_obj = true;
         object = msg.object;
         set_object();
-        renderSegment(object.segment, scale, segment_ctx);
+        renderSegment(object.segment, scale, segment_ctx, correct_obj);
 
         $('#info_text').html(text); 
         $('#info_text').fadeIn(fadeS);
+        $('#p_submit').show();
         $('#mturk_form').show();
-        deletegame();
         score += 10;
         set_score();
     });
     socket.on('wrong annotation', function(msg) {
-        objs = null;
-        object = null;
+        deletegame();
         clearInterval(timer_id);
-        clearCanvas(segment_ctx, segment_canvas);
         $('#log').hide();
         $('#waiting').hide();
 
@@ -124,9 +118,8 @@ $(document).ready(function() {
 
         $('#info_text').html(text); 
         $('#info_text').fadeIn(fadeS);
-        $('#newgame_text').html('<h3 style="margin-bottom:20px">Try it one more time?</h3>');
+        $('#newgame_text').html('<p style="margin-bottom:20px">In order to successfully complete this HIT, we ask you to play another game.</p>');
         $('#p_newgame').show();
-        deletegame();
     });
 
     function wait_for_answer() {
@@ -138,7 +131,6 @@ $(document).ready(function() {
         set_time('#w_time');
         timer_id = setInterval(set_time.bind(null, '#w_time'), 1000);
     }
-
 
     function show_question_form() {
         $('#waiting').hide();
@@ -176,7 +168,7 @@ $(document).ready(function() {
             } else {
                 $(this).text('Hide mask');
                 show_obj = true;
-                renderSegment(object.segment, scale, segment_ctx);
+                renderSegment(object.segment, scale, segment_ctx, correct_obj);
             }
         })
         $('#object').append(link);
@@ -231,7 +223,7 @@ $(document).ready(function() {
 
     function infoBarDown() {
         $('body').animate({
-            paddingTop: "110px"
+            paddingTop: "115px"
         }, 1000);
         $('#info').animate({
             height: "55px",
@@ -263,18 +255,21 @@ $(document).ready(function() {
             msg = '<span style="color: #4ea5cd">Not applicable</span>';
         }
         if (round % 2 == 0) {
-            $('#q'+round).after('<div class="well well-sm">' + msg + '</div>');
+            $('#q'+round).after('<div class="well well-sm" style="font-weight: 500">' + msg + '</div>');
         } else {
-            $('#q'+round).after('<div class="well well-sm" style="background-color: #fff;">' + msg + '</div>');
+            $('#q'+round).after('<div class="well well-sm" style="background-color: #fff; font-weight: 500">' + msg + '</div>');
         }
         scrollBottom();
         round += 1;
     }
     function addQuestion(msg){
         if (round % 2 == 0) {
-            $('#log').prepend('<div id="q'+round+'" class="well well-sm" style="margin-top: 10px;">' + msg + '</div>');
+            $('#log').prepend('<div id="q'+round+'" class="well well-sm" style="font-weight: 500">' + msg + '</div>');
         } else {
-            $('#log').prepend('<div id="q'+round+'" class="well well-sm" style="background-color: #fff;margin-top: 10px;">' + msg + '</div>');
+            $('#log').prepend('<div id="q'+round+'" class="well well-sm" style="background-color: #fff; font-weight: 500">' + msg + '</div>');
+        }
+        if (round > 0) {
+            $('#q'+(round - 1)).css('margin-top', '10px');
         }
         scrollBottom();
     }
@@ -335,12 +330,15 @@ $(document).ready(function() {
 
     function renderImageAndSegment() {
         if (img != undefined) {
-            scale = get_scale($('#image').width(), img.width, $('.center-container').height() - 30, img.height);
+            scale = get_scale($('#image').width(), img.width, $('.center-container').height() - 15, img.height);
             var new_width = parseInt(img.width*scale);
             var new_height = parseInt(img.height*scale);
             set_canvas_size(img_canvas, new_width, new_height);
             renderImage(img_canvas, img_ctx, img.src, new_width, new_height);
             set_canvas_size(segment_canvas, new_width, new_height);
+            if (object != null) {
+                renderSegment(object.segment, scale, segment_ctx, correct_obj);
+            }
             if (objs != null) {
                 renderSegments(objs, scale, segment_ctx);
             }

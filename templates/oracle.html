@@ -47,18 +47,16 @@
 <div class="container">
   <div class="row">
     <div class="col-sm-6" id="left">
-
+      <div id="log"></div>
       <div id="intro" style="font-weight: 400">
-        <p>GuessWhat?! is a two player guessing game. 
-        Your role is the oracle.</p>
-
-        <h3>Oracle</h3>
+        <h3>Game instructions</h3>
         <ul>
         <li>You will be shown an image of a scene with multiple objects. </li>
         <li>One of the objects will be assigned as the target which the questioner should predict.</li>
         <li>Your job is to help the questioner by answering his questions with Yes, No or Not Applicable. </li>
-        <li>You will receive 10 points if the questioner guesses the target correctly. </li>
+        <li>HIT is completed when your partner guessed the correct object, otherwise we ask you to play another game</li>
         </ul>
+        Please watch the instruction video on the right before starting your first game.
 
       </div>
       {% if accepted_hit %}
@@ -66,13 +64,14 @@
           <a class="btn btn-success" id="newgame" role="button">Start a new game &raquo;</a>
       </p>
       {% endif %}
-      <p id="p_submit">
+      <p id="p_submit" style="margin: 20px 0 20px 0">
+        Thank you for completing the game. In order to get rewarded for your effort you need to submit your HIT:
         <form id="mturk_form" method="POST" action="https://workersandbox.mturk.com/mturk/externalSubmit">
           <input type="hidden" id="assignmentId" name="assignmentId" value="{{ assignmentId }}">
-          <input id="submitButton" type="submit" name="Submit" value="Complete HIT">
+          <input id="submitButton" type="submit" name="Submit" class="btn btn-success" value="Complete HIT">
         </form>
       </p>
-      <div id="log"></div>
+      
     </div>
     <div class="col-sm-6" id ="right">
       <div style="position: relative;" id="image">

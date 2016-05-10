@@ -50,18 +50,18 @@
 <div class="container">
   <div class="row">
     <div class="col-sm-6" id="left">
-
+      <div id="log"></div>
       <div id="intro" style="font-weight: 400">
-        <p>GuessWhat?! is a two player guessing game. 
-        Your role is the oracle.</p>
-
-        <h3>Questioner</h3>
+        <h3>Game instructions</h3>
         <ul>
         <li>You will be shown an image of a scene with multiple objects. </li>
         <li>One of the objects will be assigned as the target (but not visible to you). </li>
-        <li>Your job is to guess that object by asking yes or no questions to the oracle. </li>
-        <li>You will receive 10 points if you guess the object correctly. </li>
+        <li>Your job is to guess that object by asking yes or no questions.</li>
+        <li>You click on the GuessWhat! button once you are certain which object it is. </li>
+        <li>All object segmentations are shown in the image, and you click on your object.</li>
+        <li>HIT is completed when you've guessed the correct object, otherwise we ask you to play another game</li>
         </ul>
+        Please watch the instruction video on the right before starting your first game.
 
       </div>
       {% if accepted_hit %}
@@ -69,13 +69,14 @@
         <a class="btn btn-success" id="newgame" role="button">Start the game &raquo;</a>
       </p>
       {% endif %}
-      <p id="p_submit">
+      <p id="p_submit" style="margin: 20px 0 20px 0">
+        Thank you for completing the game. In order to get rewarded for your effort you need to submit your HIT:
         <form id="mturk_form" method="POST" action="https://workersandbox.mturk.com/mturk/externalSubmit">
           <input type="hidden" id="assignmentId" name="assignmentId" value="{{ assignmentId }}">
-          <input id="submitButton" type="submit" name="Submit" value="Complete HIT">
+          <input id="submitButton" type="submit" name="Submit" class="btn btn-success" value="Complete HIT">
         </form>
       </p>
-      <div id="log"></div>
+      
     </div>
     <div class="col-sm-6" id ="right">
       <div style="position: relative;" id="image">
