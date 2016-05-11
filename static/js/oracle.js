@@ -241,6 +241,7 @@ $(document).ready(function() {
         $('#right').switchClass("col-sm-6", "col-sm-7", 0, "easeInOutQuad");
 
     }
+
     function infoBarUp() {
         $('body').animate({
             paddingTop: "60px"
@@ -253,6 +254,13 @@ $(document).ready(function() {
         // $('#right').switchClass("col-sm-7", "col-sm-3", 0, "easeInOutQuad");
     }
 
+    function modifyAnswer(r) {
+        $('#a'+r).text('');
+        var yes = $('<a class="btn btn-success">Yes</a>').appendTo('#a'+r);
+        var no = $('<a class="btn btn-danger">No</a>').appendTo('#a'+r);
+        var na = $('<a class="btn btn-info">Not applicable</a>').appendTo('#a'+r);
+    }
+
     function addAnswer(msg){
         if (msg == 'Yes') {
             msg = '<span style="color: #61b832">Yes</span>';
@@ -262,9 +270,15 @@ $(document).ready(function() {
             msg = '<span style="color: #4ea5cd">Not applicable</span>';
         }
         if (round % 2 == 0) {
-            $('#q'+round).after('<div class="well well-sm" style="font-weight: 500">' + msg + '</div>');
+            var cur_round = round;
+            var ans = $('<div id="a' + cur_round + '" class="well well-sm" style="font-weight: 500">' + msg +'</div>')
+            var link = $('<span style="float: right"><i class="fa fa-undo"></i> <a href="#">Undo</a></span>').click(function(){modifyAnswer(cur_round)}).appendTo(ans);
+            $('#q'+round).after(ans);
         } else {
-            $('#q'+round).after('<div class="well well-sm" style="background-color: #fff; font-weight: 500">' + msg + '</div>');
+            var cur_round = round;
+            var ans = $('<div id="a' + cur_round + '" class="well well-sm" style="font-weight: 500; background-color: #fff;">' + msg +'</div>')
+            var link = $('<span style="float: right"><i class="fa fa-undo"></i> <a href="#">Undo</a></span>').click(function(){modifyAnswer(cur_round)}).appendTo(ans);
+            $('#q'+round).after(ans);
         }
         scrollBottom();
         round += 1;
