@@ -1,14 +1,23 @@
 class Player():
     """Player wrapper."""
 
-    def __init__(self, sid, assignment_id, hit_id, worker_id, ip):
+    def __init__(self, sid, ip):
         self.sid = sid
-        self.assignment_id = assignment_id
-        self.hit_id = hit_id
-        self.worker_id = worker_id
         self.ip = ip
+        self.assignment_id = None
+        self.hit_id = None
+        self.worker_id = None
         self.partner = None
         self.dialogue = None
+
+
+class QualifyOracle(Player):
+    """Oracle that needs to qualify."""
+    namespace = '/q_oracle'
+    role = 'QualifyOracle'
+
+    def __init__(self, sid, ip):
+        Player.__init__(self, sid, ip)
 
 
 class Oracle(Player):
@@ -16,23 +25,23 @@ class Oracle(Player):
     namespace = '/oracle'
     role = 'Oracle'
 
-    def __init__(self, sid, assignment_id, hit_id, worker_id, ip):
-        Player.__init__(self, sid, assignment_id, hit_id, worker_id, ip)
+    def __init__(self, sid, ip):
+        Player.__init__(self, sid, ip)
 
 
-class Questioner1(Player):
-    """Questioner of level1."""
-    namespace = '/questioner1'
-    role = 'Questioner1'
+class QualifyQuestioner(Player):
+    """Questioner that needs to qualify."""
+    namespace = '/q_questioner'
+    role = 'QualifyQuestioner'
 
-    def __init__(self, sid, assignment_id, hit_id, worker_id, ip):
-        Player.__init__(self, sid, assignment_id, hit_id, worker_id, ip)
+    def __init__(self, sid, ip):
+        Player.__init__(self, sid, ip)
 
 
-class Questioner2(Player):
-    """Questioner of level2. """
-    namespace = '/questioner2'
-    role = 'Questioner2'
+class Questioner(Player):
+    """Questioner. """
+    namespace = '/questioner'
+    role = 'Questioner'
 
-    def __init__(self, sid, assignment_id, hit_id, worker_id, ip):
-        Player.__init__(self, sid, assignment_id, hit_id, worker_id, ip)
+    def __init__(self, sid, ip):
+        Player.__init__(self, sid, ip)

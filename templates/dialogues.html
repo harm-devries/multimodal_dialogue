@@ -1,0 +1,29 @@
+{% extends "main.html" %}
+
+{% block body %}
+
+<div class="container" style="margin-top: 15px">
+  <table class="table table-striped">
+  	<thead>
+    <tr>
+      <th>Id</th>
+      <th>#objects</th>
+      <th>#questions</th>
+      <th>Status</th>
+      <th>Time</th>
+    </tr>
+  </thead>
+  <tbody>
+  	{% for d in dialogues %}
+	    <tr>
+	      <th scope="row"><a href="/dialogue/{{d.id}}">{{d.id}}</a></th>
+	      <td>{{d.nr_objs}}</td>
+	      <td>{{d.nr_q}}</td>
+	      <td>{{d.status}}</td>
+	      <td>{{d.seconds}}s</td>
+	    </tr>
+	{% endfor %}
+  </tbody>
+  </table>
+</div>
+{% endblock %}

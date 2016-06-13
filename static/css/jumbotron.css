@@ -183,3 +183,14 @@ hr {
     color: #fff;
     background-color: #f2b632;
 }
+.strike{
+    position: relative;
+}
+.strike::after {
+    content: '';
+    border-bottom: 4px solid #000;
+    position: absolute;
+    left: 0;
+    top: 40%;
+    width: 100%;
+}

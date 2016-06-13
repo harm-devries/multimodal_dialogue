@@ -1,0 +1,56 @@
+{% extends "main.html" %}
+
+{% block body %}
+
+<div class="container" style="margin-top: 15px">
+  <table class="table table-striped">
+  <tr>
+  <th></th>
+  <th>#Oracle</th>
+  <th>#Questioner</th>
+  <th>Total</th>
+  <th>Percentage</th>
+  </tr>
+  <tr>
+  	<th scope="row">Success</th>
+  	<td></td>
+  	<td></td>
+  	<td>{{counts.success}}</td>
+    <td>{{counts.success / counts.total * 100}}%</td>
+  </tr>
+  <tr>
+  	<th scope="row">Failure</th>
+  	<td></td>
+  	<td></td>
+  	<td>{{counts.failure}}</td>
+    <td>{{counts.failure / counts.total * 100}}%)</td>
+  </tr>
+  <tr>
+  	<th scope="row">Timeout</th>
+  	<td>{{counts.oracle_timeout}}</td>
+  	<td>{{counts.questioner_timeout}}</td>
+  	<td>{{counts.oracle_timeout + counts.questioner_timeout}}</td>
+    <td>{{(counts.oracle_timeout + counts.questioner_timeout)/counts.total * 100}}%)</td>
+  </tr>
+  <tr>
+  	<th scope="row">Disconnect</th>
+  	<td>{{counts.oracle_disconnect}}</td>
+  	<td>{{counts.questioner_disconnect}}</td>
+  	<td>{{counts.oracle_disconnect + counts.questioner_disconnect}}</td>
+    <td>{{(counts.oracle_disconnect + counts.questioner_disconnect)/counts.total * 100}}%</td>
+  </tr>
+  <tr>
+  	<th scope="row">Reported</th>
+  	<td>{{counts.oracle_reported}}</td>
+  	<td>{{counts.questioner_reported}}</td>
+  	<td>{{counts.oracle_reported + counts.questioner_reported}}</td>
+    <td>{{(counts.oracle_reported + counts.questioner_reported)/counts.total * 100}}%</td>
+  </tr>
+  <tr class="table-info">
+  	<td></td><td></td><td></td><th>{{counts.total}}</th><th>100%</th>
+  </tr>
+  </table>
+  Average number of questions for dialogue with success or failure status: <b>{{avg_questions}}</b>. <br/>
+  Average time taken for a dialogue with success or failure status: {{avg_seconds}}s.
+</div>
+{% endblock %}

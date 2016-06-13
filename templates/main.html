@@ -48,21 +48,18 @@
         <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-menubuilder"><span class="sr-only">Toggle navigation</span><span class="icon-bar"></span><span class="icon-bar"></span><span class="icon-bar"></span>
         </button>
       </div>
-
-      <!-- <div class="collapse navbar-collapse">
-        <ul class="nav navbar-nav navbar-right">
-          <li class="active"><a href="/">About</a></li>
-          <li class="dropdown">
-            <a href="#" class="dropdown-toggle" data-toggle="dropdown">Game <b class="caret"></b></a>
-            <ul class="dropdown-menu">
-              <li><a href="/oracle">Oracle</a></li>
-              <li><a href="/questioner1">Questioner - level 1</a></li>
-              <li><a href="/questioner2">Questioner - level 2</a></li>
-            </ul>
-          </li>
-          <li><a href="/leaderboard">Leaderboard</a></li>
-        </ul>
-      </div> -->
+      {% if accepted_hit %}
+      <div class="collapse navbar-collapse">
+        <table style="float: right; margin-top: 2px;">
+          <tr style="color: lightgreen">
+            <td style="color: lightblue" width="100px">Disconnects:</td><td width="50px" style="color: lightblue" id="nr_disconnects">{{ disconnect }}</td><td width="100px">Successes:</td><td id="nr_successes">{{ success }}</td>
+          </tr>
+          <tr style="color: #FFAEAE">
+            <td></td><td></td><td width="100px">Failures:</td><td id="nr_failures">{{ failure }}</td>
+          </tr>
+        </table>
+      </div>
+      {% endif %}
     </div>
   </div>
 

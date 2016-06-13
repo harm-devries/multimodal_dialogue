@@ -4,7 +4,7 @@
 {% if accepted_hit %}
 <meta id="namespace" data-name="{{namespace}}">
 <script src="{{ url_for('static', filename='js/image_utils.js') }}"></script>
-<script src="{{ url_for('static', filename='js/oracle.js') }}"></script>
+<script src="{{ url_for('static', filename='js/questioner.js') }}"></script>
 <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.5/socket.io.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/vex-js/2.3.4/js/vex.combined.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vex-js/2.3.4/css/vex.css" />
@@ -25,25 +25,28 @@
               <div class="col-sm-10"><span class="loader"><span class="loader-inner"></span></span><span id="waiting_text"></span></div>
             </div>
           </div>
-          <div id="answer">
+          <div id="question">
             <div class="row">
-              <div class="col-sm-1" id="a_time"></div>
-              <div class="col-sm-11"><a id="yes" class="btn btn-success">Yes</a> <a id="no" class="btn btn-danger">No</a> <a id="na" class="btn btn-info">Not applicable</a></div>
+              <div class="col-sm-1" id="q_time"></div>
+              <div class="col-sm-9"><input autocomplete="off" type="text" id="newquestion" placeholder="Ask a new question" class="form-control"></div>
+              <div clas="col-sm-1"><a class="btn btn-success" id="ask" type="submit">Ask</a></div>
             </div>
           </div>
         </div>
         <div class="col-sm-5">
+          <div id="guess">
+            <a class="btn btn-primary" id="guessbtn">GuessWhat!</a>
+          </div>
           <div id="object">
           </div>
         </div>
         <div class="col-sm-2">
-          <div id="report">
-            <a id="report_user" class="btn btn-danger">Report player</a>
+          <div id="report"><a id="report_user" class="btn btn-danger">Report player</a>
           </div>
         </div>
       </div>
     </div>
-  </div>
+ </div>
 {% endblock %}
 
 {% block body %}
@@ -56,28 +59,37 @@
         <h3>Game instructions</h3>
         <ul>
         <li>You will be shown an image of a scene with multiple objects. </li>
-        <li>One of the objects will be assigned as the target which the questioner should predict.</li>
-        <li>Your job is to help the questioner by answering his questions with Yes, No or Not Applicable. </li>
+        <li>One of the objects will be assigned as the target (but not visible to you). </li>
+        <li>Your job is to guess that object by asking yes or no questions.</li>
+        <li>You click on the GuessWhat! button once you are <u>certain</u> which object it is. </li>
+        <li>All object segmentations are then shown in the image, and you click on the correct object.</li>
         </ul>
+
         Please watch the instruction video on the right before starting your first game.
+
         <h3>Important</h3>
         <p>
-        In this HIT we ask you to successfully complete 10 games. Your HIT will be approved if you <b>do not make more than 3 mistakes</b>. Our motivation for this policy is that we do want you to answer the questions correctly. </p>
+        In this HIT we ask you to successfully complete 10 games. Your HIT will be approved if you <b>do not make more than 3 mistakes</b>. Our motivation for this policy is that we do want you to be sure which object it is before you start guessing. </p>
         <p>
-        Note that this a live game - you will be paired up with another player that needs to figure out the target object. Please behave accordingly: do not disconnect from the game and answer the questions correctly. Your HIT will be approved if <b>you do not disconnect more than 3 times</b>.</p>
+        Note that this a live game - you will be paired up with another player that answers your questions in an interactive session. Please behave accordingly: do not disconnect from the game and ask meaningful questions that leads you to guess the object. Your HIT will be approved if <b>you do not disconnect more than 3 times</b>.</p>
         <p>
-        Do not hesitate to contact Harm de Vries - mail (at) harmdevries.com - if you have any further questions or feedback.</p>
+        Do not hesitate to contact Harm de Vries - mail (at) harmdevries.com - if you have any further questions.</p>
 
       </div>
       {% if accepted_hit %}
       <p id="p_newgame"><span id="newgame_text"></span>
-          <a class="btn btn-success" id="newgame" role="button">Start a new game &raquo;</a>
+        <a class="btn btn-success" id="newgame" role="button">Start the game &raquo;</a>
       </p>
       {% endif %}
+      <p id="p_submit" style="margin: 20px 0 20px 0">
+        Thank you for completing the game. In order to get rewarded for your effort you need to submit your 
+      </p>
       
     </div>
     <div class="col-sm-6" id ="right">
-      <img id="instructions" src="https://s3-us-west-2.amazonaws.com/guess-what/oracle_instructions.gif" style="margin-top: 25px; width: 100%" />
+
+      <img id="instructions" src="https://s3-us-west-2.amazonaws.com/guess-what/questioner_instructions.gif" style="margin-top: 25px; width: 100%" />
+      
       <div style="position: relative;" id="image">
       <canvas id="img" width="100" height="100" 
        style="position: absolute; left: 0; top: 0; z-index: 0;"></canvas>

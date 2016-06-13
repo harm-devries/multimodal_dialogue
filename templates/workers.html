@@ -1,0 +1,27 @@
+{% extends "main.html" %}
+
+{% block body %}
+
+<div class="container" style="margin-top: 15px">
+  <table class="table table-striped">
+  	<thead>
+    <tr>
+      <th>Id</th>
+      <th>#success</th>
+      <th>#failure</th>
+      <th>#disconnect</th>
+    </tr>
+  </thead>
+  <tbody>
+  	{% for w in workers %}
+	    <tr>
+	      <th scope="row"><a href="/worker/{{w.id}}">{{w.id}}</a></th>
+	      <td>{{w.success}}</td>
+	      <td>{{w.failure}}</td>
+	      <td>{{w.disconnect}}</td>
+	    </tr>
+	{% endfor %}
+  </tbody>
+  </table>
+</div>
+{% endblock %}

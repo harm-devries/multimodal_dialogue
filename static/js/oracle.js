@@ -1,6 +1,31 @@
 $(document).ready(function() {
-    namespace = '/oracle';
-    var socket = io.connect('http://' + document.domain + ':' + location.port + namespace);
+    namespace = $('#namespace').data().name;
+    var socket = io.connect('https://' + document.domain + ':' + location.port + namespace);
+    var QueryString = function () {
+          // This function is anonymous, is executed immediately and 
+          // the return value is assigned to QueryString!
+          var query_string = {};
+          var query = window.location.search.substring(1);
+          var vars = query.split("&");
+          for (var i=0;i<vars.length;i++) {
+            var pair = vars[i].split("=");
+                // If first entry with this name
+            if (typeof query_string[pair[0]] === "undefined") {
+              query_string[pair[0]] = decodeURIComponent(pair[1]);
+                // If second entry with this name
+            } else if (typeof query_string[pair[0]] === "string") {
+              var arr = [ query_string[pair[0]],decodeURIComponent(pair[1]) ];
+              query_string[pair[0]] = arr;
+                // If third or later entry with this name
+            } else {
+              query_string[pair[0]].push(decodeURIComponent(pair[1]));
+            }
+          } 
+          return query_string;
+    }();
+    socket.emit('update session', {assignmentId: QueryString.assignmentId,
+                                   hitId: QueryString.hitId,
+                                   workerId: QueryString.workerId});
     var img; //image url
     var object; // selected object for oracle
     var correct_obj; // if flag is true, segment will be displayed in green
@@ -27,6 +52,8 @@ $(document).ready(function() {
     var answer_time = 30;
     var question_time = 90;
     var guess_time = 30;
+    vex.defaultOptions.className = 'vex-theme-default';
+
 
     // socket.on('disconnect', function() {
     //     $('#question').hide();
@@ -44,6 +71,13 @@ $(document).ready(function() {
         partner_timeout = true;
         deletegame();
         noPartner();
+    });
+    socket.on('reported', function(){
+        deletegame();
+        noPartner();
+        vex.dialog.alert({
+            message: 'Your partner has reported your playing behavior. We will start a new game, but please play appropriately to avoid further consequences.',
+        });
     });
 
     socket.on('answerer', function(msg) {
@@ -93,10 +127,9 @@ $(document).ready(function() {
 
         $('#info_text').html(text); 
         $('#info_text').fadeIn(fadeS);
-        $('#p_submit').show();
-        $('#mturk_form').show();
-        score += 10;
-        set_score();
+        $('#newgame_text').html('<p style="margin-bottom: 20px">You have to finish ' + (10 - msg.stats.success) + ' more games to complete the HIT. </p>');
+        $('#p_newgame').show();
+        set_score(msg.stats.success, msg.stats.failure, msg.stats.oracle_disconnect + msg.stats.oracle_timeout);
     });
 
     socket.on('wrong annotation', function(msg) {
@@ -118,8 +151,9 @@ $(document).ready(function() {
 
         $('#info_text').html(text); 
         $('#info_text').fadeIn(fadeS);
-        $('#newgame_text').html('<p style="margin-bottom:20px">In order to successfully complete this HIT, we ask you to play another game.</p>');
+        $('#newgame_text').html('<p style="margin-bottom: 20px">You have to finish ' + (10 - msg.stats.success) + ' more games to complete the HIT. </p>');
         $('#p_newgame').show();
+        set_score(msg.stats.success, msg.stats.failure, msg.stats.oracle_disconnect + msg.stats.oracle_timeout);
     });
 
     function wait_for_question() {
@@ -182,8 +216,10 @@ $(document).ready(function() {
         $('#object').fadeIn(fadeS);
     }
 
-    function set_score() {
-        $('#score').html('Your score: <h3 style="display:inline; margin: 0">'+score+'</h3>');
+    function set_score(success, failure, disconnect) {
+        $('#nr_successes').html(success);
+        $('#nr_failures').html(failure);
+        $('#nr_disconnects').html(disconnect);
     }
 
     function deletegame() {
@@ -211,6 +247,7 @@ $(document).ready(function() {
         hideAll();
         $('#title').fadeOut(fadeS);
         $('#intro').fadeOut(fadeS);
+        $('#instructions').fadeOut(fadeS);
         $('#p_newgame').fadeOut(fadeS);
         $('#p_newplayergame').fadeOut(fadeS);
         var msg;
@@ -226,6 +263,10 @@ $(document).ready(function() {
         $('#info_text').html('<span class="loader"><span class="loader-inner"></span></span> ' + msg);
         $('#info_text').show();
         infoBarDown();
+        // setTimeout(function(){
+        //     $('#intro').show();
+        //     $('#intro').html('We couldn\'t find a partner for you at the moment. Please come back later. <br /><br /> (You could also try to refresh the webpage - sometimes sockets fail to connect to the webserver.).')
+        // }, 30000);
     }
 
     function infoBarDown() {
@@ -254,30 +295,69 @@ $(document).ready(function() {
         // $('#right').switchClass("col-sm-7", "col-sm-3", 0, "easeInOutQuad");
     }
 
-    function modifyAnswer(r) {
+    function modifyAnswer(r, cur_ans) {
         $('#a'+r).text('');
-        var yes = $('<a class="btn btn-success">Yes</a>').appendTo('#a'+r);
-        var no = $('<a class="btn btn-danger">No</a>').appendTo('#a'+r);
-        var na = $('<a class="btn btn-info">Not applicable</a>').appendTo('#a'+r);
+        if (cur_ans == 'Yes') {
+            var yes = $(colorizeAnswer(cur_ans)).css('margin-left', '10px');
+        } else {
+            var yes = $('<a href="#" class="btn btn-success">Yes</a>').on('click', function(){updateAnswer(r, cur_ans, 'Yes')});
+        }
+        $('#a'+r).append(yes);
+        if (cur_ans == 'No') {
+            var no = $(colorizeAnswer(cur_ans)).css('margin-left', '10px');
+        } else {
+            var no = $('<a href="#" style="margin-left: 10px" class="btn btn-danger">No</a>').on('click', function(){updateAnswer(r, cur_ans, 'No')});
+        }
+        $('#a'+r).append(no);
+        if (cur_ans == 'Not applicable') {
+            var na = $(colorizeAnswer(cur_ans)).css('margin-left', '10px');
+        } else {
+            var na = $('<a href="#" style="margin-left: 10px" class="btn btn-info">Not applicable</a>').on('click', function(){updateAnswer(r, cur_ans, 'Not applicable')});
+        }
+        $('#a'+r).append(na);
+    }
+
+    function colorizeAnswer(msg, line_through) {
+        if (msg == 'Yes') {
+            if (!line_through) {
+                msg = '<span style="color: #61b832">Yes</span>';
+            } else {
+                msg = '<span class="strike" style="color: #61b832">Yes</span>';
+            }
+        } else if (msg == 'No') {
+            if (!line_through) {
+                msg = '<span style="color: #de4343">No</span>';
+            } else {
+                msg = '<span class="strike" style="color: #de4343;">No</span>';
+            }
+        } else {
+            if (!line_through) {
+                msg = '<span style="color: #4ea5cd">Not applicable</span>';
+            } else {
+                msg = '<span class="strike" style="color: #4ea5cd;">Not applicable</span>';
+            }
+        }
+        return msg;
+    }
+
+    function updateAnswer(r, old_msg, new_msg) {
+        old_msg_html = colorizeAnswer(old_msg, true);
+        new_msg_html = colorizeAnswer(new_msg);
+        $('#a'+r).html(old_msg_html + '&nbsp; &nbsp;' + new_msg_html);
+        socket.emit('update answer', {round: r, old_msg: old_msg, new_msg: new_msg})
     }
 
     function addAnswer(msg){
-        if (msg == 'Yes') {
-            msg = '<span style="color: #61b832">Yes</span>';
-        } else if (msg == 'No') {
-            msg = '<span style="color: #de4343">No</span>';
-        } else {
-            msg = '<span style="color: #4ea5cd">Not applicable</span>';
-        }
+        col_msg = colorizeAnswer(msg);
         if (round % 2 == 0) {
             var cur_round = round;
-            var ans = $('<div id="a' + cur_round + '" class="well well-sm" style="font-weight: 500">' + msg +'</div>')
-            var link = $('<span style="float: right"><i class="fa fa-undo"></i> <a href="#">Undo</a></span>').click(function(){modifyAnswer(cur_round)}).appendTo(ans);
+            var ans = $('<div id="a' + cur_round + '" class="well well-sm" style="font-weight: 500">' + col_msg +'</div>')
+            var link = $('<span style="float: right"><i class="fa fa-undo"></i> <a href="#">Undo</a></span>').click(function(){modifyAnswer(cur_round, msg)}).appendTo(ans);
             $('#q'+round).after(ans);
         } else {
             var cur_round = round;
-            var ans = $('<div id="a' + cur_round + '" class="well well-sm" style="font-weight: 500; background-color: #fff;">' + msg +'</div>')
-            var link = $('<span style="float: right"><i class="fa fa-undo"></i> <a href="#">Undo</a></span>').click(function(){modifyAnswer(cur_round)}).appendTo(ans);
+            var ans = $('<div id="a' + cur_round + '" class="well well-sm" style="font-weight: 500; background-color: #fff;">' + col_msg +'</div>')
+            var link = $('<span style="float: right"><i class="fa fa-undo"></i> <a href="#">Undo</a></span>').click(function(){modifyAnswer(cur_round, msg)}).appendTo(ans);
             $('#q'+round).after(ans);
         }
         scrollBottom();
@@ -299,6 +379,23 @@ $(document).ready(function() {
     // the data is displayed in the "Received" section of the page
     // handlers for the different forms in the page
     // these send data to the server in a variety of ways
+    $('a#report_user').click(function(event) {
+        vex.dialog.prompt({
+          message: 'This will end the game.',             // adds the content message
+          placeholder: 'Please specify a reason',      // text displayed in Prompt input field
+
+          // calls a callback function, with simple Alert message
+          // if the user adds data in the input field, "value" contains that text, if Cancel, value is false,
+          // if OK with no data added in input field, value is an object with empty "vex" property
+          callback: function(value) {
+            if(value !== false && value != '') {
+                deletegame(); 
+                noPartner(); 
+                socket.emit('report questioner', value);
+            }
+          }
+        });
+    });
     $('a#newgame').click(function(event) {
         deletegame();
         $('#info').switchClass('success', 'default', 0);
@@ -346,7 +443,9 @@ $(document).ready(function() {
     }
 
     $(window).resize(function() {
-        renderImageAndSegment();
-        resizeLog();
+        if (img != undefined) {
+            renderImageAndSegment();
+            resizeLog();
+        }
     });
 });

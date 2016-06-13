@@ -1,8 +1,5 @@
 """Helper functions to connect to postgres database."""
-import os
-import psycopg2
-import psycopg2.extras
-import urlparse
+from sqlalchemy.sql import text
 
 from random import randint
 
@@ -31,7 +28,7 @@ class Picture:
 class Object:
     """Object wrapper"""
 
-    def __init__(self, object_id, category_id, category, segment, area ):
+    def __init__(self, object_id, category_id, category, segment, area):
         self.object_id = object_id
         self.category_id = category_id
         self.category = category
@@ -84,413 +81,446 @@ class Dialogue:
         self.id = id
         self.picture = picture
         self.object = object
+        self.question_ids = []
 
 
-class DatabaseHelper():
-    """Database helper for multimodal dialogue project."""
+def get_dialogues(connection):
+    dialogues = []
+    rows = connection.execute("SELECT d.dialogue_id, d.status, d.start_timestamp, d.end_timestamp, "
+                              "(SELECT count(*) FROM question AS q WHERE q.dialogue_id = d.dialogue_id) AS nr_q, "
+                              "(SELECT count(*) FROM object AS o WHERE o.picture_id = d.picture_id)"
+                              " AS nr_o,  d.status, d.start_timestamp, d.end_timestamp FROM "
+                              "dialogue AS d WHERE d.status != '' "
+                              "ORDER BY d.start_timestamp DESC")
+    for row in rows:
+        seconds = -1
+        if row[3] and row[2]:
+            seconds = (row[3] - row[2]).seconds
+        dialogues.append({'id': row[0], 'nr_objs': row[5],
+                          'nr_q': row[4], 'status': row[1],
+                          'seconds': seconds})
+    return dialogues
 
-    def __init__(self, database, username, password, hostname, port):
-        """Connect to postgresql database."""
-        try:
-            self.conn = psycopg2.connect(database=database,
-                                         user=username,
-                                         password=password,
-                                         host=hostname,
-                                         port=port)
-        except Exception as e:
-            print "Unable to connect to database:"
-            print e
 
-    @classmethod
-    def from_postgresurl(cls, db_url):
-        """Return DatabaseHelper from postgresurl.
+def get_dialogue_stats(connection):
+    rows = connection.execute("SELECT d.dialogue_id, d.status, d.start_timestamp, d.end_timestamp, "
+                              "(SELECT count(*) FROM question AS q WHERE q.dialogue_id = d.dialogue_id) AS nr_q, "
+                              "(SELECT count(*) FROM object AS o WHERE o.picture_id = d.picture_id)"
+                              " AS nr_o,  d.status, d.start_timestamp, d.end_timestamp FROM "
+                              "dialogue AS d WHERE d.status != '' "
+                              "ORDER BY d.start_timestamp DESC")
+    counts = {'success': 0, 'failure': 0, 'ongoing': 0,
+              'oracle_disconnect': 0, 'questioner_disconnect': 0,
+              'oracle_timeout': 0, 'questioner_timeout': 0,
+              'oracle_reported': 0, 'questioner_reported': 0,
+              'total': 0}
+    total_seconds = 0.
+    total_questions = 0.
+    j = 0
+    for row in rows:
+        counts[row[1]] += 1
+        counts['total'] += 1
+        if row[1] in ['success', 'failure']:
+            total_seconds += (row[3] - row[2]).seconds
+            total_questions += row[4]
+            j += 1
+    return counts, total_seconds / j, total_questions / j
 
-        Parses postgresurl into database, username, password, hostname
-        and port and initializes DatabaseHelper from it.
-        """
-        urlparse.uses_netloc.append("postgres")
-        url = urlparse.urlparse(db_url)
-        return cls(url.path[1:], url.username, url.password,
-                   url.hostname, url.port)
 
-    def get_conversation(self, dialogue_id):
-        try:
-            cur = self.conn.cursor()
-            cur.execute("SELECT q.content, a.content FROM question AS q, "
-                        "answer AS a WHERE a.question_id = q.question_id "
-                        "AND q.dialogue_id = %s ORDER BY q.timestamp DESC; ",
-                        [dialogue_id])
+def get_dialogue_guess(connection, dialogue_id):
+    rows = connection.execute(text("SELECT "
+                                   "o.object_id, o.category_id, c.name, o.segment, "
+                                   "o.area FROM object AS o, object_category AS c, "
+                                   "dialogue AS d, guess AS g "
+                                   "WHERE o.category_id = c.category_id AND "
+                                   "g.object_id = o.object_id AND "
+                                   "g.dialogue_id = d.dialogue_id AND d.dialogue_id = :id "),
+                              id=dialogue_id)
+    if rows.rowcount > 0:
+        row = rows.first()
+        obj = Object(row[0], row[1],
+                     row[2], row[3], row[4])
+        return obj
+    else:
+        return None
 
-            rows = cur.fetchall()
-            qas = [dict(question=row[0], answer=row[1]) for row in rows]
-            cur.close()
-        except Exception as e:
-            print e
-        return qas
 
-    def get_random_picture(self, difficulty=1):
+def get_dialogue_object(connection, dialogue_id):
+    rows = connection.execute(text("SELECT "
+                                   "o.object_id, o.category_id, c.name, o.segment, "
+                                   "o.area FROM object AS o, object_category AS c, "
+                                   "dialogue AS d "
+                                   "WHERE o.category_id = c.category_id AND "
+                                   "d.object_id = o.object_id AND d.dialogue_id = :id "
+                                   "ORDER BY o.area ASC; "),
+                              id=dialogue_id)
+    row = rows.first()
+    obj = Object(row[0], row[1],
+                 row[2], row[3], row[4])
+    return obj
 
-        """Fetch image by its id."""
 
-        picture = None
+def get_dialogue_conversation(conn, dialogue_id):
+    rows = conn.execute(text("SELECT q.content, a.content FROM question AS q, "
+                             "answer AS a WHERE a.question_id = q.question_id "
+                             "AND q.dialogue_id = :id ORDER BY q.timestamp DESC;"),
+                        id=dialogue_id)
 
-        try:
-            cur = self.conn.cursor()
-            cur.execute("SELECT picture_id, coco_url, width, height FROM "
-                        "picture WHERE difficulty = %s ORDER BY "
-                        "RANDOM() LIMIT 1", [difficulty])
+    return [dict(question=row[0], answer=row[1]) for row in rows]
 
-            picture_id, coco_url, width, height = cur.fetchone()
-            cur.close()
 
-            cur = self.conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+def get_dialogue_info(conn, id):
+    rows = conn.execute(text("SELECT p.picture_id, p.width, p.height, d.status, "
+                             "(SELECT worker_id FROM session WHERE id = d.questioner_session_id), "
+                             "(SELECT worker_id FROM session WHERE id = d.oracle_session_id), "
+                             "d.start_timestamp, d.end_timestamp "
+                             "FROM dialogue AS d, picture AS p "
+                             "WHERE d.picture_id = p.picture_id "
+                             "AND d.dialogue_id = :id"),
+                        id=id)
+    if rows.rowcount > 0:
+        row = rows.first()
+        seconds = -1
+        if row[7] and row[6]:
+            seconds = (row[7] - row[6]).seconds
+        return row[0], row[1], row[2], row[3], row[4], row[5], seconds
 
-            cur.execute(("SELECT "
+    return None, None, None, None, None, None, None
+
+
+def get_objects(conn, picture_id):
+    rows = conn.execute(("SELECT "
                          "o.object_id, o.category_id, c.name, o.segment, "
                          "o.area FROM object AS o, object_category AS c "
                          "WHERE o.category_id = c.category_id AND "
                          "o.picture_id = %s "
                          "ORDER BY o.area ASC; "), [picture_id])
+    objects = []
+    for row in rows:
+        obj = Object(row['object_id'], row['category_id'],
+                     row['name'], row['segment'], row['area'])
+        objects.append(obj)
+    return objects
 
-            rows = cur.fetchall()
-            objects = []
-            for row in rows:
-                obj = Object(row['object_id'], row['category_id'],
-                             row['name'], row['segment'], row['area'])
-                objects.append(obj)
 
-            picture = Picture(picture_id, coco_url, width, height, objects)
+def get_random_picture(conn, difficulty=1):
+    """Fetch random picture."""
 
-        except Exception as e:
-            print "Unable to fetch picture"
-            print e
+    rows = conn.execute(text("SELECT picture_id, coco_url, width, height FROM "
+                             "picture WHERE difficulty = :diff ORDER BY "
+                             "RANDOM() LIMIT 1"), diff=difficulty)
+    row = rows.first()
+    picture_id, coco_url, width, height = row[0], row[1], row[2], row[3]
 
-        return picture
+    objects = get_objects(conn, picture_id)
 
-    def start_dialogue(self, oracle_session_id, questioner_session_id):
-        """Start new dialogue. """
-        dialogue = None
+    return Picture(picture_id, coco_url, width, height, objects)
 
-        try:
-            # Pick a random picture
-            picture = self.get_random_picture()
 
-            # Pick a random object
-            objects = picture.objects
-            object_index = randint(0, len(objects) - 1)
-            object_id = objects[object_index].object_id
+def get_last_unfinished_picture(conn, session_id, questioner=True):
+    if questioner:
+        result = conn.execute(text("SELECT d.status, d.object_id, d.picture_id, p.coco_url, p.width, p.height, d.dialogue_id "
+                                   "FROM dialogue d, session s, picture p WHERE "
+                                   "s.worker_id = (SELECT worker_id FROM session WHERE id = :sid) "
+                                   "AND d.picture_id = p.picture_id AND d.questioner_session_id = s.id "
+                                   "ORDER BY d.start_timestamp DESC LIMIT 1"), sid=session_id)
+    else:
+        result = conn.execute(text("SELECT d.status, d.object_id, d.picture_id, p.coco_url, p.width, p.height, d.dialogue_id "
+                                   "FROM dialogue d, session s, picture p WHERE "
+                                   "s.worker_id = (SELECT worker_id FROM session WHERE id = :sid) "
+                                   "AND d.picture_id = p.picture_id AND d.oracle_session_id = s.id "
+                                   "ORDER BY d.start_timestamp DESC LIMIT 1"), sid=session_id)
+    if result.rowcount > 0:
+        row = result.first()
+        if row[0] in ['questioner_disconnect', 'oracle_disconnect', 'questioner_timeout', 'oracle_timeout']:
+            objects = get_objects(conn, row[2])
+            return Picture(row[2], row[3], row[4], row[5], objects), row[1], row[6]
+    return None
 
-            dialogue_id = self.insert_dialogue(
-                picture_id=picture.id,
-                object_id=object_id,
-                oracle_session_id=oracle_session_id,
-                questioner_session_id=questioner_session_id)
 
-            if dialogue_id is not None:
-                dialogue = Dialogue(id=dialogue_id, picture=picture,
-                                    object=objects[object_index])
+def start_dialogue(conn, oracle_session_id, questioner_session_id,
+                   difficulty=1, mode='qualification'):
+    """Start new dialogue. """
+    dialogue = None
 
-        except Exception as e:
-            print("Fail to start a new dialogue -> could not find object")
-            print e
+    try:
+        # If player disconnected during previous dialogue, 
+        # we restart with the same image
+        prev_dialogue = get_last_unfinished_picture(conn, questioner_session_id,
+                                                    questioner=True)
+        prev_dialogue_id = None
+        if prev_dialogue is not None:
+            picture, object_id, prev_dialogue_id = prev_dialogue
+        else:
+            prev_dialogue = get_last_unfinished_picture(conn, oracle_session_id,
+                                                        questioner=False)
+            if prev_dialogue is not None:
+                picture, object_id, prev_dialogue_id = prev_dialogue
+            else:
+                picture = get_random_picture(conn, difficulty=difficulty)
+                # Pick a random object
+                objects = picture.objects
+                object_index = randint(0, len(objects) - 1)
+                object_id = objects[object_index].object_id
 
-        return dialogue
+        obj = None
+        for o in picture.objects:
+            if o.object_id == object_id:
+                obj = o
 
-    def insert_dialogue(self, picture_id, object_id,
-                        oracle_session_id,
-                        questioner_session_id):
-        try:
-            # Insert dialogue
-            curr = self.conn.cursor()
-            curr.execute("INSERT INTO dialogue (picture_id, object_id, "
-                         "oracle_session_id, questioner_session_id, status) "
-                         " VALUES (%s,%s,%s,%s, 'ongoing') "
-                         " RETURNING dialogue_id; ",
-                         (picture_id, object_id, oracle_session_id,
-                          questioner_session_id))
+        dialogue_id = insert_dialogue(conn, picture.id,
+                                      object_id,
+                                      oracle_session_id,
+                                      questioner_session_id,
+                                      prev_dialogue_id,
+                                      mode)
 
-            self.conn.commit()
+        if dialogue_id is not None:
+            dialogue = Dialogue(id=dialogue_id, picture=picture,
+                                object=obj)
 
-            dialogue_id, = curr.fetchone()
+    except Exception as e:
+        print("Fail to start a new dialogue -> could not find object")
+        print e
 
+    return dialogue
+
+
+def insert_dialogue(conn, picture_id, object_id,
+                    oracle_session_id,questioner_session_id,
+                    prev_dialogue_id, mode):
+    try:
+        # Insert dialogue
+        if prev_dialogue_id is None:
+            result = conn.execute(text("INSERT INTO dialogue (picture_id, object_id, "
+                                       "oracle_session_id, questioner_session_id, status, mode) "
+                                       " VALUES (:pid, :oid, :osid, :qsid, 'ongoing', :mode) "
+                                       " RETURNING dialogue_id; "),
+                                  pid=picture_id, oid=object_id, osid=oracle_session_id,
+                                  qsid=questioner_session_id, mode=mode)
+
+            dialogue_id = result.first()[0]
+            return dialogue_id
+        else:
+            result = conn.execute(text("INSERT INTO dialogue (picture_id, object_id, "
+                                       "oracle_session_id, questioner_session_id, "
+                                       "status, prev_dialogue_id, mode) "
+                                       " VALUES (:pid, :oid, :osid, :qsid, 'ongoing', :prev_pid, :mode) "
+                                       " RETURNING dialogue_id; "),
+                                  pid=picture_id, oid=object_id, osid=oracle_session_id,
+                                  qsid=questioner_session_id, prev_pid=prev_dialogue_id,
+                                  mode=mode)
+
+            dialogue_id = result.first()[0]
             return dialogue_id
 
-        except Exception as e:
-            self.conn.rollback()
-            print "Fail to insert new dialogue"
-            print e
+    except Exception as e:
+        print "Fail to insert new dialogue"
+        print e
 
-    def update_dialogue_status(self, dialogue_id, status):
-        try:
-            # Insert dialogue
-            curr = self.conn.cursor()
-            curr.execute("UPDATE dialogue "
-                         "SET status = %s, end_timestamp = NOW() "
-                         "WHERE dialogue_id = %s;",
-                         [status, dialogue_id])
 
-            self.conn.commit()
+def update_dialogue_status(conn, dialogue_id, status, reason=None):
+    try:
+        if reason is not None:
+            conn.execute(text("UPDATE dialogue "
+                              "SET status = :status, end_timestamp = NOW(), "
+                              "reason = :reason "
+                              "WHERE dialogue_id = :id;"),
+                         status=status, reason=reason, id=dialogue_id)
+        else:
+            conn.execute(text("UPDATE dialogue "
+                              "SET status = :status, end_timestamp = NOW() "
+                              "WHERE dialogue_id = :id;"),
+                         status=status, id=dialogue_id)
+    except Exception as e:
+        print "Fail to update dialogue status"
+        print e
 
-        except Exception as e:
-            self.conn.rollback()
-            print "Fail to update dialogue status"
-            print e
 
-    # def insert_worker(self, worker_id):
-    #     try:
-    #         curr = self.conn.cursor()
-    #         curr.execute("INSERT INTO worker (worker_id) "
-    #                      "SELECT %s "
-    #                      "WHERE NOT EXISTS"
-    #                      "(SELECT 1 FROM worker WHERE worker_id=%s);",
-    #                      (worker_id, worker_id))
+def insert_question(conn, dialogue_id, message):
+    try:
+        # Append a new question to the dialogue
+        result = conn.execute(text("INSERT INTO question (dialogue_id, content) "
+                                   "VALUES (:id, :msg) RETURNING question_id; "),
+                              id=dialogue_id, msg=message)
 
-    #         self.conn.commit()
-    #     except Exception as e:
-    #         self.conn.rollback()
-    #         print "Fail to insert new worker"
-    #         print e
+        question_id = result.first()[0]
+        return question_id
 
-    # def insert_hit(self, hit_id, worker_id):
-    #     try:
+    except Exception as e:
+        print "Fail to insert new question"
+        print e
 
-    #         curr = self.conn.cursor()
-    #         curr.execute("INSERT INTO hit (hit_id, worker_id) "
-    #                      "VALUES (%s,%s);", (hit_id, worker_id))
 
-    #         self.conn.commit()
-    #     except Exception as e:
-    #         if curr is not None:
-    #             curr.rollback()
-    #         print "Fail to insert new hit"
-    #         print e
+def insert_answer(conn, question_id, message):
+    assert message == "Yes" or message == "No" or message == "N/A"
 
-    def insert_question(self, dialogue_id, message):
+    try:
+        # Append a new answer to the question
+        result = conn.execute(text("INSERT INTO answer (question_id, content)"
+                              "VALUES (:qid, :msg) RETURNING answer_id;"),
+                              qid=question_id, msg=message)
+        answer_id = result.first()[0]
+        return answer_id
 
-        try:
-            curr = self.conn.cursor()
+    except Exception as e:
+        print "Fail to insert new answer"
+        print e
 
-            # Append a new question to the dialogue
-            curr.execute("INSERT INTO question (dialogue_id, content) "
-                         "VALUES (%s,%s) RETURNING question_id; ",
-                         (dialogue_id, message))
 
-            self.conn.commit()
+def insert_guess(conn, dialogue_id, object_id):
+    try:
+        # Insert new guess
+        conn.execute(text("INSERT INTO guess (dialogue_id, object_id) "
+                          "VALUES (:did, :oid);"),
+                     did=dialogue_id, oid=object_id)
 
-            question_id, = curr.fetchone()
+    except Exception as e:
+        print "Fail to insert new guess"
+        print e
 
-            return question_id
 
-        except Exception as e:
-            self.conn.rollback()
-            print "Fail to insert new question"
-            print e
+def insert_session(conn, player):
+    try:
+        result = conn.execute(text("INSERT INTO session"
+                                   "(socket_id, role, ip)"
+                                   " VALUES(:sid, :role, :ip) "
+                                   " RETURNING id;"),
+                              sid=player.sid,
+                              role=player.role,
+                              ip=player.ip)
 
-    def insert_answer(self, question_id, message):
-        assert message == "Yes" or message == "No" or message == "N/A"
+        session_id = result.first()[0]
+        return session_id
 
-        try:
-            curr = self.conn.cursor()
+    except Exception as e:
+        print "Fail to insert new session"
+        print e
 
-            # Append a new answer to the question
-            curr.execute("INSERT INTO answer (question_id, content)"
-                         "VALUES (%s,%s) RETURNING answer_id;",
-                         (question_id, message))
-            self.conn.commit()
 
-            answer_id, = curr.fetchone()
+def update_session(conn, player):
+    """Update session with assignmentId, hitId and workerId."""
+    try:
+        conn.execute(text("INSERT INTO worker (id) "
+                          "SELECT :id WHERE NOT EXISTS"
+                          "(SELECT id FROM worker WHERE id = :id);"),
+                     id=player.worker_id)
 
-            return answer_id
+        conn.execute(text("UPDATE session "
+                          "SET assignment_id = :aid, hit_id = :hid, worker_id = :wid "
+                          "WHERE id = :sid"),
+                     aid=player.assignment_id,
+                     hid=player.hit_id,
+                     wid=player.worker_id,
+                     sid=player.session_id)
+    except Exception as e:
+        print "Fail to update session"
+        print e
 
-        except Exception as e:
-            self.conn.rollback()
-            print "Fail to insert new answer"
-            print e
 
-    def insert_guess(self, dialogue_id, object_id):
-        try:
-            curr = self.conn.cursor()
+def end_session(conn, session_id):
+    try:
+        conn.execute(text("UPDATE session "
+                          "SET end_timestamp = NOW() "
+                          "WHERE id = :id; "),
+                     id=session_id)
 
-            # Insert new guess
-            curr.execute("INSERT INTO guess (dialogue_id, object_id)"
-                         "VALUES (%s,%s);", (dialogue_id, object_id))
+    except Exception as e:
+        print "Fail to end session, id = ", session_id
+        print e
 
-            self.conn.commit()
 
-        except Exception as e:
-            self.conn.rollback()
-            print "Fail to insert new guess"
-            print e
+def insert_into_queue(conn, player):
+    try:
+        result = conn.execute(text("INSERT INTO queue_event"
+                                   "(session_id)"
+                                   " VALUES(:sid) RETURNING id;"),
+                              sid=player.session_id)
 
-    def insert_session(self, player):
-        try:
-            curr = self.conn.cursor()
+        queue_id = result.first()[0]
+        return queue_id
+    except Exception as e:
+        print "Fail to insert queue"
+        print e
 
-            curr.execute("INSERT INTO session"
-                         "(socket_id, assignment_id, hit_id, worker_id,"
-                         " role, ip) VALUES(%s, %s, %s, %s, %s, %s) "
-                         " RETURNING id;",
-                         [player.sid,
-                          player.assignment_id,
-                          player.hit_id,
-                          player.worker_id,
-                          player.role,
-                          player.ip])
-            self.conn.commit()
-            session_id, = curr.fetchone()
 
-            return session_id
+def remove_from_queue(conn, player, reason):
+    try:
+        conn.execute(text("UPDATE queue_event "
+                          "SET end_timestamp = NOW(), reason = :reason "
+                          "WHERE id = :id"),
+                     reason=reason,
+                     id=player.queue_id)
+        player.queue_id = None
+    except Exception as e:
+        print "Fail to remove from queue"
+        print e
 
-        except Exception as e:
-            self.conn.rollback()
-            print "Fail to insert new session"
-            print e
 
-    def end_session(self, session_id):
-        try:
-            curr = self.conn.cursor()
-            curr.execute("UPDATE session "
-                         "SET end_timestamp = NOW() "
-                         "WHERE id = %s; ",
-                         [session_id])
-            self.conn.commit()
+def get_workers(conn):
+    workers = []
+    rows = conn.execute("SELECT w.worker_id, (SELECT count(*) FROM session AS s, dialogue AS d WHERE s.worker_id = w.worker_id AND (d.oracle_session_id = s.id OR questioner_session_id = s.id) AND d.status = 'success') AS d_success, (SELECT count(*) FROM session AS s, dialogue AS d WHERE s.worker_id = w.worker_id AND (d.oracle_session_id = s.id OR questioner_session_id = s.id) AND d.status = 'failure') AS d_failure, (SELECT count(*) FROM session AS s, dialogue AS d WHERE s.worker_id = w.worker_id AND (d.oracle_session_id = s.id OR questioner_session_id = s.id) AND (d.status = 'oracle_disconnect' OR d.status = 'questioner_disconnect')) AS d_disconnect FROM (SELECT worker_id FROM session AS s GROUP BY worker_id) AS w ORDER BY d_success DESC")
+    for row in rows:
+        workers.append({'id': row[0], 'success': row[1],
+                        'failure': row[2], 'disconnect': row[3]})
+    return workers
 
-        except Exception as e:
-            self.conn.rollback()
-            print "Fail to end session, id = ", session_id
-            print e
 
-    def insert_into_queue(self, player):
-        try:
-            curr = self.conn.cursor()
+def get_worker(conn, id):
+    dialogues = []
+    rows = conn.execute("SELECT d.dialogue_id, d.status, d.start_timestamp, d.end_timestamp, "
+                        "(SELECT count(*) FROM question AS q WHERE q.dialogue_id = d.dialogue_id) AS nr_q, "
+                        "(SELECT count(*) FROM object AS o WHERE o.picture_id = d.picture_id)"
+                        " AS nr_o, (d.oracle_session_id = s.id) AS oracle FROM "
+                        "dialogue AS d, session AS s WHERE (d.oracle_session_id = s.id OR d.questioner_session_id = s.id) "
+                        "AND s.worker_id = %s AND d.status != '' "
+                        "ORDER BY d.start_timestamp DESC", [id])
+    for row in rows:
+        seconds = -1
+        if row[3] and row[2]:
+            seconds = (row[3] - row[2]).seconds
+        dialogues.append({'id': row[0], 'nr_objs': row[5],
+                          'nr_q': row[4], 'status': row[1],
+                          'seconds': seconds, 'oracle': row[6]})
+    return dialogues
 
-            # Insert new guess
-            curr.execute("INSERT INTO queue_event"
-                         "(session_id)"
-                         " VALUES(%s) RETURNING id;",
-                         [player.session_id])
-            self.conn.commit()
-            queue_id, = curr.fetchone()
-            return queue_id
-        except Exception as e:
-            self.conn.rollback()
-            print "Fail to insert queue"
-            print e
 
-    def remove_from_queue(self, player, reason):
-        try:
-            curr = self.conn.cursor()
+def get_recent_worker_stats(conn, id, limit=15, questioner=True):
+    if questioner:
+        stats = {'success': 0, 'failure': 0, 'questioner_disconnect': 0, 'questioner_timeout': 0}
+    else:
+        stats = {'success': 0, 'failure': 0, 'oracle_disconnect': 0, 'oracle_timeout': 0}
+    if questioner:
+        rows = conn.execute(text("SELECT status, count(status) FROM "
+                                 "(SELECT status FROM dialogue WHERE status IN ('success', 'failure', 'questioner_timeout', 'questioner_disconnect') AND questioner_session_id IN"
+                                 " (SELECT id FROM session WHERE worker_id = :wid) ORDER BY start_timestamp DESC LIMIT :limit)"
+                                 " AS s GROUP BY status"), wid=id, limit=limit)
+    else:
+        rows = conn.execute(text("SELECT status, count(status) FROM "
+                                 "(SELECT status FROM dialogue WHERE status IN ('success', 'failure', 'oracle_timeout', 'oracle_disconnect') AND oracle_session_id IN"
+                                 " (SELECT id FROM session WHERE worker_id = :wid) ORDER BY start_timestamp DESC LIMIT :limit)"
+                                 " AS s GROUP BY status"), wid=id, limit=limit)
+    for row in rows:
+        stats[row[0]] = row[1]
+    return stats
 
-            # Insert new guess
-            curr.execute("UPDATE queue_event "
-                         "SET end_timestamp = NOW(), reason = %s "
-                         "WHERE id = %s",
-                         [reason, player.queue_id])
-            self.conn.commit()
-            player.queue_id = None
-        except Exception as e:
-            self.conn.rollback()
-            print "Fail to remove from queue"
-            print e
 
-    def insert_report_worker(self, dialogue_id, from_worker_id,
-                             to_worker_id, from_oracle, content=None,
-                             too_slow=False, harassment=False,
-                             bad_player=False):
-        try:
-            curr = self.conn.cursor()
+def get_number_of_success(conn, id, questioner=False):
+    result = conn.execute(text("SELECT count(*) FROM dialogue WHERE status = 'success'"
+                               " AND questioner_session_id IN (SELECT id FROM session WHERE worker_id = :wid)"), wid=id)
+    if result.rowcount > 0:
+        return result.first()[0]
+    else:
+        return 0
 
-            # Insert new guess
-            curr.execute("INSERT INTO report_worker "
-                         "(dialogue_id, from_worker_id, to_worker_id, "
-                         "from_oracle, content, too_slow, harassment, "
-                         "bad_player) VALUES (%s,%s,%s,%s,%s,%s,%s,%s) ",
-                         [dialogue_id, from_worker_id, to_worker_id,
-                          from_oracle, content, too_slow, harassment,
-                          bad_player])
 
-        except Exception as e:
-            self.conn.rollback()
-            print("Fail to insert report to blame worker (" +
-                  str(to_worker_id) + ") for dialogue (" +
-                  str(dialogue_id) + ")")
-            print e
-
-    # TODO use trigger to compute from_oracle on the fly
-    # def insert_report_dialogue(self, dialogue_id, worker_id, from_oracle,
-    #                            content=None, picture_too_hard=False,
-    #                            object_too_hard=False):
-    #     try:
-    #         curr = self.conn.cursor()
-
-    #         # Insert new guess
-    #         curr.execute("INSERT INTO report_dialogue "
-    #                      "(dialogue_id, worker_id, from_oracle, content, "
-    #                      "picture_too_hard, object_too_hard) "
-    #                      "VALUES (%s,%s,%s,%s,%s,%s) ",
-    #                      [dialogue_id, worker_id, from_oracle, content,
-    #                       picture_too_hard, object_too_hard])
-
-    #     except Exception as e:
-    #         self.conn.rollback()
-    #         print("Fail to insert report from worker (" + str(worker_id) +
-    #               ") for dialogue (" + str(dialogue_id) + ")")
-    #         print e
-
-    def update_answer(self, answer_id, message):
-
-        assert message == "Yes" or message == "No" or message == "N/A"
-
-        try:
-            curr = self.conn.cursor()
-
-            # Insert new guess
-            curr.execute("UPDATE answer SET content = %s WHERE answer_id = %s",
-                         [message, answer_id])
-
-            self.conn.commit()
-
-        except Exception as e:
-            self.conn.rollback()
-            print "Fail to update answer"
-            print e
-
-    # def update_score(self, name):
-    #     try:
-    #         curr = self.conn.cursor()
-
-    #         # Insert new guess
-    #         curr.execute("UPDATE player SET score = score + 10 WHERE name = %s", [name])
-
-    #         self.conn.commit()
-
-    #     except Exception as e:
-    #         self.conn.rollback()
-    #         print "Fail to update score"
-    #         print e
-
-if __name__ == '__main__':
-
-    db = DatabaseHelper.from_postgresurl(
-        os.environ['HEROKU_POSTGRESQL_SILVER_URL'])
-
-    dialogue = db.start_dialogue(oracle_hit_id=10, oracle_worker_id=10,
-                                 questioner_hit_id=20, questioner_worker_id=20)
-
-    question_id = db.insert_question(dialogue_id=dialogue.id,
-                                     message="Is it a car?")
-
-    answer_id = db.insert_answer(question_id=question_id, message="No")
-    db.update_answer(answer_id=answer_id, message="Yes")
-    db.insert_guess(dialogue_id=dialogue.id,
-                    object_id=dialogue.object.object_id)
-
-    db.insert_report_dialogue(dialogue_id=dialogue.id,
-                              worker_id=10, from_oracle=True,
-                              content=None, picture_too_hard=False,
-                              object_too_hard=True)
-
-    db.insert_report_worker(dialogue_id=dialogue.id, from_worker_id=20,
-                            to_worker_id=10, from_oracle=False,
-                            content="keep insulting me - no question",
-                            too_slow=False, harassment=True, bad_player=True)
+def get_worker_status(conn, id, questioner=False):
+    if questioner:
+        result = conn.execute(text("SELECT questioner_status FROM worker WHERE id = :id"), id=id)
+        if result.rowcount > 0:
+            return result.first()[0]
+    else:
+        result = conn.execute(text("SELECT oracle_status FROM worker WHERE id = :id"), id=id)
+        if result.rowcount > 0:
+            return result.first()[0]
+    return None

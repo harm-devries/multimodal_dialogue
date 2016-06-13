@@ -1,7 +1,10 @@
 eventlet==0.18.4
 Flask==0.10.1
+Flask-HTTPAuth==3.1.2
+Flask-SQLAlchemy==2.1
 gunicorn==18.0
-numpy==1.10.4
+PsiTurk==2.1.2
 psycopg2==2.6.1
 python-socketio==1.2
+requests==2.9.1
 user-agents==1.0.1
