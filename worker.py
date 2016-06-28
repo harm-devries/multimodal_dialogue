@@ -3,6 +3,7 @@ from psiturk.amt_services import MTurkServices
 from database.db_utils import get_recent_worker_stats
 from sqlalchemy.sql import text
 
+
 def check_qualification(conn, player):
     if player.role == 'QualifyOracle':
         stats = get_recent_worker_stats(conn, player.worker_id,
@@ -10,7 +11,7 @@ def check_qualification(conn, player):
         if stats['success'] == 10 and stats['failure'] <= 3 and stats['oracle_disconnect'] <= 3:
             approve_hit(player.assignment_id)
             conn.execute(text('UPDATE worker SET oracle_status = :status WHERE '
-                              'worker_id = :worker_id'),
+                              'id = :worker_id'),
                          status='qualified', worker_id=player.worker_id)
             return stats, True
     else:
@@ -19,10 +20,11 @@ def check_qualification(conn, player):
         if stats['success'] == 10 and stats['failure'] <= 3 and stats['questioner_disconnect'] <= 3:
             approve_hit(player.assignment_id)
             conn.execute(text('UPDATE worker SET questioner_status = :status WHERE '
-                              'worker_id = :worker_id'),
+                              'id = :worker_id'),
                          status='qualified', worker_id=player.worker_id)
         return stats, True
     return stats, False
+
 
 def update_worker_status(conn, player):
     if player.role == 'QualifyOracle':
