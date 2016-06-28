@@ -8,7 +8,7 @@ def check_qualification(conn, player):
     if player.role == 'QualifyOracle':
         stats = get_recent_worker_stats(conn, player.worker_id,
                                         limit=100, questioner=False)
-        if stats['success'] == 10 and stats['failure'] <= 3 and stats['oracle_disconnect'] <= 3:
+        if stats['success'] > 10 and stats['failure'] <= 3 and stats['oracle_disconnect'] <= 3:
             approve_hit(player.assignment_id)
             conn.execute(text('UPDATE worker SET oracle_status = :status WHERE '
                               'id = :worker_id'),
@@ -17,7 +17,7 @@ def check_qualification(conn, player):
     else:
         stats = get_recent_worker_stats(conn, player.worker_id,
                                         limit=100, questioner=True)
-        if stats['success'] == 10 and stats['failure'] <= 3 and stats['questioner_disconnect'] <= 3:
+        if stats['success'] > 10 and stats['failure'] <= 3 and stats['questioner_disconnect'] <= 3:
             approve_hit(player.assignment_id)
             conn.execute(text('UPDATE worker SET questioner_status = :status WHERE '
                               'id = :worker_id'),
@@ -51,4 +51,5 @@ def approve_hit(assignment_id):
     amt_services = MTurkServices('AKIAJO3RIMIRNSW3NZAA',
                                  'SGweeGX+EMF7sUWGiJEwRt2gIytVuXY1iOBjOMa3',
                                  True)
-    amt_services.approve_worker(assignment_id)
+    feedback = amt_services.mtc.approve_assignment(assignment_id)
+    print feedback
