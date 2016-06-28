@@ -49,4 +49,4 @@ def approve_hit(assignment_id):
     amt_services = MTurkServices('AKIAJO3RIMIRNSW3NZAA',
                                  'SGweeGX+EMF7sUWGiJEwRt2gIytVuXY1iOBjOMa3',
                                  True)
-    amt_services.mtc.approve_worker(assignment_id)
+    amt_services.approve_worker(assignment_id)
