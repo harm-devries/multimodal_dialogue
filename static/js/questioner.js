@@ -141,9 +141,13 @@ $(document).ready(function() {
 
         $('#info_text').html(text); 
         $('#info_text').fadeIn(fadeS);
-        $('#newgame_text').html('<p style="margin-bottom: 20px">You have to successfully finish ' + (10 - msg.stats.success) + ' more games to complete the HIT. </p>');
-        $('#p_newgame').show();
-        score += 10;
+        
+         if (msg.finished) {
+            $('#qualified').show();
+        } else {
+            $('#newgame_text').html('<p style="margin-bottom: 20px">You have to finish ' + (10 - msg.stats.success) + ' more games to complete the HIT. </p>');
+            $('#p_newgame').show();
+        }
         set_score(msg.stats.success, msg.stats.failure, msg.stats.questioner_disconnect + msg.stats.questioner_timeout);
     });
     socket.on('wrong annotation', function(msg) {

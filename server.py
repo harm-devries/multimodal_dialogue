@@ -103,6 +103,10 @@ def q_oracle():
         return render_template('error.html', title='Oracle - ',
                                msg=msg)
 
+    turk_submit_to = 'https://workersandbox.mturk.com'
+    if 'turkSubmitTo' in request.args:
+        turk_submit_to = request.args['turkSubmitTo']
+
     accepted_hit = False
     nr_success, nr_failure, nr_disconnects = 0, 0, 0
     if 'workerId' in request.args:
@@ -131,6 +135,7 @@ def q_oracle():
                            success=nr_success,
                            failure=nr_failure,
                            disconnect=nr_disconnects,
+                           turkSubmitTo=turk_submit_to,
                            namespace='/q_oracle')
 
 
@@ -189,8 +194,13 @@ def q_questioner():
         return render_template('error.html', title='Questioner - ',
                                msg=msg)
 
+    turk_submit_to = 'https://workersandbox.mturk.com'
+    if 'turkSubmitTo' in request.args:
+        turk_submit_to = request.args['turkSubmitTo']
+
     accepted_hit = False
     nr_success, nr_failure, nr_disconnects = 0, 0, 0
+    
     if 'workerId' in request.args:
         worker_id = request.args['workerId']
         accepted_hit = True
@@ -209,12 +219,14 @@ def q_questioner():
                 return render_template('error.html', title='Questioner - ',
                                        msg=msg)
 
+
     return render_template('questioner.html',
                            title='Questioner - ',
                            accepted_hit=accepted_hit,
                            success=nr_success,
                            failure=nr_failure,
                            disconnect=nr_disconnects,
+                           turkSubmitTo=turk_submit_to,
                            namespace='/q_questioner')
 
 
