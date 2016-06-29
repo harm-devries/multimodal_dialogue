@@ -73,10 +73,10 @@
       <p id="p_newgame"><span id="newgame_text"></span>
           <a class="btn btn-success" id="newgame" role="button">Start a new game &raquo;</a>
       </p>
-      <form id="qualified" action="{{turkSubmitTo}}/external/submit">
-          Congratulations, you are now qualified to play Guesswhat?! Please submit your HIT below. 
+      <form id="qualified" method="POST" action="{{turkSubmitTo}}/external/submit">
+          Congratulations, you are now qualified to play Guesswhat?! Please submit your HIT below. <br /><br />
           <input type="hidden" name="assignmentId" value="{{ assigmentId }}" />
-          <input type="submit" value="Submit HIT" />
+          <button class="btn btn-success" type="submit" value="Submit HIT" />
       </form>
       {% endif %}
       
