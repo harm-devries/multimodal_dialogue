@@ -45,9 +45,13 @@ def update_worker_status(conn, player):
             return stats, True
     return stats, False
 
+
 def approve_hit(assignment_id):
-    requests.post('https://workersandbox.mturk.com/mturk/externalSubmit',
-                  data={'assignmentId': assignment_id})
+    print assignment_id
+    res = requests.post('https://workersandbox.mturk.com/mturk/externalSubmit',
+                        data={'assignmentId': assignment_id})
+    print res.status_code
+    print res.text
     amt_services = MTurkServices('AKIAJO3RIMIRNSW3NZAA',
                                  'SGweeGX+EMF7sUWGiJEwRt2gIytVuXY1iOBjOMa3',
                                  True)
