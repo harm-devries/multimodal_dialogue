@@ -96,7 +96,6 @@ def q_oracle():
                                msg='Missing mturk parameters.')
 
     assignment_id = request.args['assignmentId']
-    print assignment_id
 
     if len(players) > 1000:
         msg = ('Sorry, there are currently'
@@ -195,13 +194,15 @@ def q_questioner():
         return render_template('error.html', title='Questioner - ',
                                msg=msg)
 
+    assignment_id = request.args['assignmentId']
+
     turk_submit_to = 'https://workersandbox.mturk.com'
     if 'turkSubmitTo' in request.args:
         turk_submit_to = request.args['turkSubmitTo']
 
     accepted_hit = False
     nr_success, nr_failure, nr_disconnects = 0, 0, 0
-    
+
     if 'workerId' in request.args:
         worker_id = request.args['workerId']
         accepted_hit = True
@@ -223,6 +224,7 @@ def q_questioner():
 
     return render_template('questioner.html',
                            title='Questioner - ',
+                           assignmentId=assignment_id,
                            accepted_hit=accepted_hit,
                            success=nr_success,
                            failure=nr_failure,
