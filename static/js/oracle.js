@@ -127,7 +127,11 @@ $(document).ready(function() {
 
         $('#info_text').html(text); 
         $('#info_text').fadeIn(fadeS);
-        $('#newgame_text').html('<p style="margin-bottom: 20px">You have to finish ' + (10 - msg.stats.success) + ' more games to complete the HIT. </p>');
+        if (msg.finished) {
+            $('#newgame_text').html('<p style="margin-bottom: 20px">You have to finish ' + (10 - msg.stats.success) + ' more games to complete the HIT. </p>');
+        } else {
+            
+        }
         $('#p_newgame').show();
         set_score(msg.stats.success, msg.stats.failure, msg.stats.oracle_disconnect + msg.stats.oracle_timeout);
     });

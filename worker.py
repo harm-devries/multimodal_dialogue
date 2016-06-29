@@ -9,7 +9,6 @@ def check_qualification(conn, player):
         stats = get_recent_worker_stats(conn, player.worker_id,
                                         limit=100, questioner=False)
         if stats['success'] > 10 and stats['failure'] <= 3 and stats['oracle_disconnect'] <= 3:
-            approve_hit(player.assignment_id)
             conn.execute(text('UPDATE worker SET oracle_status = :status WHERE '
                               'id = :worker_id'),
                          status='qualified', worker_id=player.worker_id)
@@ -18,7 +17,6 @@ def check_qualification(conn, player):
         stats = get_recent_worker_stats(conn, player.worker_id,
                                         limit=100, questioner=True)
         if stats['success'] > 10 and stats['failure'] <= 3 and stats['questioner_disconnect'] <= 3:
-            approve_hit(player.assignment_id)
             conn.execute(text('UPDATE worker SET questioner_status = :status WHERE '
                               'id = :worker_id'),
                          status='qualified', worker_id=player.worker_id)
@@ -44,16 +42,3 @@ def update_worker_status(conn, player):
                          status='blocked', worker_id=player.worker_id)
             return stats, True
     return stats, False
-
-
-def approve_hit(assignment_id):
-    print assignment_id
-    res = requests.post('https://workersandbox.mturk.com/mturk/externalSubmit',
-                        data={'assignmentId': assignment_id})
-    print res.status_code
-    print res.text
-    amt_services = MTurkServices('AKIAJO3RIMIRNSW3NZAA',
-                                 'SGweeGX+EMF7sUWGiJEwRt2gIytVuXY1iOBjOMa3',
-                                 True)
-    feedback = amt_services.mtc.approve_assignment(assignment_id)
-    print feedback
