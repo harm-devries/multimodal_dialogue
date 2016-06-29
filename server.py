@@ -96,6 +96,7 @@ def q_oracle():
                                msg='Missing mturk parameters.')
 
     assignment_id = request.args['assignmentId']
+    print assignment_id
 
     if len(players) > 1000:
         msg = ('Sorry, there are currently'
