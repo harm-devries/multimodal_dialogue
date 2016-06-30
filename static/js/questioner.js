@@ -208,7 +208,7 @@ $(document).ready(function() {
             clearInterval(timer_id);
             setTimeout(function(){
                 window.location.reload(false);
-            }, 1000);
+            }, 3000);
         }
     }
 
