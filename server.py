@@ -698,6 +698,7 @@ def up_session(sid, msg):
 @sio.on('disconnect', namespace='/questioner')
 @sio.on('disconnect', namespace='/q_questioner')
 def disconnect(sid):
+    print 'disconnect' + sid
     if sid in players:
         player = players[sid]
         conn = engine.connect()
@@ -730,9 +731,15 @@ def disconnect(sid):
         if player in oracle_queue:
             oracle_queue.remove(player)
             remove_from_queue(conn, player, 'disconnect')
+        if player in q_oracle_queue:
+            q_oracle_queue.remove(player)
+            remove_from_queue(conn, player, 'disconnect')
         """3. Player is in questioner queue"""
         if player in questioner_queue:
             questioner_queue.remove(player)
+            remove_from_queue(conn, player, 'disconnect')
+        if player in q_questioner_queue:
+            q_questioner_queue.remove(player)
             remove_from_queue(conn, player, 'disconnect')
         """4. Player did not start a game yet"""
         end_session(conn, player.session_id)

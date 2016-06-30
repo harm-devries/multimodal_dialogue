@@ -1,6 +1,6 @@
 $(document).ready(function() {
     namespace = $('#namespace').data().name;
-    var socket = io.connect('https://' + document.domain + ':' + location.port + namespace);
+    var socket = io.connect('https://' + document.domain + ':' + location.port + namespace, {rememberTransport: false});
     var QueryString = function () {
           // This function is anonymous, is executed immediately and 
           // the return value is assigned to QueryString!
