@@ -22,7 +22,7 @@ from players import QualifyOracle, Oracle, QualifyQuestioner, Questioner
 # from flask.ext.login import LoginManager, UserMixin, login_required
 
 # set this to 'threading', 'eventlet', or 'gevent'
-async_mode = 'eventlet'
+async_mode = 'gevent'
 
 if async_mode == 'gevent':
     from gevent import monkey
