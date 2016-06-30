@@ -1,7 +1,6 @@
 $(document).ready(function() {
     namespace = $('#namespace').data().name;
-    console.log(namespace);
-    var socket = io.connect('https://' + document.domain + ':' + location.port + namespace);
+    var socket = io.connect('https://' + document.domain + ':' + location.port + namespace, {rememberTransport: false});
     /* parse url params and send assignmentId, hitId and workerId to server */
     var QueryString = function () {
           // This function is anonymous, is executed immediately and 
@@ -141,7 +140,7 @@ $(document).ready(function() {
 
         $('#info_text').html(text); 
         $('#info_text').fadeIn(fadeS);
-        
+
          if (msg.finished) {
             $('#qualified').show();
         } else {
