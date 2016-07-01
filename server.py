@@ -16,7 +16,7 @@ from database.db_utils import (get_dialogues, get_dialogue_stats,
                                update_dialogue_status, start_dialogue,
                                remove_from_queue, insert_into_queue,
                                get_worker_status, get_recent_worker_stats, get_one_worker_status, update_one_worker_status)
-from worker import check_qualification, update_worker_status
+from worker import check_qualified, check_blocked
 from players import QualifyOracle, Oracle, QualifyQuestioner, Questioner
 
 
@@ -497,11 +497,11 @@ def guess_annotation(sid, object_id):
     if selected_obj.object_id == object_id:
         update_dialogue_status(conn, dialogue.id, 'success')
 
-        stats, finished_flag = check_qualification(conn, player)
+        stats, finished_flag = check_qualified(conn, player)
         sio.emit('correct annotation', {'object': selected_obj.to_json(),
                                         'stats': stats, 'finished': finished_flag},
                  room=sid, namespace=player.namespace)
-        stats, finished_flag = check_qualification(conn, player.partner)
+        stats, finished_flag = check_qualified(conn, player.partner)
         sio.emit('correct annotation', {'object': selected_obj.to_json(),
                                         'stats': stats, 'finished': finished_flag},
                  room=player.partner.sid, namespace=player.partner.namespace)
@@ -510,11 +510,11 @@ def guess_annotation(sid, object_id):
         for obj in dialogue.picture.objects:
             if obj.object_id == object_id:
                 guessed_obj = obj
-        stats, blocked = update_worker_status(conn, player)
+        stats, blocked = check_blocked(conn, player)
         sio.emit('wrong annotation', {'object': selected_obj.to_json(),
                                       'stats': stats, 'blocked': blocked},
                  room=sid, namespace=player.namespace)
-        stats, blocked = update_worker_status(conn, player.partner)
+        stats, blocked = check_blocked(conn, player.partner)
         sio.emit('wrong annotation', {'object': guessed_obj.to_json(),
                                       'stats': stats, 'blocked': blocked},
                  room=player.partner.sid, namespace=player.partner.namespace)
