@@ -7,7 +7,7 @@ def check_qualified(conn, player):
         stats = get_recent_worker_stats(conn, player.worker_id,
                                         limit=100, questioner=False)
         if stats['success'] > 10 and stats['failure'] <= 3 and stats['oracle_disconnect'] <= 3:
-            print 'test'
+            print stats['success']
             print (stats['success'] > 10)
             conn.execute(text('UPDATE worker SET questioner_status = :status, '
                               'o_ass_id = :ass_id WHERE id = :worker_id'),

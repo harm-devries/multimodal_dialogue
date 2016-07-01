@@ -533,7 +533,7 @@ def get_recent_worker_stats(conn, id, limit=15, questioner=True):
                                  " (SELECT id FROM session WHERE worker_id = :wid) ORDER BY start_timestamp DESC LIMIT :limit)"
                                  " AS s GROUP BY status"), wid=id, limit=limit)
     for row in rows:
-        stats[row[0]] = row[1]
+        stats[row[0]] = int(row[1])
     return stats
 
 
