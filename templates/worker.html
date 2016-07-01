@@ -1,7 +1,49 @@
 {% extends "main.html" %}
-
+ <h1>Hello, {{ user.nickname }}!</h1>
 {% block body %}
+<div class="container" style="margin-top: 15px">
+  <table class="table table-striped">
+  	<thead>
+    <tr>
+      <th>Role</th>
+      <th>Status</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+	    <tr>
+	      <td>Oracle</td>
+	      <td>{{ worker.oracle_status }}</td>
+	      <td>
+              <form action="/worker/{{ worker.id }}/oracle_status" method="POST">
+                  <select name="oracle_status">
+                      <option value="not qualified">Not Qualified</option>
+                      <option value="qualified">Qualified</option>
+                      <option value="blocked">Blocked</option>
+                  </select>
+                  <input type="submit" value="Update status">
+             </form>
+		</td>
+	    </tr>
+	    </tr>
+	    <tr>
+	      <td>Questioner</td>
+	      <td>{{ worker.questioner_status }}</td>
+	      <td>
+              <form action="/worker/{{ worker.id }}/questioner_status" method="POST">
+                  <select name="questioner_status">
+                      <option value="not qualified">Not Qualified</option>
+                      <option value="qualified">Qualified</option>
+                      <option value="blocked">Blocked</option>
+                  </select>
+                  <input type="submit" value="Update status">
+             </form>
+		</td>
+	    </tr>
+  </tbody>
+  </table>
 
+</div>
 <div class="container" style="margin-top: 15px">
   <table class="table table-striped">
   	<thead>

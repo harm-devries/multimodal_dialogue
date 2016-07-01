@@ -15,9 +15,11 @@ from database.db_utils import (get_dialogues, get_dialogue_stats,
                                insert_session, end_session, update_session,
                                update_dialogue_status, start_dialogue,
                                remove_from_queue, insert_into_queue,
-                               get_worker_status, get_recent_worker_stats)
+                               get_worker_status, get_recent_worker_stats, get_one_worker_status, update_one_worker_status)
 from worker import check_qualification, update_worker_status
 from players import QualifyOracle, Oracle, QualifyQuestioner, Questioner
+
+
 
 # from flask.ext.login import LoginManager, UserMixin, login_required
 
@@ -325,13 +327,32 @@ def workers():
     return render_template('workers.html', workers=workers)
 
 
+def render_worker(id):
+    with engine.begin() as conn:
+        dialogues = get_worker(conn, id)
+        status = get_one_worker_status(conn, id)
+
+    return render_template('worker.html', dialogues=dialogues, worker=status)
+
+
 @app.route('/worker/<id>')
 @auth.login_required
 def worker(id):
-    conn = engine.connect()
-    dialogues = get_worker(conn, id)
-    conn.close()
-    return render_template('worker.html', dialogues=dialogues)
+    return render_worker(id)
+
+@auth.login_required
+@app.route('/worker/<id>/questioner_status', methods=['POST'])
+def one_worker_questioner_status(id):
+    with engine.begin() as conn:
+       update_one_worker_status(conn, id, "questioner_status", request.form['questioner_status'])
+    return render_worker(id)
+
+@auth.login_required
+@app.route('/worker/<id>/oracle_status', methods=['POST'])
+def one_worker_oracle_status(id):
+    with engine.begin() as conn:
+       update_one_worker_status(conn, id, "oracle_status", request.form['oracle_status'])
+    return render_worker(id)
 
 
 @app.route('/stats')
