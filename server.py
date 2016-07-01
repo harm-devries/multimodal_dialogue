@@ -211,7 +211,7 @@ def q_questioner():
         worker_id = request.args['workerId']
         accepted_hit = True
         conn = engine.connect()
-        worker_status = get_worker_status(conn, worker_id)
+        worker_status = get_worker_status(conn, worker_id, questioner=True)
         if worker_status == 'blocked':
             return render_template('error.html', title='Questioner - ',
                                    msg='You are currently blocked. ')
@@ -746,7 +746,7 @@ def disconnect(sid):
             else:
                 update_dialogue_status(conn, player.dialogue.id,
                                        'oracle_disconnect')
-            update_worker_status(conn, player)
+            check_blocked(conn, player)
             delete_game([player, partner])
 
             if partner.role == 'Oracle':
