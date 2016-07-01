@@ -6,10 +6,8 @@ def check_qualified(conn, player):
     if player.role == 'QualifyOracle':
         stats = get_recent_worker_stats(conn, player.worker_id,
                                         limit=100, questioner=False)
-        if stats['success'] > 10 and stats['failure'] <= 3 and stats['oracle_disconnect'] <= 3:
-            print stats['success']
-            print (stats['success'] > 10)
-            conn.execute(text('UPDATE worker SET questioner_status = :status, '
+        if stats['success'] >= 10 and stats['failure'] <= 3 and stats['oracle_disconnect'] <= 3:
+            conn.execute(text('UPDATE worker SET oracle_status = :status, '
                               'o_ass_id = :ass_id WHERE id = :worker_id'),
                          status='qualified', worker_id=player.worker_id,
                          ass_id=player.assignment_id)
@@ -18,13 +16,13 @@ def check_qualified(conn, player):
         stats = get_recent_worker_stats(conn, player.worker_id,
                                         limit=100, questioner=True)
 
-        if stats['success'] > 10 and stats['failure'] <= 3 and stats['questioner_disconnect'] <= 3:
+        if stats['success'] >= 10 and stats['failure'] <= 3 and stats['questioner_disconnect'] <= 3:
             conn.execute(text('UPDATE worker SET questioner_status = :status, '
                               'q_ass_id = :ass_id WHERE id = :worker_id'),
                          status='qualified', worker_id=player.worker_id,
                          ass_id=player.assignment_id)
-        return stats, True
-    return stats, False
+            return (stats, True)
+    return (stats, False)
 
 
 def check_blocked(conn, player):
