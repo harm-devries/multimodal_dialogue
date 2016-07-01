@@ -20,9 +20,6 @@ from worker import check_qualification, update_worker_status
 from players import QualifyOracle, Oracle, QualifyQuestioner, Questioner
 
 
-
-# from flask.ext.login import LoginManager, UserMixin, login_required
-
 # set this to 'threading', 'eventlet', or 'gevent'
 async_mode = 'gevent'
 
@@ -115,9 +112,14 @@ def q_oracle():
         worker_id = request.args['workerId']
         accepted_hit = True
         conn = engine.connect()
-        if get_worker_status(conn, worker_id) == 'blocked':
+        worker_status = get_worker_status(conn, worker_id)
+        if worker_status == 'blocked':
             return render_template('error.html', title='Oracle - ',
                                    msg='You are currently blocked. ')
+
+        if worker_status == 'qualified':
+            return render_template('error.html', title='Oracle - ',
+                                   msg='You are already qualified. Please accept the HIT with "Qualified" in the title.')
 
         stats = get_recent_worker_stats(conn, worker_id, questioner=False)
         nr_success, nr_failure = stats['success'], stats['failure']
@@ -209,9 +211,14 @@ def q_questioner():
         worker_id = request.args['workerId']
         accepted_hit = True
         conn = engine.connect()
-        if get_worker_status(conn, worker_id, questioner=True) == 'blocked':
+        worker_status = get_worker_status(conn, worker_id)
+        if worker_status == 'blocked':
             return render_template('error.html', title='Questioner - ',
                                    msg='You are currently blocked. ')
+
+        if worker_status == 'qualified':
+            return render_template('error.html', title='Questioner - ',
+                                   msg='You are already qualified. Please accept the HIT with "Qualified" in the title.')
 
         stats = get_recent_worker_stats(conn, worker_id, questioner=True)
         nr_success, nr_failure = stats['success'], stats['failure']
@@ -340,18 +347,20 @@ def render_worker(id):
 def worker(id):
     return render_worker(id)
 
+
 @auth.login_required
 @app.route('/worker/<id>/questioner_status', methods=['POST'])
 def one_worker_questioner_status(id):
     with engine.begin() as conn:
-       update_one_worker_status(conn, id, "questioner_status", request.form['questioner_status'])
+        update_one_worker_status(conn, id, "questioner_status", request.form['questioner_status'])
     return render_worker(id)
+
 
 @auth.login_required
 @app.route('/worker/<id>/oracle_status', methods=['POST'])
 def one_worker_oracle_status(id):
     with engine.begin() as conn:
-       update_one_worker_status(conn, id, "oracle_status", request.form['oracle_status'])
+        update_one_worker_status(conn, id, "oracle_status", request.form['oracle_status'])
     return render_worker(id)
 
 
@@ -475,7 +484,7 @@ def guess(sid):
     sio.emit('all annotations', {'objs': objs},
              room=sid, namespace=player.namespace)
     sio.emit('start guessing', '',
-             room=player.partner.sid, namespace='/oracle')
+             room=player.partner.sid, namespace=player.partner.namespace)
 
 
 @sio.on('guess annotation', namespace='/q_questioner')

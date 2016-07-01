@@ -1,10 +1,8 @@
-import requests
-from psiturk.amt_services import MTurkServices
 from database.db_utils import get_recent_worker_stats
 from sqlalchemy.sql import text
 
 
-def check_qualification(conn, player):
+def check_qualified(conn, player):
     if player.role == 'QualifyOracle':
         stats = get_recent_worker_stats(conn, player.worker_id,
                                         limit=100, questioner=False)
@@ -26,7 +24,7 @@ def check_qualification(conn, player):
     return stats, False
 
 
-def update_worker_status(conn, player):
+def check_blocked(conn, player):
     if player.role == 'QualifyOracle':
         stats = get_recent_worker_stats(conn, player.worker_id,
                                         limit=100, questioner=False)
