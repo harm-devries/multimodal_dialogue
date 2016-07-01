@@ -502,6 +502,8 @@ def guess_annotation(sid, object_id):
                                         'stats': stats, 'finished': finished_flag},
                  room=sid, namespace=player.namespace)
         stats, finished_flag = check_qualified(conn, player.partner)
+        print stats
+        print finished_flag
         sio.emit('correct annotation', {'object': selected_obj.to_json(),
                                         'stats': stats, 'finished': finished_flag},
                  room=player.partner.sid, namespace=player.partner.namespace)
