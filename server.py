@@ -753,6 +753,7 @@ def delete_game(players):
         player.partner = None
         player.dialogue = None
 
+
 @app.errorhandler(500)
 def internal_error(error):
     print error

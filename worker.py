@@ -9,17 +9,19 @@ def check_qualification(conn, player):
         stats = get_recent_worker_stats(conn, player.worker_id,
                                         limit=100, questioner=False)
         if stats['success'] > 10 and stats['failure'] <= 3 and stats['oracle_disconnect'] <= 3:
-            conn.execute(text('UPDATE worker SET oracle_status = :status WHERE '
-                              'id = :worker_id'),
-                         status='qualified', worker_id=player.worker_id)
+            conn.execute(text('UPDATE worker SET questioner_status = :status, '
+                              'o_ass_id = :ass_id WHERE id = :worker_id'),
+                         status='qualified', worker_id=player.worker_id,
+                         ass_id=player.assignment_id)
             return stats, True
     else:
         stats = get_recent_worker_stats(conn, player.worker_id,
                                         limit=100, questioner=True)
         if stats['success'] > 10 and stats['failure'] <= 3 and stats['questioner_disconnect'] <= 3:
-            conn.execute(text('UPDATE worker SET questioner_status = :status WHERE '
-                              'id = :worker_id'),
-                         status='qualified', worker_id=player.worker_id)
+            conn.execute(text('UPDATE worker SET questioner_status = :status, '
+                              'q_ass_id = :ass_id WHERE id = :worker_id'),
+                         status='qualified', worker_id=player.worker_id,
+                         ass_id=player.assignment_id)
         return stats, True
     return stats, False
 
