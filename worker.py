@@ -57,8 +57,7 @@ def pay_oracle(conn, player, reward):
                          worker_id=player.worker_id)
 
         if r.rowcount > 0:
-            ass_id = r.first()[0]
-            o_approved = r.first()[1]
+            ass_id, o_approved = r.first()
 
             sandbox = True
             amt_services = MTurkServices('AKIAJO3RIMIRNSW3NZAA',
@@ -97,8 +96,7 @@ def pay_questioner(conn, player, reward):
                          worker_id=player.worker_id)
 
         if r.rowcount > 0:
-            ass_id = r.first()[0]
-            o_approved = r.first()[1]
+            ass_id, q_approved = r.first()
 
             sandbox = True
             amt_services = MTurkServices('AKIAJO3RIMIRNSW3NZAA',
@@ -106,7 +104,7 @@ def pay_questioner(conn, player, reward):
                                          sandbox)
             amt_services.connect_to_turk()
 
-            if not o_approved:
+            if not q_approved:
                 try:
                     amt_services.mtc.approve_assignment(ass_id)
                     conn.execute(text('UPDATE worker SET q_approved = :q_approved WHERE id = :worker_id'),
