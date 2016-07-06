@@ -80,7 +80,7 @@ $(document).ready(function() {
     socket.on('questioner', function(msg) {
         setTimeout(function(){
             $('#info_text').html('<span class="loader"><span class="loader-inner"></span></span> We have found a partner!');
-        }, 1000);
+        }, 700);
         
         setTimeout(function(){
             $('#title').fadeOut(fadeS);
@@ -93,7 +93,7 @@ $(document).ready(function() {
             renderImageAndSegment();
             show_question_form();
             $('#report').fadeIn(fadeS);
-        }, 2000);
+        }, 1400);
     });
     socket.on('new answer', function(msg) {
         addAnswer(msg);
@@ -141,11 +141,20 @@ $(document).ready(function() {
         $('#info_text').html(text); 
         $('#info_text').fadeIn(fadeS);
 
-         if (msg.finished) {
-            $('#qualified').show();
-        } else {
-            $('#newgame_text').html('<p style="margin-bottom: 20px">You have to finish ' + (10 - msg.stats.success) + ' more games to complete the HIT. </p>');
+        if (msg.qualified) {
+            if (!msg.reward) {
+                $('#newgame_text').html('<p style="margin-bottom: 20px">Something went wrong while paying your bonus. Contact Harm de Vries at mail@harmdevries.com for more information (include your worker id).</p>');
+            } else {
+                $('#newgame_text').html('<p style="margin-bottom: 20px">Congratulations, we have added ' + msg.reward +'$ to your account. Continue your streak!</p>');
+            }
             $('#p_newgame').show();
+        } else {
+            if (msg.finished) {
+                $('#qualified').show();
+            } else {
+                $('#newgame_text').html('<p style="margin-bottom: 20px">Congratulations, you have to finish ' + (10 - msg.stats.success) + ' more games to complete this HIT. </p>');
+                $('#p_newgame').show();
+            }
         }
         set_score(msg.stats.success, msg.stats.failure, msg.stats.questioner_disconnect + msg.stats.questioner_timeout);
     });
@@ -168,10 +177,15 @@ $(document).ready(function() {
 
         $('#info_text').html(text); 
         $('#info_text').fadeIn(fadeS);
-        if (msg.finished) {
-            $('#newgame_text').html('<p style="margin-bottom: 20px">You have are successfully qualified. </p>');
+        if (msg.qualified) {
+            $('#newgame_text').html('<p style="margin-bottom: 20px">Try it one more time!</p>');
         } else {
-            $('#newgame_text').html('<p style="margin-bottom: 20px">You have to finish ' + (10 - msg.stats.success) + ' more games to complete the HIT. </p>');
+            if (msg.blocked) {
+                $('#newgame_text').html('<p style="margin-bottom: 20px">You have made too many mistakes or disconnected too many times to successfully complete this HIT. Contact Harm de Vries at mail@harmdevries.com for more information about your account (include your worker id). </p>');
+                $('#newgame').hide();
+            } else {
+                $('#newgame_text').html('<p style="margin-bottom: 20px">You have to finish ' + (10 - msg.stats.success) + ' more games to complete this HIT. </p>');
+            }
         }
         $('#p_newgame').show();
         set_score(msg.stats.success, msg.stats.failure, msg.stats.questioner_disconnect + msg.stats.questioner_timeout);

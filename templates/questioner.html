@@ -56,32 +56,60 @@
     <div class="col-sm-6" id="left">
       <div id="log"></div>
       <div id="intro" style="font-weight: 400">
-        <h3>Game instructions</h3>
-        <ul>
-        <li>You will be shown an image of a scene with multiple objects. </li>
-        <li>One of the objects will be assigned as the target (but not visible to you). </li>
-        <li>Your job is to guess that object by asking yes or no questions.</li>
-        <li>You click on the GuessWhat! button once you are <u>certain</u> which object it is. </li>
-        <li>All object segmentations are then shown in the image, and you click on the correct object.</li>
-        </ul>
+        {% if namespace == '/q_questioner' %}
+          <h3>Questioner game instructions</h3>
+          <ul>
+          <li>You will be shown an image of a scene with multiple objects. </li>
+          <li>One of the objects will be assigned as the target (but not visible to you). </li>
+          <li>Your job is to locate that object by asking yes or no questions.</li>
+          <li>You click on the GuessWhat! button once you are <u>certain</u> which object it is. </li>
+          <li>All object segmentations are then shown in the image, and you click on the correct object.</li>
+          </ul>
 
-        Please watch the instruction video on the right before starting your first game.
-
-        <h3>Important</h3>
-        <p>
-        In this HIT we ask you to successfully complete 10 games. Your HIT will be approved if you <b>do not make more than 3 mistakes</b>. Our motivation for this policy is that we do want you to be sure which object it is before you start guessing. </p>
-        <p>
-        Note that this a live game - you will be paired up with another player that answers your questions in an interactive session. Please behave accordingly: do not disconnect from the game and ask meaningful questions that leads you to guess the object. Your HIT will be approved if <b>you do not disconnect more than 3 times</b>.</p>
-        <p>
+          Please watch the instruction video on the right before starting your first game.
+          <h3>Important</h3>
+          <p>
+          In this HIT we ask you to successfully complete 10 games. Your HIT will be approved if you <b>do not make more than 3 mistakes</b>. Because this is a live game, we consider it a <b>mistake when you disconnect from the server</b> while you are participating in a game.</p>.
+          <p>
+        {% else %}
+        <h3>Questioner game instructions</h3>
+          Instructions are the same as in the qualification HIT. See instruction video on the right for a quick recap. 
+          <h3>Rewards</h3>
+          <p>
+          You can keep playing the game, and you will never need to submit this HIT. We will add a bonus to your qualification HIT for every game you successfully finish.  
+          The exact reward depends on <b>your score in your last 10 games</b>:</p>
+          <table class="table table-striped">
+          <tr>
+            <th>Number of successes</th>
+            <th>Reward</th>
+          </tr>
+          <tr>
+            <td>10</td><td>0.07</td>
+          </tr>
+          <tr>
+            <td>9</td><td>0.06</td>
+          </tr>
+          <tr>
+            <td>6-8</td><td>0.04</td>
+          </tr>
+          <tr>
+            <td>0-5</td><td>0.0$</td>
+          </tr>
+          </table>
+          </p>
+          <p>Your reward will be automatically added as a bonus to your qualification HIT. </p>
+        {% endif %}
         Do not hesitate to contact Harm de Vries - mail (at) harmdevries.com - if you have any further questions.</p>
 
       </div>
       {% if accepted_hit %}
       <p id="p_newgame"><span id="newgame_text"></span>
-        <a class="btn btn-success" id="newgame" role="button">Start the game &raquo;</a>
+        <a class="btn btn-success" id="newgame" role="button">Start a new game &raquo;</a>
       </p>
       <form id="qualified" method="POST" action="{{turkSubmitTo}}/mturk/externalSubmit">
-          Congratulations, you are now qualified to play Guesswhat?! Please submit your HIT below. <br /><br />
+          Congratulations, you are now qualified to play Guesswhat?! Please submit your HIT below. 
+
+          After that, search for GuessWhat?! HIT with [QUALIFIED ONLY] and keep playing the game! <br /><br />
           <input type="hidden" id="assignmentId" name="assignmentId" value="{{assignmentId}}" />
           <input type="hidden" name="test" value="test" />
           <input type="submit" class="btn btn-success" role="button" value="Submit HIT" />

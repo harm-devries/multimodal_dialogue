@@ -15,8 +15,10 @@ from database.db_utils import (get_dialogues, get_dialogue_stats,
                                insert_session, end_session, update_session,
                                update_dialogue_status, start_dialogue,
                                remove_from_queue, insert_into_queue,
-                               get_worker_status, get_recent_worker_stats, get_one_worker_status, update_one_worker_status)
-from worker import check_qualified, check_blocked
+                               get_worker_status, get_recent_worker_stats,
+                               get_one_worker_status, update_one_worker_status)
+from worker import (check_qualified, check_blocked, get_oracle_reward,
+                    get_questioner_reward, pay_questioner, pay_oracle)
 from players import QualifyOracle, Oracle, QualifyQuestioner, Questioner
 
 
@@ -115,11 +117,11 @@ def q_oracle():
         worker_status = get_worker_status(conn, worker_id)
         if worker_status == 'blocked':
             return render_template('error.html', title='Oracle - ',
-                                   msg='You are currently blocked. ')
+                                   msg='Your account is currently blocked, probably because you\'ve made too many mistakes or disconnected too many times while completing the HIT. Contact Harm de Vries - mail@harmdevries.com - for more information.')
 
         if worker_status == 'qualified':
             return render_template('error.html', title='Oracle - ',
-                                   msg='You are already qualified. Please accept the HIT with "Qualified" in the title.')
+                                   msg='You are already qualified as an oracle. Please search for Guesswhat?! HIT with "qualified" in the title.')
 
         stats = get_recent_worker_stats(conn, worker_id, questioner=False)
         nr_success, nr_failure = stats['success'], stats['failure']
@@ -164,8 +166,24 @@ def oracle():
                                msg=msg)
 
     accepted_hit = False
+    nr_success, nr_failure, nr_disconnects = 0, 0, 0
     if 'workerId' in request.args:
+        worker_id = request.args['workerId']
         accepted_hit = True
+        conn = engine.connect()
+        worker_status = get_worker_status(conn, worker_id, questioner=False)
+        if worker_status == 'blocked':
+            return render_template('error.html', title='Oracle - ',
+                                   msg='Your account is currently blocked, probably because you\'ve made too many mistakes or disconnected too many times while completing the HIT. Contact Harm de Vries - mail@harmdevries.com - for more information.')
+
+        if worker_status is None or worker_status == 'default':
+            return render_template('error.html', title='Oracle - ',
+                                   msg='You are not qualified yet to play Guesswhat?!. Please search for GuessWhat?! HIT with "qualification" in the title.')
+
+        stats = get_recent_worker_stats(conn, worker_id, questioner=False)
+        nr_success, nr_failure = stats['success'], stats['failure']
+        nr_disconnects = stats['oracle_disconnect'] + stats['oracle_timeout']
+
         for player in players.itervalues():
             if player.worker_id == request.args['workerId'] and player.role == 'Questioner':
                 msg = ('You are allowed to play at most '
@@ -175,6 +193,9 @@ def oracle():
 
     return render_template('oracle.html',
                            title='Oracle - ',
+                           success=nr_success,
+                           failure=nr_failure,
+                           disconnect=nr_disconnects,
                            accepted_hit=accepted_hit,
                            assignmentId=assignment_id,
                            namespace='/oracle')
@@ -214,11 +235,11 @@ def q_questioner():
         worker_status = get_worker_status(conn, worker_id, questioner=True)
         if worker_status == 'blocked':
             return render_template('error.html', title='Questioner - ',
-                                   msg='You are currently blocked. ')
+                                   msg='Your account is currently blocked, probably because you\'ve made too many mistakes or disconnected too many times while completing the HIT. Contact Harm de Vries - mail@harmdevries.com - for more information.')
 
         if worker_status == 'qualified':
             return render_template('error.html', title='Questioner - ',
-                                   msg='You are already qualified. Please accept the HIT with "Qualified" in the title.')
+                                   msg='You are already qualified as a questioner. Please search for GuessWhat?! HIT with "qualified" in the title.')
 
         stats = get_recent_worker_stats(conn, worker_id, questioner=True)
         nr_success, nr_failure = stats['success'], stats['failure']
@@ -263,8 +284,25 @@ def questioner():
                                msg=msg)
 
     accepted_hit = False
+    nr_success, nr_failure, nr_disconnects = 0, 0, 0
     if 'workerId' in request.args:
         accepted_hit = True
+        worker_id = request.args['workerId']
+
+        conn = engine.connect()
+        worker_status = get_worker_status(conn, worker_id, questioner=True)
+        if worker_status == 'blocked':
+            return render_template('error.html', title='Questioner - ',
+                                   msg='Your account is currently blocked, probably because you\'ve made too many mistakes or disconnected too many times while completing the HIT. Contact Harm de Vries - mail@harmdevries.com - for more information.')
+
+        if worker_status is None or worker_status == 'default':
+            return render_template('error.html', title='Questioner - ',
+                                   msg='You are not qualified yet to play Guesswhat?!. Please search for GuessWhat?! HIT with "qualification" in the title.')
+
+        stats = get_recent_worker_stats(conn, worker_id, questioner=True)
+        nr_success, nr_failure = stats['success'], stats['failure']
+        nr_disconnects = stats['questioner_disconnect'] + stats['questioner_timeout']
+
         for player in players.itervalues():
             if player.worker_id == request.args['workerId'] and player.role == 'Oracle':
                 msg = ('You are allowed to play at most '
@@ -274,6 +312,9 @@ def questioner():
 
     return render_template('questioner.html',
                            title='Questioner - ',
+                           success=nr_success,
+                           failure=nr_failure,
+                           disconnect=nr_disconnects,
                            accepted_hit=accepted_hit,
                            assignmentId=assignment_id,
                            namespace='/questioner')
@@ -499,11 +540,15 @@ def guess_annotation(sid, object_id):
 
         stats, finished_flag = check_qualified(conn, player)
         sio.emit('correct annotation', {'object': selected_obj.to_json(),
-                                        'stats': stats, 'finished': finished_flag},
+                                        'stats': stats,
+                                        'finished': finished_flag,
+                                        'qualified': False},
                  room=sid, namespace=player.namespace)
         stats, finished_flag = check_qualified(conn, player.partner)
         sio.emit('correct annotation', {'object': selected_obj.to_json(),
-                                        'stats': stats, 'finished': finished_flag},
+                                        'stats': stats,
+                                        'finished': finished_flag,
+                                        'qualified': False},
                  room=player.partner.sid, namespace=player.partner.namespace)
     else:
         update_dialogue_status(conn, dialogue.id, 'failure')
@@ -512,11 +557,15 @@ def guess_annotation(sid, object_id):
                 guessed_obj = obj
         stats, blocked = check_blocked(conn, player)
         sio.emit('wrong annotation', {'object': selected_obj.to_json(),
-                                      'stats': stats, 'blocked': blocked},
+                                      'stats': stats,
+                                      'blocked': blocked,
+                                      'qualified': False},
                  room=sid, namespace=player.namespace)
         stats, blocked = check_blocked(conn, player.partner)
         sio.emit('wrong annotation', {'object': guessed_obj.to_json(),
-                                      'stats': stats, 'blocked': blocked},
+                                      'stats': stats,
+                                      'blocked': blocked,
+                                      'qualified': False},
                  room=player.partner.sid, namespace=player.partner.namespace)
     delete_game([player, player.partner])
     conn.close()
@@ -531,18 +580,45 @@ def guess_annotation2(sid, object_id):
     selected_obj = dialogue.object
     if selected_obj.object_id == object_id:
         update_dialogue_status(conn, dialogue.id, 'success')
-        sio.emit('correct annotation', {'object': selected_obj.to_json()},
+        stats = get_recent_worker_stats(conn, player.worker_id,
+                                        limit=1e7,
+                                        questioner=True)
+        questioner_reward = get_questioner_reward(conn, player.worker_id)
+        sio.emit('correct annotation', {'object': selected_obj.to_json(),
+                                        'stats': stats,
+                                        'reward': questioner_reward,
+                                        'qualified': True},
                  room=sid, namespace=player.namespace)
-        sio.emit('correct annotation', {'object': selected_obj.to_json()},
+        stats = get_recent_worker_stats(conn, player.partner.worker_id,
+                                        limit=1e7,
+                                        questioner=False)
+
+        oracle_reward = get_oracle_reward(conn, player.partner.worker_id)
+        sio.emit('correct annotation', {'object': selected_obj.to_json(),
+                                        'stats': stats,
+                                        'reward': oracle_reward,
+                                        'qualified': True},
                  room=player.partner.sid, namespace='/oracle')
+        pay_questioner(conn, player, questioner_reward)
+        pay_oracle(conn, player.partner, oracle_reward)
     else:
         update_dialogue_status(conn, dialogue.id, 'failure')
         for obj in dialogue.picture.objects:
             if obj.object_id == object_id:
                 guessed_obj = obj
-        sio.emit('wrong annotation', {'object': selected_obj.to_json()},
+        stats = get_recent_worker_stats(conn, player.worker_id,
+                                        limit=1e7,
+                                        questioner=True)
+        sio.emit('wrong annotation', {'object': selected_obj.to_json(),
+                                      'stats': stats,
+                                      'qualified': True},
                  room=sid, namespace=player.namespace)
-        sio.emit('wrong annotation', {'object': guessed_obj.to_json()},
+        stats = get_recent_worker_stats(conn, player.partner.worker_id,
+                                        limit=1e7,
+                                        questioner=False)
+        sio.emit('wrong annotation', {'object': guessed_obj.to_json(),
+                                      'stats': stats,
+                                      'qualified': True},
                  room=player.partner.sid, namespace='/oracle')
     delete_game([player, player.partner])
     conn.close()
@@ -746,7 +822,8 @@ def disconnect(sid):
             else:
                 update_dialogue_status(conn, player.dialogue.id,
                                        'oracle_disconnect')
-            check_blocked(conn, player)
+            if player.role == 'QualifyOracle' or player.role == 'QualifyQuestioner':
+                check_blocked(conn, player)
             delete_game([player, partner])
 
             if partner.role == 'Oracle':
