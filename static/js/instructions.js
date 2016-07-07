@@ -1,4 +1,11 @@
 $(document).ready(function() {
+    var $items = $('#group').children();
+    var $current = $items.filter('.current');
+
+    $("#prevbtn").toggle(!$current.is($items.first()));    
+    $("#nextbtn").toggle(!$current.is($items.last()));
+    $('#newgame').toggle($current.is($items.last()));
+
     function updateItems(delta)
     {
         var $items = $('#group').children();
@@ -6,7 +13,6 @@ $(document).ready(function() {
         var index = $current.index();
         var newIndex = index+delta;
         // Range check the new index
-        console.log($items.length);
         newIndex = (newIndex < 0) ? 0 : ((newIndex > $items.length) ? $items.length : newIndex); 
         if (newIndex != index){
             $current.removeClass('current');
@@ -23,4 +29,5 @@ $(document).ready(function() {
     $('#prevbtn').click(function(event) {
         updateItems(-1);
     });
+    
 });
