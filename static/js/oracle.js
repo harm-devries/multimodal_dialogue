@@ -26,6 +26,7 @@ $(document).ready(function() {
     socket.emit('update session', {assignmentId: QueryString.assignmentId,
                                    hitId: QueryString.hitId,
                                    workerId: QueryString.workerId});
+    
     var img; //image url
     var object; // selected object for oracle
     var correct_obj; // if flag is true, segment will be displayed in green
@@ -53,6 +54,9 @@ $(document).ready(function() {
     var question_time = 90;
     var guess_time = 30;
     vex.defaultOptions.className = 'vex-theme-default';
+    socket.emit('update session', {assignmentId: QueryString.assignmentId,
+                                   hitId: QueryString.hitId,
+                                   workerId: QueryString.workerId});
 
 
     // socket.on('disconnect', function() {
