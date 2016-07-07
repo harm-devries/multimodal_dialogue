@@ -51,14 +51,6 @@ $(document).ready(function() {
     var guess_time = 30;
     vex.defaultOptions.className = 'vex-theme-default';
 
-
-    // socket.on('disconnect', function() {
-    //     $('#question').hide();
-    //     $('#answer').hide();
-    //     $('#waiting').hide();
-    //     $('#info_text').text('Sorry! The server unexpectedly closed the connection. ');
-    //     $('#info_text').show();
-    // });
     socket.on('partner_disconnect', function() {
         partner_disconnect = true;
         deletegame();
