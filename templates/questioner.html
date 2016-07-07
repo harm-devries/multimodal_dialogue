@@ -56,9 +56,10 @@
     <div class="col-sm-10" id="left">
       <div id="log"></div>
       <div id="intro" style="font-weight: 400">
-        {% if namespace == '/q_questioner' %}
-          <div id="group">
+        <div id="group">
+          {% if namespace == '/q_questioner' %}
             <div class="current well">
+
               <h3>Game instructions for questioner player</h3>
               <ul>
               <li>This is a two player game, yourself and an oracle. </li>
@@ -130,31 +131,33 @@
               </ul>
               <p>Do not hesitate to contact Harm de Vries at mail (at) harmdevries.com if you have any further questions.</p>
             </div>
-          </div>
-        {% else %}
-          <h3>Important information for this HIT</h3>
-          <p>
-          You can keep playing the game; you will never need to submit this HIT. We will add a bonus to your qualification HIT for every game you successfully finish.  
-          The exact reward depends on <b>your score in your last 10 games</b>: </p>
-          <table class="table table-striped">
-          <tr>
-            <th>Number of successes</th>
-            <th>Reward</th>
-          </tr>
-          <tr>
-            <td>10</td><td>0.05</td>
-          </tr>
-          <tr>
-            <td>9</td><td>0.04</td>
-          </tr>
-          <tr>
-            <td>6-8</td><td>0.03</td>
-          </tr>
-          <tr>
-            <td>0-5</td><td>0</td>
-          </tr>
-          </table>
-        {% endif %}
+          {% else %}
+            <div class="well current">
+              <h3>Important information for this HIT</h3>
+              <p>
+              You can keep playing the game; you will never need to submit this HIT. We will add a bonus to your qualification HIT for every game you successfully finish.  
+              The exact reward depends on <b>your score in your last 10 games</b>: </p>
+              <table class="table table-striped">
+              <tr>
+                <th>Number of successes</th>
+                <th>Reward</th>
+              </tr>
+              <tr>
+                <td>10</td><td>0.07/td>
+              </tr>
+              <tr>
+                <td>9</td><td>0.06</td>
+              </tr>
+              <tr>
+                <td>6-8</td><td>0.04</td>
+              </tr>
+              <tr>
+                <td>0-5</td><td>0</td>
+              </tr>
+              </table>
+            </div>
+          {% endif %}
+        </div>
 
         <div class="well" id="newgame_text" style="display: none"></div> 
         <div class="row" id="navigation">
