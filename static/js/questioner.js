@@ -308,8 +308,8 @@ $(document).ready(function() {
             paddingTop: "10px",
             paddingBottom: "10px"
         }, 1000);
-        $('#left').switchClass("col-sm-10", "col-sm-5", 0, "easeInOutQuad");
-        $('#right').switchClass("col-sm-2", "col-sm-7", 0, "easeInOutQuad");
+        $('#left').switchClass("col-sm-9", "col-sm-5", 0, "easeInOutQuad");
+        $('#right').switchClass("col-sm-3", "col-sm-7", 0, "easeInOutQuad");
 
     }
     function infoBarUp() {
