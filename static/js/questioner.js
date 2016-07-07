@@ -51,10 +51,6 @@ $(document).ready(function() {
     var guess_time = 30;
     vex.defaultOptions.className = 'vex-theme-default';
 
-    socket.emit('update session', {assignmentId: QueryString.assignmentId,
-                                   hitId: QueryString.hitId,
-                                   workerId: QueryString.workerId});
-
 
     // socket.on('disconnect', function() {
     //     $('#question').hide();
