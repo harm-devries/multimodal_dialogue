@@ -142,14 +142,7 @@
           </tr>
           </table>
         {% endif %}
-        <form id="qualified" method="POST" action="{{turkSubmitTo}}/mturk/externalSubmit">
-            Congratulations, you are now qualified to play Guesswhat?! Please submit your HIT below. 
-
-            After that, search for the GuessWhat?! HIT with [QUALIFIED ONLY] and keep playing the game! <br /><br />
-            <input type="hidden" id="assignmentId" name="assignmentId" value="{{assignmentId}}" />
-            <input type="hidden" name="test" value="test" />
-            <input type="submit" class="btn btn-success" role="button" value="Submit HIT" />
-        </form>
+        
         <div class="well" id="newgame_text" style="display: none"></div> 
         <div class="row" id="navigation">
           <div class="col-xs-6">
@@ -159,6 +152,11 @@
             <a id="nextbtn" class="btn btn-info" style="float:right">Next &raquo;</a>
             {% if accepted_hit %}
               <a class="btn btn-success" id="newgame" style="display: none; float:right" role="button">Start a game &raquo;</a>
+              <form id="qualified" method="POST" action="{{turkSubmitTo}}/mturk/externalSubmit">
+                <input type="hidden" id="assignmentId" name="assignmentId" value="{{assignmentId}}" />
+                <input type="hidden" name="test" value="test" />
+                <input type="submit" class="btn btn-success" role="button" value="Submit HIT" style="float:right" />
+              </form>
             {% endif %}
           </div>
         </div>
