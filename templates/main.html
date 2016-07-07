@@ -25,6 +25,7 @@
 
     <!-- Custom styles for this template -->
     <link href="{{ url_for('static', filename='css/jumbotron.css') }}" rel="stylesheet">
+    <script src="{{ url_for('static', filename='js/instructions.js') }}"></script>
     {% block includes %}{% endblock %}
     
     
@@ -44,7 +45,7 @@
   <div class="navbar navbar-default navbar-fixed-top" id="top">
     <div class="container">
       <div class="navbar-header">
-        <a class="navbar-brand" href="/"><span class="first_part">Guess</span><span class="second_part">What?!</span></a>
+        <a class="navbar-brand" href="#"><span class="first_part">Guess</span><span class="second_part">What?!</span></a>
         <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-menubuilder"><span class="sr-only">Toggle navigation</span><span class="icon-bar"></span><span class="icon-bar"></span><span class="icon-bar"></span>
         </button>
       </div>

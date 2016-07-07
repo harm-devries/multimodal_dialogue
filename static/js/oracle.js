@@ -86,7 +86,6 @@ $(document).ready(function() {
         }, 700);
 
         setTimeout(function(){
-            $('#title').fadeOut(fadeS);
             $('#intro').fadeOut(fadeS);
             $('#info_text').hide();
             img = msg.img;
@@ -129,19 +128,22 @@ $(document).ready(function() {
         $('#info_text').fadeIn(fadeS);
         if (msg.qualified) {
             if (!msg.reward) {
-                $('#newgame_text').html('<p style="margin-bottom: 20px">Something went wrong while paying your bonus. Contact Harm de Vries at mail@harmdevries.com for more information (include your worker id).</p>');
+                $('#newgame_text').html('<p>Something went wrong while paying your bonus. Contact Harm de Vries at mail@harmdevries.com for more information (include your worker id).</p>');
             } else {
-                $('#newgame_text').html('<p style="margin-bottom: 20px">Congratulations, we have added ' + msg.reward +'$ to your account. Continue your streak!</p>');
+                $('#newgame_text').html('<p>Congratulations, we have added ' + msg.reward +'$ to your account. Continue your streak!</p>');
             }
-            $('#p_newgame').show();
         } else {
             if (msg.finished) {
+                $('#newgame_text').html('<p>Congratulations, you are now qualified to play Guesswhat?! Please submit your HIT below. After that, search for the GuessWhat?! HIT with [QUALIFIED ONLY] and keep playing the game!</p>');
                 $('#qualified').show();
+                $('#newgame').hide();
             } else {
-                $('#newgame_text').html('<p style="margin-bottom: 20px">Congratulations, you have to finish ' + (10 - msg.stats.success) + ' more games to complete this HIT. </p>');
-                $('#p_newgame').show();
+                $('#newgame_text').html('<p>Congratulations, you have to finish ' + (10 - msg.stats.success) + ' more games to complete this HIT. </p>');
             }
         }
+        $('#newgame_text').show();
+        $('#intro').show();
+        $('#prevbtn').hide();
         set_score(msg.stats.success, msg.stats.failure, msg.stats.oracle_disconnect + msg.stats.oracle_timeout);
     });
 
@@ -165,16 +167,18 @@ $(document).ready(function() {
         $('#info_text').html(text); 
         $('#info_text').fadeIn(fadeS);
         if (msg.qualified) {
-            $('#newgame_text').html('<p style="margin-bottom: 20px">Try it one more time!</p>');
+            $('#newgame_text').html('<p>Try it one more time!</p>');
         } else {
             if (msg.blocked) {
-                $('#newgame_text').html('<p style="margin-bottom: 20px">You have made too many mistakes or disconnected too many times to successfully complete this HIT. Contact Harm de Vries at mail@harmdevries.com for more information about your account (include your worker id). </p>');
-                $('#newgame').hide();
+                $('#newgame_text').html('<p>You have made too many mistakes or disconnected too many times to successfully complete this HIT. Contact Harm de Vries at mail@harmdevries.com for more information about your account (include your worker id). </p>');
+                $('#navigation').hide();
             } else {
-                $('#newgame_text').html('<p style="margin-bottom: 20px">You have to finish ' + (10 - msg.stats.success) + ' more games to complete this HIT. </p>');
+                $('#newgame_text').html('<p>You have to finish ' + (10 - msg.stats.success) + ' more games to complete this HIT. </p>');
             }
         }
-        $('#p_newgame').show();
+        $('#newgame_text').show();
+        $('#intro').show();
+        $('#prevbtn').hide();
         set_score(msg.stats.success, msg.stats.failure, msg.stats.oracle_disconnect + msg.stats.oracle_timeout);
     });
 
@@ -267,11 +271,8 @@ $(document).ready(function() {
 
     function noPartner() {
         hideAll();
-        $('#title').fadeOut(fadeS);
+        $('#group').fadeOut(fadeS);
         $('#intro').fadeOut(fadeS);
-        $('#instructions').fadeOut(fadeS);
-        $('#p_newgame').fadeOut(fadeS);
-        $('#p_newplayergame').fadeOut(fadeS);
         var msg;
         if(partner_disconnect) {
             msg = 'Your partner disconnected. Waiting for a new one..';
@@ -300,8 +301,8 @@ $(document).ready(function() {
             paddingTop: "10px",
             paddingBottom: "10px"
         }, 1000);
-        $('#left').switchClass("col-sm-6", "col-sm-5", 0, "easeInOutQuad");
-        $('#right').switchClass("col-sm-6", "col-sm-7", 0, "easeInOutQuad");
+        $('#left').switchClass("col-sm-10", "col-sm-5", 0, "easeInOutQuad");
+        $('#right').switchClass("col-sm-2", "col-sm-7", 0, "easeInOutQuad");
 
     }
 

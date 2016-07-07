@@ -53,75 +53,129 @@
 
 <div class="container">
   <div class="row">
-    <div class="col-sm-6" id="left">
+    <div class="col-sm-10" id="left">
       <div id="log"></div>
       <div id="intro" style="font-weight: 400">
         {% if namespace == '/q_questioner' %}
-          <h3>Questioner game instructions</h3>
-          <ul>
-          <li>You will be shown an image of a scene with multiple objects. </li>
-          <li>One of the objects will be assigned as the target (but not visible to you). </li>
-          <li>Your job is to locate that object by asking yes or no questions.</li>
-          <li>You click on the GuessWhat! button once you are <u>certain</u> which object it is. </li>
-          <li>All object segmentations are then shown in the image, and you click on the correct object.</li>
-          </ul>
-
-          Please watch the instruction video on the right before starting your first game.
-          <h3>Important</h3>
-          <p>
-          In this HIT we ask you to successfully complete 10 games. Your HIT will be approved if you <b>do not make more than 3 mistakes</b>. Because this is a live game, we consider it a <b>mistake when you disconnect from the server</b> while you are participating in a game.</p>
-          <p>
+          <div id="group">
+            <div class="current well">
+              <h3>Game instructions for questioner player</h3>
+              <ul>
+              <li>This is a two player game, yourself and an oracle. </li>
+              <li>You will be shown an image of a scene with multiple objects. </li>
+              <li>One of the objects will be assigned as the target (but not visible to you). </li>
+              <li>Your job is to locate that object by asking yes or no questions.</li>
+              <li>You click on the GuessWhat! button once you are <u>certain</u> which object it is. </li>
+              <li>All object segmentations are then shown in the image, and you click on the correct object.</li>
+              </ul>
+              <p>In the following we walk you step by step through an example game. </p>
+            </div>
+            <div class="well">
+              <img class="img-responsive" src="{{ url_for('static', filename='questioner_img/32.png') }}" />
+            </div>
+            <div class="well">
+              <img class="img-responsive" src="{{ url_for('static', filename='questioner_img/33.png') }}" />
+            </div>
+            <div class="well">
+              <img class="img-responsive" src="{{ url_for('static', filename='questioner_img/57.png') }}" />
+            </div>
+            <div class="well">
+              <img class="img-responsive" src="{{ url_for('static', filename='questioner_img/65.png') }}" />
+            </div>
+            <div class="well">
+              <img class="img-responsive" src="{{ url_for('static', filename='questioner_img/70.png') }}" />
+            </div>
+            <div class="well">
+              <img class="img-responsive" src="{{ url_for('static', filename='questioner_img/93.png') }}" />
+            </div>
+            <div class="well">
+              <img class="img-responsive" src="{{ url_for('static', filename='questioner_img/142.png') }}" />
+            </div>
+            <div class="well">
+              <img class="img-responsive" src="{{ url_for('static', filename='questioner_img/214.png') }}" />
+            </div>
+            <div class="well">
+              <img class="img-responsive" src="{{ url_for('static', filename='questioner_img/232.png') }}" />
+            </div>
+            <div class="well">
+              <img class="img-responsive" src="{{ url_for('static', filename='questioner_img/274.png') }}" />
+            </div>
+            <div class="well">
+              <img class="img-responsive" src="{{ url_for('static', filename='questioner_img/299.png') }}" />
+            </div>
+            <div class="well">
+              <img class="img-responsive" src="{{ url_for('static', filename='questioner_img/351.png') }}" />
+            </div>
+            <div class="well">
+              <img class="img-responsive" src="{{ url_for('static', filename='questioner_img/364.png') }}" />
+            </div>
+            <div class="well">
+              <img class="img-responsive" src="{{ url_for('static', filename='questioner_img/407.png') }}" />
+            </div>
+            <div class="well">
+              <img class="img-responsive" src="{{ url_for('static', filename='questioner_img/415.png') }}" />
+            </div>
+            <div class="well">
+              <img class="img-responsive" src="{{ url_for('static', filename='questioner_img/416.png') }}" />
+            </div>
+            <div class="well">
+              <img class="img-responsive" src="{{ url_for('static', filename='questioner_img/420.png') }}" />
+            </div>
+            <div class="well">
+              <h3>Important rules for this HIT</h3>
+              <ul>
+              <li>In this HIT we ask you to successfully complete <b>10 games</b>.</li>
+              <li>Your HIT will be approved if you <b>do not make more than 3 mistakes</b>.</li>
+              <li>Because this is a live game, we consider it a <b>mistake when you disconnect from the server</b> while you are participating in a game.</li>
+              </ul>
+              <p>Do not hesitate to contact Harm de Vries at mail (at) harmdevries.com if you have any further questions.</p>
+            </div>
+          </div>
         {% else %}
-        <h3>Questioner game instructions</h3>
-          Instructions are the same as in the qualification HIT. See instruction video on the right for a quick recap. 
-          <h3>Rewards</h3>
+          <h3>Important information for this HIT</h3>
           <p>
-          You can keep playing the game, and you will never need to submit this HIT. We will add a bonus to your qualification HIT for every game you successfully finish.  
-          The exact reward depends on <b>your score in your last 10 games</b>:</p>
+          You can keep playing the game; you will never need to submit this HIT. We will add a bonus to your qualification HIT for every game you successfully finish.  
+          The exact reward depends on <b>your score in your last 10 games</b>: </p>
           <table class="table table-striped">
           <tr>
             <th>Number of successes</th>
             <th>Reward</th>
           </tr>
           <tr>
-            <td>10</td><td>0.07</td>
+            <td>10</td><td>0.05</td>
           </tr>
           <tr>
-            <td>9</td><td>0.06</td>
+            <td>9</td><td>0.04</td>
           </tr>
           <tr>
-            <td>6-8</td><td>0.04</td>
+            <td>6-8</td><td>0.03</td>
           </tr>
           <tr>
-            <td>0-5</td><td>0.0$</td>
+            <td>0-5</td><td>0</td>
           </tr>
           </table>
-          </p>
-          <p>Your reward will be automatically added as a bonus to your qualification HIT. </p>
         {% endif %}
-        Do not hesitate to contact Harm de Vries - mail (at) harmdevries.com - if you have any further questions.</p>
 
+        <div class="well" id="newgame_text" style="display: none"></div> 
+        <div class="row" id="navigation">
+          <div class="col-xs-6">
+            <a id="prevbtn" class="btn btn-info" style="display: none">Previous</a>
+          </div>
+          <div class="col-xs-6">
+            <a id="nextbtn" class="btn btn-info" style="float:right">Next &raquo;</a>
+            {% if accepted_hit %}
+              <a class="btn btn-success" id="newgame" style="display: none; float: right" role="button">Start a game &raquo;</a>
+              <form id="qualified" method="POST" action="{{turkSubmitTo}}/mturk/externalSubmit">
+                <input type="hidden" id="assignmentId" name="assignmentId" value="{{assignmentId}}" />
+                <input type="hidden" name="test" value="test" />
+                <input type="submit" class="btn btn-success" role="button" value="Submit HIT" style="float:right" />
+              </form>
+            {% endif %}
+          </div>
+        </div>
       </div>
-      {% if accepted_hit %}
-      <p id="p_newgame"><span id="newgame_text"></span>
-        <a class="btn btn-success" id="newgame" role="button">Start a new game &raquo;</a>
-      </p>
-      <form id="qualified" method="POST" action="{{turkSubmitTo}}/mturk/externalSubmit">
-          Congratulations, you are now qualified to play Guesswhat?! Please submit your HIT below. 
-
-          After that, search for GuessWhat?! HIT with [QUALIFIED ONLY] and keep playing the game! <br /><br />
-          <input type="hidden" id="assignmentId" name="assignmentId" value="{{assignmentId}}" />
-          <input type="hidden" name="test" value="test" />
-          <input type="submit" class="btn btn-success" role="button" value="Submit HIT" />
-      </form>
-      {% endif %}
-      
-      
     </div>
-    <div class="col-sm-6" id ="right">
-
-      <img id="instructions" src="https://s3-us-west-2.amazonaws.com/guess-what/questioner_instructions.gif" style="margin-top: 25px; width: 100%" />
-      
+    <div class="col-sm-2" id ="right">
       <div style="position: relative;" id="image">
       <canvas id="img" width="100" height="100" 
        style="position: absolute; left: 0; top: 0; z-index: 0;"></canvas>

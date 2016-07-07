@@ -194,3 +194,9 @@ hr {
     top: 40%;
     width: 100%;
 }
+#group div{
+    display: none;
+}
+#group div.current{
+  display: block;
+}

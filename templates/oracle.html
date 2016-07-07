@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vex-js/2.3.4/css/vex.css" />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vex-js/2.3.4/css/vex-theme-default.css" />
 {% endif %}
+
 {% endblock %}
 
 {% block infobar %}
@@ -50,26 +51,75 @@
 
 <div class="container">
   <div class="row">
-    <div class="col-sm-6" id="left">
+    <div class="col-sm-10" id="left">
       <div id="log"></div>
       <div id="intro" style="font-weight: 400">
         {% if namespace == '/q_oracle' %}
-          <h3>Oracle game instructions</h3>
-          <ul>
-          <li>This is a two-player game (oracle and questioner). 
-          <li>You will be shown an image of a scene with multiple objects. </li>
-          <li>One of the objects will be assigned as the target which the questioner should predict.</li>
-          <li>Your job is to help the questioner by answering his questions with Yes, No or Not Applicable. </li>
-          </ul>
-          Please watch the instruction video on the right before starting your first game.
-          <h3>Important</h3>
-          <p>
-          In this HIT we ask you to successfully complete 10 games. Your HIT will be approved if you <b>do not make more than 3 mistakes</b>. Because this is a live game, we consider it a <b>mistake when you disconnect from the server</b> while you are participating in a game.</p>
+          <div id="group">
+            <div class="current well">
+              <h3>Game instructions for oracle player</h3>
+              <ul>
+              <li>This is a two-player game, yourself and a questioner. </li>
+              <li>You will be shown an image of a scene with multiple objects. </li>
+              <li>One of the objects will be assigned as the target which the questioner should predict.</li>
+              <li>Your job is to help the questioner by answering his questions with Yes, No or Not Applicable. </li>
+              </ul>
+              <p>In the following we walk you step by step through an example game. </p>
+            </div>
+            <div class="well">
+              <img class="img-responsive" src="{{ url_for('static', filename='oracle_img/edited-15.png') }}" />
+            </div>
+            <div class="well">
+              <img class="img-responsive" src="{{ url_for('static', filename='oracle_img/edited-16.png') }}" />
+            </div>
+            <div class="well">
+              <img class="img-responsive" src="{{ url_for('static', filename='oracle_img/edited-17.png') }}" />
+            </div>
+            <div class="well">
+              <img class="img-responsive" src="{{ url_for('static', filename='oracle_img/edited-78.png') }}" />
+            </div>
+            <div class="well">
+              <img class="img-responsive" src="{{ url_for('static', filename='oracle_img/edited-79.png') }}" />
+            </div>
+            <div class="well">
+              <img class="img-responsive" src="{{ url_for('static', filename='oracle_img/edited-144.png') }}" />
+            </div>
+            <div class="well">
+              <img class="img-responsive" src="{{ url_for('static', filename='oracle_img/edited-145.png') }}" />
+            </div>
+            <div class="well">
+              <img class="img-responsive" src="{{ url_for('static', filename='oracle_img/edited-146.png') }}" />
+            </div>
+            <div class="well">
+              <img class="img-responsive" src="{{ url_for('static', filename='oracle_img/edited-148.png') }}" />
+            </div>
+            <div class="well">
+              <img class="img-responsive" src="{{ url_for('static', filename='oracle_img/edited-157.png') }}" />
+            </div>
+            <div class="well">
+              <img class="img-responsive" src="{{ url_for('static', filename='oracle_img/edited-240.png') }}" />
+            </div>
+            <div class="well">
+              <img class="img-responsive" src="{{ url_for('static', filename='oracle_img/edited-284.png') }}" />
+            </div>
+            <div class="well">
+              <img class="img-responsive" src="{{ url_for('static', filename='oracle_img/edited-369.png') }}" />
+            </div>
+            <div class="well">
+              <img class="img-responsive" src="{{ url_for('static', filename='oracle_img/edited-378.png') }}" />
+            </div>
+            <div class="well">
+              <h3>Important rules for this HIT</h3>
+              <ul>
+              <li>In this HIT we ask you to successfully complete <b>10 games</b>.</li>
+              <li>Your HIT will be approved if you <b>do not make more than 3 mistakes</b>.</li>
+              <li>Because this is a live game, we consider it a <b>mistake when you disconnect from the server</b> while you are participating in a game.</li>
+              </ul>
+              <p>Do not hesitate to contact Harm de Vries at mail (at) harmdevries.com if you have any further questions.</p>
+            </div>
+          </div>
         {% else %}
-          <h3>Oracle game instructions</h3>
-          Instructions are the same as in the qualification HIT. See instruction video on the right for a quick recap. 
-
-          <h3>Rewards</h3>
+          <h3>Important information for this HIT</h3>
           <p>
           You can keep playing the game; you will never need to submit this HIT. We will add a bonus to your qualification HIT for every game you successfully finish.  
           The exact reward depends on <b>your score in your last 10 games</b>: </p>
@@ -91,29 +141,31 @@
             <td>0-5</td><td>0</td>
           </tr>
           </table>
-          </p>
         {% endif %}
-        <p>
-        Do not hesitate to contact Harm de Vries - mail (at) harmdevries.com - if you have any further questions or feedback. </p>
+        <form id="qualified" method="POST" action="{{turkSubmitTo}}/mturk/externalSubmit">
+            Congratulations, you are now qualified to play Guesswhat?! Please submit your HIT below. 
 
+            After that, search for the GuessWhat?! HIT with [QUALIFIED ONLY] and keep playing the game! <br /><br />
+            <input type="hidden" id="assignmentId" name="assignmentId" value="{{assignmentId}}" />
+            <input type="hidden" name="test" value="test" />
+            <input type="submit" class="btn btn-success" role="button" value="Submit HIT" />
+        </form>
+        <div class="well" id="newgame_text" style="display: none"></div> 
+        <div class="row" id="navigation">
+          <div class="col-xs-6">
+            <a id="prevbtn" class="btn btn-info" style="display: none">Previous</a>
+          </div>
+          <div class="col-xs-6">
+            <a id="nextbtn" class="btn btn-info" style="float:right">Next &raquo;</a>
+            {% if accepted_hit %}
+              <a class="btn btn-success" id="newgame" style="display: none; float:right" role="button">Start a game &raquo;</a>
+            {% endif %}
+          </div>
+        </div>
       </div>
-      {% if accepted_hit %}
-      <p id="p_newgame"><span id="newgame_text"></span>
-          <a class="btn btn-success" id="newgame" role="button">Start a new game &raquo;</a>
-      </p>
-      <form id="qualified" method="POST" action="{{turkSubmitTo}}/mturk/externalSubmit">
-         Congratulations, you are now qualified to play Guesswhat?! Please submit your HIT below. 
-
-          After that, search for GuessWhat?! HIT with [QUALIFIED ONLY] and keep playing the game! <br /><br />
-          <input type="hidden" id="assignmentId" name="assignmentId" value="{{assignmentId}}" />
-          <input type="hidden" name="test" value="test" />
-          <input type="submit" class="btn btn-success" role="button" value="Submit HIT" />
-      </form>
-      {% endif %}
-      
     </div>
-    <div class="col-sm-6" id ="right">
-      <img id="instructions" src="https://s3-us-west-2.amazonaws.com/guess-what/oracle_instructions.gif" style="margin-top: 25px; width: 100%" />
+    <div class="col-sm-2" id ="right">
+
       <div style="position: relative;" id="image">
       <canvas id="img" width="100" height="100" 
        style="position: absolute; left: 0; top: 0; z-index: 0;"></canvas>
