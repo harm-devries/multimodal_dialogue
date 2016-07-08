@@ -465,7 +465,8 @@ def get_workers(conn):
     (SELECT count(*) FROM session AS s, dialogue AS d WHERE s.worker_id = w.worker_id AND (d.oracle_session_id = s.id OR questioner_session_id = s.id) AND d.status = 'success') AS d_success, \
     (SELECT count(*) FROM session AS s, dialogue AS d WHERE s.worker_id = w.worker_id AND (d.oracle_session_id = s.id OR questioner_session_id = s.id) AND d.status = 'failure') AS d_failure, \
     (SELECT count(*) FROM session AS s, dialogue AS d WHERE s.worker_id = w.worker_id AND (d.oracle_session_id = s.id OR questioner_session_id = s.id) AND (d.status = 'oracle_disconnect' OR d.status = 'questioner_disconnect')) AS d_disconnect \
-    FROM (SELECT worker_id FROM session AS s GROUP BY worker_id) AS w ORDER BY d_success DESC")
+    FROM (SELECT worker_id FROM session AS s WHERE worker_id != '' GROUP BY worker_id) AS w ORDER BY d_success DESC")
+
     for row in rows:
         workers.append({'id': row[0], 'oracle_status' : row[1], 'questioner_status' : row[2], 'success': row[3],
                         'failure': row[4], 'disconnect': row[5]})

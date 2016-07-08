@@ -443,7 +443,7 @@ def report_oracle(sid, reason):
     player = players[sid]
     partner = player.partner
     conn = engine.connect()
-    update_dialogue_status(player.dialogue.id, 'oracle_reported',
+    update_dialogue_status(conn, player.dialogue.id, 'oracle_reported',
                            reason=reason)
     delete_game([player, partner])
     sio.emit('reported', '', room=partner.sid, namespace=partner.namespace)
