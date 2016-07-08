@@ -78,12 +78,12 @@ def pay_oracle(conn, player, reward):
 
             bonus = MTurkConnection.get_price_as_price(reward)
             amt_services.mtc.grant_bonus(player.worker_id, ass_id,
-                                         bonus, "dialogue_id:" + str(dialogue_id))
+                                         bonus, "Completed dialogue with id " + str(dialogue_id))
             conn.execute(text("UPDATE dialogue SET oracle_paid = :oracle_paid "
                               "WHERE dialogue_id = :id"),
                          oracle_paid=True, id=dialogue_id)
             conn.execute(text("UPDATE money SET money = money + :money"),
-                         money=max(reward*0.2, 0.01))
+                         money=reward+max(reward*0.2, 0.01))
             return True
     return False
 
@@ -119,12 +119,12 @@ def pay_questioner(conn, player, reward):
 
             bonus = MTurkConnection.get_price_as_price(reward)
             amt_services.mtc.grant_bonus(player.worker_id, ass_id,
-                                         bonus, "dialogue_id:" + str(dialogue_id))
+                                         bonus, "Completed dialogue with id " + str(dialogue_id))
             conn.execute(text("UPDATE dialogue SET questioner_paid = :questioner_paid "
                               "WHERE dialogue_id = :id"),
                          questioner_paid=True, id=dialogue_id)
             conn.execute(text("UPDATE money SET money = money + :money"),
-                         money=max(reward*0.2, 0.01))
+                         money=reward+max(reward*0.2, 0.01))
             return True
     return False
 

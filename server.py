@@ -297,7 +297,7 @@ def questioner():
 
         if worker_status is None or worker_status == 'default':
             return render_template('error.html', title='Questioner - ',
-                                   msg='You are not qualified yet to play Guesswhat?!. Please search for GuessWhat?! HIT with [QUALIFIED ONLY] in the title.')
+                                   msg='You are not qualified yet to play Guesswhat?!. Please search for GuessWhat?! HIT without [QUALIFIED ONLY] in the title.')
 
         stats = get_recent_worker_stats(conn, worker_id, questioner=True)
         nr_success, nr_failure = stats['success'], stats['failure']
