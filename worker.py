@@ -13,6 +13,7 @@ def check_qualified(conn, player):
                               'o_ass_id = :ass_id WHERE id = :worker_id'),
                          status='qualified', worker_id=player.worker_id,
                          ass_id=player.assignment_id)
+            conn.execute("UPDATE money SET money = money + 0.3")
             return stats, True
     else:
         stats = get_recent_worker_stats(conn, player.worker_id,
@@ -23,6 +24,7 @@ def check_qualified(conn, player):
                               'q_ass_id = :ass_id WHERE id = :worker_id'),
                          status='qualified', worker_id=player.worker_id,
                          ass_id=player.assignment_id)
+            conn.execute("UPDATE money SET money = money + 0.48")
             return (stats, True)
     return (stats, False)
 
@@ -80,6 +82,8 @@ def pay_oracle(conn, player, reward):
             conn.execute(text("UPDATE dialogue SET oracle_paid = :oracle_paid "
                               "WHERE dialogue_id = :id"),
                          oracle_paid=True, id=dialogue_id)
+            conn.execute(text("UPDATE money SET money = money + :money"),
+                         money=max(reward*0.2, 0.01))
             return True
     return False
 
@@ -119,6 +123,8 @@ def pay_questioner(conn, player, reward):
             conn.execute(text("UPDATE dialogue SET questioner_paid = :questioner_paid "
                               "WHERE dialogue_id = :id"),
                          questioner_paid=True, id=dialogue_id)
+            conn.execute(text("UPDATE money SET money = money + :money"),
+                         money=max(reward*0.2, 0.01))
             return True
     return False
 

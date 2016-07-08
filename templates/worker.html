@@ -17,7 +17,7 @@
 	      <td>
               <form action="/worker/{{ worker.id }}/oracle_status" method="POST">
                   <select name="oracle_status">
-                      <option value="not qualified">Not Qualified</option>
+                      <option value="default">Default</option>
                       <option value="qualified">Qualified</option>
                       <option value="blocked">Blocked</option>
                   </select>
@@ -32,7 +32,7 @@
 	      <td>
               <form action="/worker/{{ worker.id }}/questioner_status" method="POST">
                   <select name="questioner_status">
-                      <option value="not qualified">Not Qualified</option>
+                      <option value="default">Default</option>
                       <option value="qualified">Qualified</option>
                       <option value="blocked">Blocked</option>
                   </select>
