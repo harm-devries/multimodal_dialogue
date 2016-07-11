@@ -391,7 +391,7 @@ def insert_session(conn, player):
 
         conn.execute(text("INSERT INTO assignment (assignment_id, worker_id) "
                           "SELECT :ass_id, :worker_id WHERE NOT EXISTS"
-                          "(SELECT id FROM assignment WHERE worker_id = :worker_id AND assignment_id = :ass_id);"),
+                          "(SELECT assignment_id FROM assignment WHERE worker_id = :worker_id AND assignment_id = :ass_id);"),
                      worker_id=player.worker_id, ass_id=player.assignment_id)
 
         result = conn.execute(text("INSERT INTO session"
