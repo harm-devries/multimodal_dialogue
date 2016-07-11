@@ -19,7 +19,8 @@ from database.db_utils import (get_dialogues, get_dialogue_stats,
                                get_worker_status, get_assignment_stats,
                                get_one_worker_status, update_one_worker_status,
                                assignment_completed)
-from worker import (check_qualified, check_blocked, check_assignment_completed)
+from worker import (check_qualified, check_blocked, check_assignment_completed,
+                    pay_questioner_bonus, pay_oracle_bonus)
 from players import QualifyOracle, Oracle, QualifyQuestioner, Questioner
 
 
@@ -599,21 +600,25 @@ def guess_annotation2(sid, object_id):
     selected_obj = dialogue.object
     if selected_obj.object_id == object_id:
         update_dialogue_status(conn, dialogue.id, 'success')
-        stats, finished_flag = check_assignment_completed(conn, player)
+        stats, finished_flag1 = check_assignment_completed(conn, player)
         sio.emit('correct annotation', {'object': selected_obj.to_json(),
                                         'stats': stats,
-                                        'finished': finished_flag,
+                                        'finished': finished_flag1,
                                         'qualified': True},
                  room=sid, namespace=player.namespace)
         stats = get_assignment_stats(conn, player.partner.worker_id,
                                      questioner=False)
 
-        stats, finished_flag = check_assignment_completed(conn, player.partner)
+        stats, finished_flag2 = check_assignment_completed(conn, player.partner)
         sio.emit('correct annotation', {'object': selected_obj.to_json(),
                                         'stats': stats,
-                                        'finished': finished_flag,
+                                        'finished': finished_flag2,
                                         'qualified': True},
                  room=player.partner.sid, namespace='/oracle')
+        if finished_flag1:
+            pay_questioner_bonus(conn, player)
+        if finished_flag2:
+            pay_oracle_bonus(conn, player)
     else:
         update_dialogue_status(conn, dialogue.id, 'failure')
         for obj in dialogue.picture.objects:
