@@ -165,6 +165,10 @@ def oracle():
         return render_template('error.html', title='Oracle - ',
                                msg=msg)
 
+    turk_submit_to = 'https://workersandbox.mturk.com'
+    if 'turkSubmitTo' in request.args:
+        turk_submit_to = request.args['turkSubmitTo']
+
     accepted_hit = False
     nr_success, nr_failure, nr_disconnects = 0, 0, 0
     if 'workerId' in request.args:
@@ -198,6 +202,7 @@ def oracle():
                            disconnect=nr_disconnects,
                            accepted_hit=accepted_hit,
                            assignmentId=assignment_id,
+                           turkSubmitTo=turk_submit_to,
                            namespace='/oracle')
 
 
@@ -283,6 +288,10 @@ def questioner():
         return render_template('error.html', title='Questioner - ',
                                msg=msg)
 
+    turk_submit_to = 'https://workersandbox.mturk.com'
+    if 'turkSubmitTo' in request.args:
+        turk_submit_to = request.args['turkSubmitTo']
+
     accepted_hit = False
     nr_success, nr_failure, nr_disconnects = 0, 0, 0
     if 'workerId' in request.args:
@@ -317,6 +326,7 @@ def questioner():
                            disconnect=nr_disconnects,
                            accepted_hit=accepted_hit,
                            assignmentId=assignment_id,
+                           turkSubmitTo=turk_submit_to,
                            namespace='/questioner')
 
 

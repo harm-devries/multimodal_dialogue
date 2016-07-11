@@ -80,6 +80,69 @@ def check_assignment_completed(conn, player):
     return (stats, False)
 
 
+def pay_oracle_bonus(conn, player):
+    r = conn.execute(text("SELECT o_ass_id, o_approved FROM worker WHERE id = :worker_id"),
+                     worker_id=player.worker_id)
+    if r.rowcount > 0:
+        ass_id, o_approved = r.first()
+
+        sandbox = True
+        amt_services = MTurkServices('AKIAJO3RIMIRNSW3NZAA',
+                                     'SGweeGX+EMF7sUWGiJEwRt2gIytVuXY1iOBjOMa3',
+                                     sandbox)
+        amt_services.connect_to_turk()
+
+        if not o_approved:
+            try:
+                amt_services.mtc.approve_assignment(ass_id)
+                conn.execute(text('UPDATE worker SET o_approved = :o_approved WHERE id = :worker_id'),
+                             o_approved=True, worker_id=player.worker_id)
+            except Exception as e:
+                print e
+                return False
+
+        reward = get_oracle_reward(conn, player.assignment_id)
+        if reward > 0.0:
+            bonus = MTurkConnection.get_price_as_price(reward)
+            amt_services.mtc.grant_bonus(player.worker_id, ass_id,
+                                         bonus, "Bonus for assignment " + str(player.assignment_id))
+            conn.execute(text('UPDATE assignment SET bonus = :bonus, bonus_paid = :bonus_paid'
+                              ' WHERE assignment_id = :ass_id AND worker_id = :worker_id'),
+                         bonus=reward, ass_id=player.assignment_id,
+                         bonus_paid=True, worker_id=player.worker_id)
+
+
+def pay_questioner_bonus(conn, player):
+    r = conn.execute(text("SELECT q_ass_id, q_approved FROM worker WHERE id = :worker_id"),
+                     worker_id=player.worker_id)
+    if r.rowcount > 0:
+        ass_id, q_approved = r.first()
+
+        sandbox = True
+        amt_services = MTurkServices('AKIAJO3RIMIRNSW3NZAA',
+                                     'SGweeGX+EMF7sUWGiJEwRt2gIytVuXY1iOBjOMa3',
+                                     sandbox)
+        amt_services.connect_to_turk()
+
+        if not q_approved:
+            try:
+                amt_services.mtc.approve_assignment(ass_id)
+                conn.execute(text('UPDATE worker SET q_approved = :q_approved WHERE id = :worker_id'),
+                             q_approved=True, worker_id=player.worker_id)
+            except Exception as e:
+                print e
+                return False
+
+        reward = get_questioner_reward(conn, player.assignment_id)
+        if reward > 0.0:
+            bonus = MTurkConnection.get_price_as_price(reward)
+            amt_services.mtc.grant_bonus(player.worker_id, ass_id,
+                                         bonus, "Bonus for assignment " + str(player.assignment_id))
+            conn.execute(text('UPDATE assignment SET bonus = :bonus, bonus_paid = :bonus_paid'
+                              ' WHERE assignment_id = :ass_id AND worker_id = :worker_id'),
+                         bonus=reward, ass_id=player.assignment_id,
+                         bonus_paid=True, worker_id=player.worker_id)
+
 # def pay_oracle(conn, player, reward):
 #     res = conn.execute(text("SELECT dialogue_id FROM dialogue WHERE oracle_paid = :oracle_paid "
 #                             " AND mode = :mode AND status = :status AND oracle_session_id IN "
@@ -163,26 +226,27 @@ def check_assignment_completed(conn, player):
 #     return False
 
 
-# def get_oracle_reward(conn, worker_id):
-#     stats = get_recent_worker_stats(conn, worker_id,
-#                                     limit=10, questioner=False)
-#     success = stats['success']
-#     if success == 10:
-#         return 0.05
-#     if success == 9:
-#         return 0.04
-#     if success in [6, 7, 8]:
-#         return 0.03
-#     return 0.0
+def get_oracle_reward(conn, assignment_id):
+    stats = get_assignment_stats(conn, assignment_id,
+                                 questioner=False)
+    fails = stats['failure']
+    if fails == 0:
+        return 0.10
+    if fails == 1:
+        return 0.07
+    if fails == 2:
+        return 0.04
+    return 0.0
 
-# def get_questioner_reward(conn, worker_id):
-#     stats = get_recent_worker_stats(conn, worker_id,
-#                                     limit=10, questioner=True)
-#     success = stats['success']
-#     if success == 10:
-#         return 0.07
-#     if success == 9:
-#         return 0.06
-#     if success in [6, 7, 8]:
-#         return 0.04
-#     return 0.0
+
+def get_questioner_reward(conn, assignment_id):
+    stats = get_assignment_stats(conn, assignment_id,
+                                 questioner=True)
+    fails = stats['failure']
+    if fails == 0:
+        return 0.15
+    if fails == 1:
+        return 0.10
+    if fails == 2:
+        return 0.05
+    return 0.0
