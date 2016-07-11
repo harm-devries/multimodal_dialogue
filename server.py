@@ -755,10 +755,7 @@ def get_hit_info(url):
 def q_oracle_connect(sid, re):
     ip = re['REMOTE_ADDR']
     hit_id, assignment_id, worker_id = get_hit_info(re['HTTP_REFERER'])
-    print hit_id
-    print assignment_id
-    print worker_id
-    player = QualifyOracle(sid, ip)
+    player = QualifyOracle(sid, hit_id, assignment_id, worker_id, ip)
     conn = engine.connect()
     player.session_id = insert_session(conn, player)
     conn.close()
@@ -769,10 +766,7 @@ def q_oracle_connect(sid, re):
 def oracle_connect(sid, re):
     ip = re['REMOTE_ADDR']
     hit_id, assignment_id, worker_id = get_hit_info(re['HTTP_REFERER'])
-    print hit_id
-    print assignment_id
-    print worker_id
-    player = Oracle(sid, ip)
+    player = Oracle(sid, hit_id, assignment_id, worker_id, ip)
     conn = engine.connect()
     player.session_id = insert_session(conn, player)
     conn.close()
@@ -783,10 +777,7 @@ def oracle_connect(sid, re):
 def questioner_connect(sid, re):
     ip = re['REMOTE_ADDR']
     hit_id, assignment_id, worker_id = get_hit_info(re['HTTP_REFERER'])
-    print hit_id
-    print assignment_id
-    print worker_id
-    player = Questioner(sid, ip)
+    player = Questioner(sid, hit_id, assignment_id, worker_id, ip)
     conn = engine.connect()
     player.session_id = insert_session(conn, player)
     conn.close()
@@ -797,10 +788,7 @@ def questioner_connect(sid, re):
 def q_questioner_connect(sid, re):
     ip = re['REMOTE_ADDR']
     hit_id, assignment_id, worker_id = get_hit_info(re['HTTP_REFERER'])
-    print hit_id
-    print assignment_id
-    print worker_id
-    player = QualifyQuestioner(sid, ip)
+    player = QualifyQuestioner(sid, hit_id, assignment_id, worker_id, ip)
     conn = engine.connect()
     player.session_id = insert_session(conn, player)
     conn.close()

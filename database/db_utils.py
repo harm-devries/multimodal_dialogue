@@ -385,10 +385,13 @@ def insert_guess(conn, dialogue_id, object_id):
 def insert_session(conn, player):
     try:
         result = conn.execute(text("INSERT INTO session"
-                                   "(socket_id, role, ip)"
-                                   " VALUES(:sid, :role, :ip) "
+                                   "(socket_id, hit_id, assignment_id, worker_id, role, ip)"
+                                   " VALUES(:sid, :hit_id, :ass_id, :worker_id, :role, :ip) "
                                    " RETURNING id;"),
                               sid=player.sid,
+                              hit_id=player.hit_id,
+                              ass_id=player.assignment_id,
+                              worker_id=player.worker_id,
                               role=player.role,
                               ip=player.ip)
 
