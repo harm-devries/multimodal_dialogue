@@ -594,7 +594,8 @@ def get_worker_status(conn, id, questioner=False):
 
 
 def assignment_completed(conn, assignment_id):
-    result = conn.execute("SELECT completed FROM assignment WHERE assignment_id = :ass_id")
+    result = conn.execute(text("SELECT completed FROM assignment WHERE assignment_id = :ass_id"),
+                          ass_id=assignment_id)
     if result.rowcount > 0:
         return result.first()[0]
     return False
