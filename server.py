@@ -584,6 +584,7 @@ def guess_annotation2(sid, object_id):
         stats, finished_flag = check_assignment_completed(conn, player)
         sio.emit('correct annotation', {'object': selected_obj.to_json(),
                                         'stats': stats,
+                                        'finished': finished_flag,
                                         'qualified': True},
                  room=sid, namespace=player.namespace)
         stats = get_assignment_stats(conn, player.partner.worker_id,
@@ -592,6 +593,7 @@ def guess_annotation2(sid, object_id):
         stats, finished_flag = check_assignment_completed(conn, player.partner)
         sio.emit('correct annotation', {'object': selected_obj.to_json(),
                                         'stats': stats,
+                                        'finished': finished_flag,
                                         'qualified': True},
                  room=player.partner.sid, namespace='/oracle')
     else:
