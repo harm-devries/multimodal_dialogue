@@ -2,6 +2,7 @@ import json
 import os
 import random
 import socketio
+import urlparse
 import user_agents
 from collections import deque
 from flask import Flask, render_template, request
@@ -746,10 +747,17 @@ def find_oracle(sid, _oracle_queue, _questioner_queue, mode):
     conn.close()
 
 
+def get_hit_info(url):
+    par = urlparse.parse_qs(urlparse.urlparse(url).query)
+    return par['hitId'], par['assignmentId'], par['workerId']
+
 @sio.on('connect', namespace='/q_oracle')
 def q_oracle_connect(sid, re):
     ip = re['REMOTE_ADDR']
-    print re
+    hit_id, assignment_id, worker_id = get_hit_info(re['HTTP_REFERER'])
+    print hit_id
+    print assignment_id
+    print worker_id
     player = QualifyOracle(sid, ip)
     conn = engine.connect()
     player.session_id = insert_session(conn, player)
@@ -759,8 +767,11 @@ def q_oracle_connect(sid, re):
 
 @sio.on('connect', namespace='/oracle')
 def oracle_connect(sid, re):
-    print re
     ip = re['REMOTE_ADDR']
+    hit_id, assignment_id, worker_id = get_hit_info(re['HTTP_REFERER'])
+    print hit_id
+    print assignment_id
+    print worker_id
     player = Oracle(sid, ip)
     conn = engine.connect()
     player.session_id = insert_session(conn, player)
@@ -770,8 +781,11 @@ def oracle_connect(sid, re):
 
 @sio.on('connect', namespace='/questioner')
 def questioner_connect(sid, re):
-    print re
     ip = re['REMOTE_ADDR']
+    hit_id, assignment_id, worker_id = get_hit_info(re['HTTP_REFERER'])
+    print hit_id
+    print assignment_id
+    print worker_id
     player = Questioner(sid, ip)
     conn = engine.connect()
     player.session_id = insert_session(conn, player)
@@ -781,8 +795,11 @@ def questioner_connect(sid, re):
 
 @sio.on('connect', namespace='/q_questioner')
 def q_questioner_connect(sid, re):
-    print re
     ip = re['REMOTE_ADDR']
+    hit_id, assignment_id, worker_id = get_hit_info(re['HTTP_REFERER'])
+    print hit_id
+    print assignment_id
+    print worker_id
     player = QualifyQuestioner(sid, ip)
     conn = engine.connect()
     player.session_id = insert_session(conn, player)
