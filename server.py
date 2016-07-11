@@ -185,7 +185,7 @@ def oracle():
             return render_template('error.html', title='Oracle - ',
                                    msg='You are not qualified yet to play Guesswhat?!. Please search for GuessWhat?! HIT without [QUALIFIED ONLY] in the title.')
 
-        if assignment_completed(assignment_id):
+        if assignment_completed(conn, assignment_id):
             return render_template('error.html', title='Questioner - ',
                                    msg='You have already completed this assignment.')
 
@@ -312,7 +312,7 @@ def questioner():
         if worker_status is None or worker_status == 'default':
             return render_template('error.html', title='Questioner - ',
                                    msg='You are not qualified yet to play Guesswhat?!. Please search for GuessWhat?! HIT without [QUALIFIED ONLY] in the title.')
-        if assignment_completed(assignment_id):
+        if assignment_completed(conn, assignment_id):
             return render_template('error.html', title='Questioner - ',
                                    msg='You have already completed this assignment.')
 
