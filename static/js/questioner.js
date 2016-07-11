@@ -175,7 +175,12 @@ $(document).ready(function() {
         $('#info_text').html(text); 
         $('#info_text').fadeIn(fadeS);
         if (msg.qualified) {
-            $('#newgame_text').html('<p>You have to finish ' + (10 - msg.stats.success) + ' more games to complete this HIT. </p>');
+            if (msg.blocked) {
+                $('#newgame_text').html('<p>You have made too many mistakes to successfully complete this HIT. Please return this HIT and start a new one!</p>');
+                $('#newgame').hide();
+            } else {
+                $('#newgame_text').html('<p>You have to finish ' + (10 - msg.stats.success) + ' more games to complete this HIT. </p>');
+            }
         } else {
             if (msg.blocked) {
                 $('#newgame_text').html('<p>You have made too many mistakes or disconnected too many times to successfully complete this HIT. Contact Harm de Vries at guesswhat.mturk@gmail.com for more information about your account (include your worker id). </p>');
