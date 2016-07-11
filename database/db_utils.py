@@ -384,6 +384,16 @@ def insert_guess(conn, dialogue_id, object_id):
 
 def insert_session(conn, player):
     try:
+        conn.execute(text("INSERT INTO worker (id) "
+                          "SELECT :id WHERE NOT EXISTS"
+                          "(SELECT id FROM worker WHERE id = :id);"),
+                     id=player.worker_id)
+
+        conn.execute(text("INSERT INTO assignment (assignment_id, worker_id) "
+                          "SELECT :ass_id, :worker_id WHERE NOT EXISTS"
+                          "(SELECT id FROM assignment WHERE worker_id = :worker_id AND assignment_id = :ass_id);"),
+                     worker_id=player.worker_id, ass_id=player.assignment_id)
+
         result = conn.execute(text("INSERT INTO session"
                                    "(socket_id, hit_id, assignment_id, worker_id, role, ip)"
                                    " VALUES(:sid, :hit_id, :ass_id, :worker_id, :role, :ip) "
