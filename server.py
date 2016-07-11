@@ -618,7 +618,7 @@ def guess_annotation2(sid, object_id):
         if finished_flag1:
             pay_questioner_bonus(conn, player)
         if finished_flag2:
-            pay_oracle_bonus(conn, player)
+            pay_oracle_bonus(conn, player.partner)
     else:
         update_dialogue_status(conn, dialogue.id, 'failure')
         for obj in dialogue.picture.objects:
