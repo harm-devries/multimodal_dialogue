@@ -553,6 +553,25 @@ def get_recent_worker_stats(conn, id, limit=15, questioner=True):
     return stats
 
 
+def get_assignment_stats(conn, id, questioner=True):
+    if questioner:
+        stats = {'success': 0, 'failure': 0, 'questioner_disconnect': 0, 'questioner_timeout': 0}
+    else:
+        stats = {'success': 0, 'failure': 0, 'oracle_disconnect': 0, 'oracle_timeout': 0}
+    if questioner:
+        rows = conn.execute(text("SELECT status, count(status) FROM "
+                                 "(SELECT status FROM dialogue WHERE status IN ('success', 'failure', 'questioner_timeout', 'questioner_disconnect') AND questioner_session_id IN"
+                                 " (SELECT id FROM session WHERE assignment_id = :aid))"
+                                 " AS s GROUP BY status"), aid=id)
+    else:
+        rows = conn.execute(text("SELECT status, count(status) FROM "
+                                 "(SELECT status FROM dialogue WHERE status IN ('success', 'failure', 'oracle_timeout', 'oracle_disconnect') AND oracle_session_id IN"
+                                 " (SELECT id FROM session WHERE assignment_id = :aid))"
+                                 " AS s GROUP BY status"), aid=id)
+    for row in rows:
+        stats[row[0]] = int(row[1])
+    return stats
+
 def get_number_of_success(conn, id, questioner=False):
     result = conn.execute(text("SELECT count(*) FROM dialogue WHERE status = 'success'"
                                " AND questioner_session_id IN (SELECT id FROM session WHERE worker_id = :wid)"), wid=id)

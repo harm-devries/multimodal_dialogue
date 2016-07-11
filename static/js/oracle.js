@@ -128,10 +128,12 @@ $(document).ready(function() {
         $('#info_text').html(text); 
         $('#info_text').fadeIn(fadeS);
         if (msg.qualified) {
-            if (!msg.reward) {
-                $('#newgame_text').html('<p>Something went wrong while paying your bonus. Contact Harm de Vries at guesswhat.mturk@gmail.com for more information (include your worker id).</p>');
+            if (msg.finished) {
+                $('#newgame_text').html('<p>Congratulations, you have successfully completed this HIT! Please submit your HIT below, and start a new one to continue your streak!</p>');
+                $('#qualified').show();
+                $('#newgame').hide();
             } else {
-                $('#newgame_text').html('<p>Congratulations, we have added ' + msg.reward +'$ to your account. Continue your streak!</p>');
+                $('#newgame_text').html('<p>Congratulations, you have to finish ' + (10 - msg.stats.success) + ' more games to complete this HIT. </p>');
             }
         } else {
             if (msg.finished) {
@@ -168,7 +170,7 @@ $(document).ready(function() {
         $('#info_text').html(text); 
         $('#info_text').fadeIn(fadeS);
         if (msg.qualified) {
-            $('#newgame_text').html('<p>Try it one more time!</p>');
+            $('#newgame_text').html('<p>You have to finish ' + (10 - msg.stats.success) + ' more games to complete this HIT. </p>');
         } else {
             if (msg.blocked) {
                 $('#newgame_text').html('<p>You have made too many mistakes or disconnected too many times to successfully complete this HIT. Contact Harm de Vries at guesswhat.mturk@gmail.com for more information about your account (include your worker id). </p>');

@@ -16,7 +16,7 @@ from database.db_utils import (get_dialogues, get_dialogue_stats,
                                insert_session, end_session, update_session,
                                update_dialogue_status, start_dialogue,
                                remove_from_queue, insert_into_queue,
-                               get_worker_status, get_recent_worker_stats,
+                               get_worker_status, get_assignment_stats,
                                get_one_worker_status, update_one_worker_status)
 from worker import (check_qualified, check_blocked, get_oracle_reward,
                     get_questioner_reward, pay_questioner, pay_oracle)
@@ -124,7 +124,7 @@ def q_oracle():
             return render_template('error.html', title='Oracle - ',
                                    msg='You are already qualified as an oracle. Please search for Guesswhat?! HIT with [QUALIFIED ONLY] in the title.')
 
-        stats = get_recent_worker_stats(conn, worker_id, questioner=False)
+        stats = get_assignment_stats(conn, worker_id, questioner=False)
         nr_success, nr_failure = stats['success'], stats['failure']
         nr_disconnects = stats['oracle_disconnect'] + stats['oracle_timeout']
 
@@ -181,7 +181,7 @@ def oracle():
             return render_template('error.html', title='Oracle - ',
                                    msg='You are not qualified yet to play Guesswhat?!. Please search for GuessWhat?! HIT without [QUALIFIED ONLY] in the title.')
 
-        stats = get_recent_worker_stats(conn, worker_id, questioner=False)
+        stats = get_assignment_stats(conn, worker_id, questioner=False)
         nr_success, nr_failure = stats['success'], stats['failure']
         nr_disconnects = stats['oracle_disconnect'] + stats['oracle_timeout']
 
@@ -242,7 +242,7 @@ def q_questioner():
             return render_template('error.html', title='Questioner - ',
                                    msg='You are already qualified as a questioner. Please search for GuessWhat?! HIT with [QUALIFIED ONLY] in the title.')
 
-        stats = get_recent_worker_stats(conn, worker_id, questioner=True)
+        stats = get_assignment_stats(conn, worker_id, questioner=True)
         nr_success, nr_failure = stats['success'], stats['failure']
         nr_disconnects = stats['questioner_disconnect'] + stats['questioner_timeout']
         for player in players.itervalues():
@@ -300,7 +300,7 @@ def questioner():
             return render_template('error.html', title='Questioner - ',
                                    msg='You are not qualified yet to play Guesswhat?!. Please search for GuessWhat?! HIT without [QUALIFIED ONLY] in the title.')
 
-        stats = get_recent_worker_stats(conn, worker_id, questioner=True)
+        stats = get_assignment_stats(conn, worker_id, questioner=True)
         nr_success, nr_failure = stats['success'], stats['failure']
         nr_disconnects = stats['questioner_disconnect'] + stats['questioner_timeout']
 
