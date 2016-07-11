@@ -17,7 +17,8 @@ from database.db_utils import (get_dialogues, get_dialogue_stats,
                                update_dialogue_status, start_dialogue,
                                remove_from_queue, insert_into_queue,
                                get_worker_status, get_assignment_stats,
-                               get_one_worker_status, update_one_worker_status)
+                               get_one_worker_status, update_one_worker_status,
+                               assignment_completed)
 from worker import (check_qualified, check_blocked, check_assignment_completed)
 from players import QualifyOracle, Oracle, QualifyQuestioner, Questioner
 
@@ -184,6 +185,10 @@ def oracle():
             return render_template('error.html', title='Oracle - ',
                                    msg='You are not qualified yet to play Guesswhat?!. Please search for GuessWhat?! HIT without [QUALIFIED ONLY] in the title.')
 
+        if assignment_completed(assignment_id):
+            return render_template('error.html', title='Questioner - ',
+                                   msg='You have already completed this assignment.')
+
         stats = get_assignment_stats(conn, assignment_id, questioner=False)
         nr_success, nr_failure = stats['success'], stats['failure']
         nr_disconnects = stats['oracle_disconnect'] + stats['oracle_timeout']
@@ -307,6 +312,9 @@ def questioner():
         if worker_status is None or worker_status == 'default':
             return render_template('error.html', title='Questioner - ',
                                    msg='You are not qualified yet to play Guesswhat?!. Please search for GuessWhat?! HIT without [QUALIFIED ONLY] in the title.')
+        if assignment_completed(assignment_id):
+            return render_template('error.html', title='Questioner - ',
+                                   msg='You have already completed this assignment.')
 
         stats = get_assignment_stats(conn, assignment_id, questioner=True)
         nr_success, nr_failure = stats['success'], stats['failure']

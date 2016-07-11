@@ -591,3 +591,10 @@ def get_worker_status(conn, id, questioner=False):
         if result.rowcount > 0:
             return result.first()[0]
     return None
+
+
+def assignment_completed(conn, assignment_id):
+    result = conn.execute("SELECT completed FROM assignment WHERE assignment_id = :ass_id")
+    if result.rowcount > 0:
+        return result.first()[0]
+    return False
