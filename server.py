@@ -18,7 +18,7 @@ from database.db_utils import (get_dialogues, get_dialogue_stats,
                                remove_from_queue, insert_into_queue,
                                get_worker_status, get_assignment_stats,
                                get_one_worker_status, update_one_worker_status)
-from worker import (check_qualified, check_blocked, check_hit_completed)
+from worker import (check_qualified, check_blocked, check_assignment_completed)
 from players import QualifyOracle, Oracle, QualifyQuestioner, Questioner
 
 
@@ -581,7 +581,7 @@ def guess_annotation2(sid, object_id):
     selected_obj = dialogue.object
     if selected_obj.object_id == object_id:
         update_dialogue_status(conn, dialogue.id, 'success')
-        stats, finished_flag = check_hit_completed(conn, player)
+        stats, finished_flag = check_assignment_completed(conn, player)
         sio.emit('correct annotation', {'object': selected_obj.to_json(),
                                         'stats': stats,
                                         'qualified': True},
@@ -589,7 +589,7 @@ def guess_annotation2(sid, object_id):
         stats = get_assignment_stats(conn, player.partner.worker_id,
                                      questioner=False)
 
-        stats, finished_flag = check_hit_completed(conn, player.partner)
+        stats, finished_flag = check_assignment_completed(conn, player.partner)
         sio.emit('correct annotation', {'object': selected_obj.to_json(),
                                         'stats': stats,
                                         'qualified': True},
@@ -601,14 +601,22 @@ def guess_annotation2(sid, object_id):
                 guessed_obj = obj
         stats = get_assignment_stats(conn, player.assignment_id,
                                      questioner=True)
+        blocked = False
+        if (stats['failure'] + stats['questioner_disconnect']) > 3:
+            blocked = True
         sio.emit('wrong annotation', {'object': selected_obj.to_json(),
                                       'stats': stats,
+                                      'blocked': blocked,
                                       'qualified': True},
                  room=sid, namespace=player.namespace)
         stats = get_assignment_stats(conn, player.partner.assignment_id,
                                      questioner=False)
+        blocked = False
+        if (stats['failure'] + stats['questioner_disconnect']) > 3:
+            blocked = True
         sio.emit('wrong annotation', {'object': guessed_obj.to_json(),
                                       'stats': stats,
+                                      'blocked': blocked,
                                       'qualified': True},
                  room=player.partner.sid, namespace='/oracle')
     delete_game([player, player.partner])
