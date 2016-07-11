@@ -582,42 +582,32 @@ def guess_annotation2(sid, object_id):
     selected_obj = dialogue.object
     if selected_obj.object_id == object_id:
         update_dialogue_status(conn, dialogue.id, 'success')
-        stats = get_recent_worker_stats(conn, player.worker_id,
-                                        limit=1e7,
-                                        questioner=True)
-        questioner_reward = get_questioner_reward(conn, player.worker_id)
+        stats, finished_flag = check_qualified(conn, player)
         sio.emit('correct annotation', {'object': selected_obj.to_json(),
                                         'stats': stats,
-                                        'reward': questioner_reward,
                                         'qualified': True},
                  room=sid, namespace=player.namespace)
-        stats = get_recent_worker_stats(conn, player.partner.worker_id,
-                                        limit=1e7,
-                                        questioner=False)
+        stats = get_assignment_stats(conn, player.partner.worker_id,
+                                     questioner=False)
 
-        oracle_reward = get_oracle_reward(conn, player.partner.worker_id)
+        stats, finished_flag = check_qualified(conn, player.partner)
         sio.emit('correct annotation', {'object': selected_obj.to_json(),
                                         'stats': stats,
-                                        'reward': oracle_reward,
                                         'qualified': True},
                  room=player.partner.sid, namespace='/oracle')
-        pay_questioner(conn, player, questioner_reward)
-        pay_oracle(conn, player.partner, oracle_reward)
     else:
         update_dialogue_status(conn, dialogue.id, 'failure')
         for obj in dialogue.picture.objects:
             if obj.object_id == object_id:
                 guessed_obj = obj
-        stats = get_recent_worker_stats(conn, player.worker_id,
-                                        limit=1e7,
-                                        questioner=True)
+        stats = get_assignment_stats(conn, player.assignment_id,
+                                     questioner=True)
         sio.emit('wrong annotation', {'object': selected_obj.to_json(),
                                       'stats': stats,
                                       'qualified': True},
                  room=sid, namespace=player.namespace)
-        stats = get_recent_worker_stats(conn, player.partner.worker_id,
-                                        limit=1e7,
-                                        questioner=False)
+        stats = get_assignment_stats(conn, player.partner.assignment_id,
+                                     questioner=False)
         sio.emit('wrong annotation', {'object': guessed_obj.to_json(),
                                       'stats': stats,
                                       'qualified': True},
