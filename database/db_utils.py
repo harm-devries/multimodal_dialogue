@@ -102,13 +102,15 @@ def get_dialogues(connection):
     return dialogues
 
 
-def get_dialogue_stats(connection):
-    rows = connection.execute("SELECT d.dialogue_id, d.status, d.start_timestamp, d.end_timestamp, "
-                              "(SELECT count(*) FROM question AS q WHERE q.dialogue_id = d.dialogue_id) AS nr_q, "
-                              "(SELECT count(*) FROM object AS o WHERE o.picture_id = d.picture_id)"
-                              " AS nr_o,  d.status, d.start_timestamp, d.end_timestamp FROM "
-                              "dialogue AS d WHERE d.status != '' "
-                              "ORDER BY d.start_timestamp DESC")
+def get_dialogue_stats(connection, mode='qualification'):
+    rows = connection.execute(text("SELECT d.dialogue_id, d.status, d.start_timestamp, d.end_timestamp, "
+                                   "(SELECT count(*) FROM question AS q WHERE q.dialogue_id = d.dialogue_id) AS nr_q, "
+                                   "(SELECT count(*) FROM object AS o WHERE o.picture_id = d.picture_id)"
+                                   " AS nr_o,  d.status, d.start_timestamp, d.end_timestamp FROM "
+                                   "dialogue AS d WHERE d.mode = :mode "
+                                   "ORDER BY d.start_timestamp DESC"),
+                              mode=mode)
+    print mode
     counts = {'success': 0, 'failure': 0, 'ongoing': 0,
               'oracle_disconnect': 0, 'questioner_disconnect': 0,
               'oracle_timeout': 0, 'questioner_timeout': 0,

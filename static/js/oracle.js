@@ -129,7 +129,7 @@ $(document).ready(function() {
         $('#info_text').fadeIn(fadeS);
         if (msg.qualified) {
             if (!msg.reward) {
-                $('#newgame_text').html('<p>Something went wrong while paying your bonus. Contact Harm de Vries at mail@harmdevries.com for more information (include your worker id).</p>');
+                $('#newgame_text').html('<p>Something went wrong while paying your bonus. Contact Harm de Vries at guesswhat.mturk@gmail.com for more information (include your worker id).</p>');
             } else {
                 $('#newgame_text').html('<p>Congratulations, we have added ' + msg.reward +'$ to your account. Continue your streak!</p>');
             }
@@ -171,7 +171,7 @@ $(document).ready(function() {
             $('#newgame_text').html('<p>Try it one more time!</p>');
         } else {
             if (msg.blocked) {
-                $('#newgame_text').html('<p>You have made too many mistakes or disconnected too many times to successfully complete this HIT. Contact Harm de Vries at mail@harmdevries.com for more information about your account (include your worker id). </p>');
+                $('#newgame_text').html('<p>You have made too many mistakes or disconnected too many times to successfully complete this HIT. Contact Harm de Vries at guesswhat.mturk@gmail.com for more information about your account (include your worker id). </p>');
                 $('#navigation').hide();
             } else {
                 $('#newgame_text').html('<p>You have to finish ' + (10 - msg.stats.success) + ' more games to complete this HIT. </p>');

@@ -326,10 +326,11 @@ def dialogues():
     return render_template('dialogues.html', dialogues=get_dialogues(engine))
 
 
-@app.route('/dialogue_stats')
+@app.route('/dialogue_stats/<mode>')
 @auth.login_required
-def dialogue_stats():
-    counts, avg_seconds, avg_questions = get_dialogue_stats(engine)
+def dialogue_stats(mode):
+    print mode
+    counts, avg_seconds, avg_questions = get_dialogue_stats(engine, mode=mode)
     return render_template('dialogue_stats.html', counts=counts,
                            avg_questions=avg_questions,
                            avg_seconds=avg_seconds)
@@ -748,6 +749,7 @@ def find_oracle(sid, _oracle_queue, _questioner_queue, mode):
 @sio.on('connect', namespace='/q_oracle')
 def q_oracle_connect(sid, re):
     ip = re['REMOTE_ADDR']
+    print re
     player = QualifyOracle(sid, ip)
     conn = engine.connect()
     player.session_id = insert_session(conn, player)
@@ -757,6 +759,7 @@ def q_oracle_connect(sid, re):
 
 @sio.on('connect', namespace='/oracle')
 def oracle_connect(sid, re):
+    print re
     ip = re['REMOTE_ADDR']
     player = Oracle(sid, ip)
     conn = engine.connect()
@@ -767,6 +770,7 @@ def oracle_connect(sid, re):
 
 @sio.on('connect', namespace='/questioner')
 def questioner_connect(sid, re):
+    print re
     ip = re['REMOTE_ADDR']
     player = Questioner(sid, ip)
     conn = engine.connect()
@@ -777,6 +781,7 @@ def questioner_connect(sid, re):
 
 @sio.on('connect', namespace='/q_questioner')
 def q_questioner_connect(sid, re):
+    print re
     ip = re['REMOTE_ADDR']
     player = QualifyQuestioner(sid, ip)
     conn = engine.connect()

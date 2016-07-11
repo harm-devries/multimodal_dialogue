@@ -50,9 +50,10 @@ def check_blocked(conn, player):
 
 def pay_oracle(conn, player, reward):
     res = conn.execute(text("SELECT dialogue_id FROM dialogue WHERE oracle_paid = :oracle_paid "
-                            "AND status = :status AND oracle_session_id IN "
+                            " AND mode = :mode AND status = :status AND oracle_session_id IN "
                             "(SELECT id FROM session WHERE worker_id = :worker_id)"),
-                       oracle_paid=False, status='success', worker_id=player.worker_id)
+                       oracle_paid=False, status='success',
+                       mode='normal', worker_id=player.worker_id)
     if res.rowcount > 0:
         dialogue_id = res.first()[0]
         r = conn.execute(text("SELECT o_ass_id, o_approved FROM worker WHERE id = :worker_id"),
@@ -89,11 +90,12 @@ def pay_oracle(conn, player, reward):
 
 def pay_questioner(conn, player, reward):
     res = conn.execute(text("SELECT dialogue_id FROM dialogue WHERE "
-                            "questioner_paid = :questioner_paid "
+                            "questioner_paid = :questioner_paid AND mode = :mode,"
                             "AND status = :status AND"
                             " questioner_session_id IN "
                             "(SELECT id FROM session WHERE worker_id = :worker_id)"),
-                       questioner_paid=False, status='success', worker_id=player.worker_id)
+                       questioner_paid=False, status='success',
+                       mode='normal', worker_id=player.worker_id)
     if res.rowcount > 0:
         dialogue_id = res.first()[0]
         r = conn.execute(text("SELECT q_ass_id, q_approved FROM worker WHERE id = :worker_id"),
