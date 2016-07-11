@@ -15,7 +15,7 @@ def check_qualified(conn, player):
                          ass_id=player.assignment_id)
             conn.execute(text('UPDATE assignment SET completed = :completed '
                               'WHERE assignment_id = :ass_id AND worker_id = :wid'),
-                         completed=True, worker_id=player.worker_id,
+                         completed=True, wid=player.worker_id,
                          ass_id=player.assignment_id)
             conn.execute("UPDATE money SET money = money + 0.3")
             return stats, True
@@ -30,7 +30,7 @@ def check_qualified(conn, player):
                          ass_id=player.assignment_id)
             conn.execute(text('UPDATE assignment SET completed = :completed '
                               'WHERE assignment_id = :ass_id AND worker_id = :wid'),
-                         completed=True, worker_id=player.worker_id,
+                         completed=True, wid=player.worker_id,
                          ass_id=player.assignment_id)
             conn.execute("UPDATE money SET money = money + 0.48")
             return (stats, True)
