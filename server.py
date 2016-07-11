@@ -118,13 +118,13 @@ def q_oracle():
         worker_status = get_worker_status(conn, worker_id)
         if worker_status == 'blocked':
             return render_template('error.html', title='Oracle - ',
-                                   msg='Your account is currently blocked, probably because you\'ve made too many mistakes or disconnected too many times while completing the HIT. Contact Harm de Vries at mail@harmdevries.com for more information about your account (include your worker id).')
+                                   msg='Your account is currently blocked, probably because you\'ve made too many mistakes or disconnected too many times while completing the HIT. Contact Harm de Vries at guesswhat.mturk@gmail.com for more information about your account (include your worker id).')
 
         if worker_status == 'qualified':
             return render_template('error.html', title='Oracle - ',
                                    msg='You are already qualified as an oracle. Please search for Guesswhat?! HIT with [QUALIFIED ONLY] in the title.')
 
-        stats = get_assignment_stats(conn, worker_id, questioner=False)
+        stats = get_assignment_stats(conn, assignment_id, questioner=False)
         nr_success, nr_failure = stats['success'], stats['failure']
         nr_disconnects = stats['oracle_disconnect'] + stats['oracle_timeout']
 
@@ -175,13 +175,13 @@ def oracle():
         worker_status = get_worker_status(conn, worker_id, questioner=False)
         if worker_status == 'blocked':
             return render_template('error.html', title='Oracle - ',
-                                   msg='Your account is currently blocked, probably because you\'ve made too many mistakes or disconnected too many times while completing the HIT. Contact Harm de Vries - mail@harmdevries.com - for more information.')
+                                   msg='Your account is currently blocked, probably because you\'ve made too many mistakes or disconnected too many times while completing the HIT. Contact Harm de Vries - guesswhat.mturk@gmail.com - for more information.')
 
         if worker_status is None or worker_status == 'default':
             return render_template('error.html', title='Oracle - ',
                                    msg='You are not qualified yet to play Guesswhat?!. Please search for GuessWhat?! HIT without [QUALIFIED ONLY] in the title.')
 
-        stats = get_assignment_stats(conn, worker_id, questioner=False)
+        stats = get_assignment_stats(conn, assignment_id, questioner=False)
         nr_success, nr_failure = stats['success'], stats['failure']
         nr_disconnects = stats['oracle_disconnect'] + stats['oracle_timeout']
 
@@ -236,13 +236,13 @@ def q_questioner():
         worker_status = get_worker_status(conn, worker_id, questioner=True)
         if worker_status == 'blocked':
             return render_template('error.html', title='Questioner - ',
-                                   msg='Your account is currently blocked, probably because you\'ve made too many mistakes or disconnected too many times while completing the HIT. Contact Harm de Vries - mail@harmdevries.com - for more information.')
+                                   msg='Your account is currently blocked, probably because you\'ve made too many mistakes or disconnected too many times while completing the HIT. Contact Harm de Vries - guesswhat.mturk@gmail.com - for more information.')
 
         if worker_status == 'qualified':
             return render_template('error.html', title='Questioner - ',
                                    msg='You are already qualified as a questioner. Please search for GuessWhat?! HIT with [QUALIFIED ONLY] in the title.')
 
-        stats = get_assignment_stats(conn, worker_id, questioner=True)
+        stats = get_assignment_stats(conn, assignment_id, questioner=True)
         nr_success, nr_failure = stats['success'], stats['failure']
         nr_disconnects = stats['questioner_disconnect'] + stats['questioner_timeout']
         for player in players.itervalues():
@@ -294,13 +294,13 @@ def questioner():
         worker_status = get_worker_status(conn, worker_id, questioner=True)
         if worker_status == 'blocked':
             return render_template('error.html', title='Questioner - ',
-                                   msg='Your account is currently blocked, probably because you\'ve made too many mistakes or disconnected too many times while completing the HIT. Contact Harm de Vries - mail@harmdevries.com - for more information.')
+                                   msg='Your account is currently blocked, probably because you\'ve made too many mistakes or disconnected too many times while completing the HIT. Contact Harm de Vries - guesswhat.mturk@gmail.com - for more information.')
 
         if worker_status is None or worker_status == 'default':
             return render_template('error.html', title='Questioner - ',
                                    msg='You are not qualified yet to play Guesswhat?!. Please search for GuessWhat?! HIT without [QUALIFIED ONLY] in the title.')
 
-        stats = get_assignment_stats(conn, worker_id, questioner=True)
+        stats = get_assignment_stats(conn, assignment_id, questioner=True)
         nr_success, nr_failure = stats['success'], stats['failure']
         nr_disconnects = stats['questioner_disconnect'] + stats['questioner_timeout']
 
