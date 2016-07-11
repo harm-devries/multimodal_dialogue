@@ -749,7 +749,7 @@ def find_oracle(sid, _oracle_queue, _questioner_queue, mode):
 
 def get_hit_info(url):
     par = urlparse.parse_qs(urlparse.urlparse(url).query)
-    return par['hitId'], par['assignmentId'], par['workerId']
+    return par['hitId'][0], par['assignmentId'][0], par['workerId'][0]
 
 @sio.on('connect', namespace='/q_oracle')
 def q_oracle_connect(sid, re):
