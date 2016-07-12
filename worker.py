@@ -86,7 +86,7 @@ def pay_oracle_bonus(conn, player):
     if r.rowcount > 0:
         ass_id, o_approved = r.first()
 
-        sandbox = True
+        sandbox = False
         amt_services = MTurkServices('AKIAJO3RIMIRNSW3NZAA',
                                      'SGweeGX+EMF7sUWGiJEwRt2gIytVuXY1iOBjOMa3',
                                      sandbox)
@@ -118,7 +118,7 @@ def pay_questioner_bonus(conn, player):
     if r.rowcount > 0:
         ass_id, q_approved = r.first()
 
-        sandbox = True
+        sandbox = False
         amt_services = MTurkServices('AKIAJO3RIMIRNSW3NZAA',
                                      'SGweeGX+EMF7sUWGiJEwRt2gIytVuXY1iOBjOMa3',
                                      sandbox)
