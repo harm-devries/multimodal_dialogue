@@ -572,6 +572,7 @@ def get_assignment_stats(conn, id, questioner=True):
         stats[row[0]] = int(row[1])
     return stats
 
+
 def get_number_of_success(conn, id, questioner=False):
     result = conn.execute(text("SELECT count(*) FROM dialogue WHERE status = 'success'"
                                " AND questioner_session_id IN (SELECT id FROM session WHERE worker_id = :wid)"), wid=id)
