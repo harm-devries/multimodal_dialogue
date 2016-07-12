@@ -194,6 +194,10 @@ def oracle():
         nr_success, nr_failure = stats['success'], stats['failure']
         nr_disconnects = stats['oracle_disconnect'] + stats['oracle_timeout']
 
+        if (nr_failure + nr_disconnects) > 3:
+            return render_template('error.html', title='Oracle - ',
+                                   msg='You have made too many mistakes to successfully complete this assignment. Please return accepted HIT. ')
+
         for player in players.itervalues():
             if player.worker_id == request.args['workerId'] and player.role == 'Questioner':
                 msg = ('You are allowed to play at most '
@@ -320,6 +324,10 @@ def questioner():
         stats = get_assignment_stats(conn, assignment_id, questioner=True)
         nr_success, nr_failure = stats['success'], stats['failure']
         nr_disconnects = stats['questioner_disconnect'] + stats['questioner_timeout']
+
+        if (nr_failure + nr_disconnects) > 3:
+            return render_template('error.html', title='Questioner - ',
+                                   msg='You have made too many mistakes to successfully complete this assignment. Please return accepted HIT. ')
 
         for player in players.itervalues():
             if player.worker_id == request.args['workerId'] and player.role == 'Oracle':
