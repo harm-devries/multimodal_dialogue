@@ -41,7 +41,7 @@ def check_blocked(conn, player):
     if player.role == 'QualifyOracle':
         stats = get_assignment_stats(conn, player.assignment_id,
                                      questioner=False)
-        if (stats['failure'] + stats['oracle_disconnect']) > 3:
+        if (stats['failure'] + stats['oracle_disconnect'] + stats['oracle_timeout']) > 3:
             conn.execute(text('UPDATE worker SET oracle_status = :status WHERE '
                               'id = :worker_id'),
                          status='blocked', worker_id=player.worker_id)
@@ -49,7 +49,7 @@ def check_blocked(conn, player):
     elif player.role == 'QualifyQuestioner':
         stats = get_assignment_stats(conn, player.assignment_id,
                                      questioner=True)
-        if (stats['failure'] + stats['questioner_disconnect']) > 3:
+        if (stats['failure'] + stats['questioner_disconnect'] + stats['questioner_timeout']) > 3:
             conn.execute(text('UPDATE worker SET questioner_status = :status WHERE '
                               'id = :worker_id'),
                          status='blocked', worker_id=player.worker_id)

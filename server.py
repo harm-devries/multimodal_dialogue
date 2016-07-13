@@ -461,7 +461,7 @@ def time_out(sid):
     elif partner.role == 'QualifyQuestioner':
         find_qualification_oracle(partner.sid)
     else:
-        find_normal_questioner(partner.sid)
+        find_normal_oracle(partner.sid)
     conn.close()
 
 
@@ -873,7 +873,7 @@ def disconnect(sid):
             elif partner.role == 'QualifyQuestioner':
                 find_qualification_oracle(partner.sid)
             else:
-                find_normal_questioner(partner.sid)
+                find_normal_oracle(partner.sid)
         """2. Player is in oracle queue."""
         if player in oracle_queue:
             oracle_queue.remove(player)
