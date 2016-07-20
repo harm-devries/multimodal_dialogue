@@ -18,7 +18,7 @@ from database.db_utils import (get_dialogues, get_dialogue_stats,
                                remove_from_queue, insert_into_queue,
                                get_worker_status, get_assignment_stats,
                                get_one_worker_status, update_one_worker_status,
-                               assignment_completed, is_worker_playing)
+                               assignment_completed, is_worker_playing, get_ongoing_workers)
 from worker import (check_qualified, check_blocked, check_assignment_completed,
                     pay_questioner_bonus, pay_oracle_bonus)
 from players import QualifyOracle, Oracle, QualifyQuestioner, Questioner
@@ -457,6 +457,23 @@ def one_worker_remove_socket(id):
         del players[to_remove]
 
     return render_worker(id)
+
+@auth.login_required
+@app.route('/stats/io_error')
+def stats_io_error():
+
+    with engine.begin() as conn:
+        ongoing_workers = get_ongoing_workers(conn)
+
+    error_workers = {}
+    for socket_id, player in players.iteritems():
+        if socket_id not in ongoing_workers:
+            error_workers[socket_id] = player
+
+    msg = '<br />'.join([', '.join([x.sid, x.worker_id, str(x.sid in sio.eio.sockets.keys())]) for x in error_workers.itervalues()])
+
+    return render_template('error.html', msg=msg)
+
 
 @app.route('/stats')
 def stats():
