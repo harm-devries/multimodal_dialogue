@@ -473,14 +473,12 @@ def remove_from_queue(conn, player, reason):
 
 
 def is_worker_playing(conn, id):
-
     try:
-
-        result = conn.execute(" SELECT socket_id FROM session s "
-                            " INNER JOIN "
-                            "    ( SELECT oracle_session_id, questioner_session_id, status from dialogue WHERE status = 'ongoing') d "
-                            "    ON d.oracle_session_id = s.id OR d.questioner_session_id = s.id "
-                            " WHERE worker_id = %s", [id])
+        result = conn.execute("SELECT socket_id FROM session s "
+                              " INNER JOIN "
+                              "  (SELECT oracle_session_id, questioner_session_id, status FROM dialogue WHERE status = 'ongoing') d "
+                              " ON d.oracle_session_id = s.id OR d.questioner_session_id = s.id "
+                              " WHERE worker_id = %s", [id])
 
         if result.rowcount > 0:
             return True, result.first()[0]
@@ -545,8 +543,8 @@ def get_one_worker_status(conn, id):
         print e
 
     return status
-    
-                     
+
+
 def update_one_worker_status(conn, id, status_name, status):
     try:
         conn.execute("UPDATE worker SET " + status_name + " = %s WHERE id = %s", [status, id])
@@ -555,7 +553,7 @@ def update_one_worker_status(conn, id, status_name, status):
         print "Fail to update worker status"
         print e
 
-    
+
 def get_worker(conn, id):
     dialogues = []
     rows = conn.execute("SELECT d.dialogue_id, d.status, d.start_timestamp, d.end_timestamp, "

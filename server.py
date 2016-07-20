@@ -434,6 +434,7 @@ def one_worker_questioner_status(id):
         update_one_worker_status(conn, id, "questioner_status", request.form['questioner_status'])
     return render_worker(id)
 
+
 @auth.login_required
 @app.route('/worker/<id>/oracle_status', methods=['POST'])
 def one_worker_oracle_status(id):
@@ -441,12 +442,11 @@ def one_worker_oracle_status(id):
         update_one_worker_status(conn, id, "oracle_status", request.form['oracle_status'])
     return render_worker(id)
 
+
 @auth.login_required
 @app.route('/worker/<id>/remove_socket', methods=['POST'])
 def one_worker_remove_socket(id):
-
     # A cleaner way must exist to remove the player
-
     to_remove = None
     for socket_id, player in players.iteritems():
         if player.worker_id == id:
@@ -457,6 +457,7 @@ def one_worker_remove_socket(id):
         del players[to_remove]
 
     return render_worker(id)
+
 
 @auth.login_required
 @app.route('/stats/io_error')
@@ -832,6 +833,7 @@ def q_oracle_connect(sid, re):
     player.session_id = insert_session(conn, player)
     conn.close()
     players[sid] = player
+    print 'add: ' + str(sid)
 
 
 @sio.on('connect', namespace='/oracle')
@@ -843,6 +845,7 @@ def oracle_connect(sid, re):
     player.session_id = insert_session(conn, player)
     conn.close()
     players[sid] = player
+    print 'add: ' + str(sid)
 
 
 @sio.on('connect', namespace='/questioner')
@@ -854,6 +857,7 @@ def questioner_connect(sid, re):
     player.session_id = insert_session(conn, player)
     conn.close()
     players[sid] = player
+    print 'add: ' + str(sid)
 
 
 @sio.on('connect', namespace='/q_questioner')
@@ -865,6 +869,7 @@ def q_questioner_connect(sid, re):
     player.session_id = insert_session(conn, player)
     conn.close()
     players[sid] = player
+    print 'add: ' + str(sid)
 
 
 @sio.on('update session', namespace='/q_oracle')
@@ -886,7 +891,6 @@ def up_session(sid, msg):
 @sio.on('disconnect', namespace='/questioner')
 @sio.on('disconnect', namespace='/q_questioner')
 def disconnect(sid):
-    print 'disconnect' + sid
     if sid in players:
         player = players[sid]
         conn = engine.connect()
@@ -933,6 +937,7 @@ def disconnect(sid):
         """4. Player did not start a game yet"""
         end_session(conn, player.session_id)
         conn.close()
+        print 'del: ' + str(sid)
         del players[sid]
 
 
