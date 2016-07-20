@@ -414,9 +414,10 @@ def render_worker(id):
         status["socket_db"] = socket_id
         status["socket_io"] = 0
 
-        for socket_id, player in players.iteritems():
+        for sid, player in players.iteritems():
             if player.worker_id == id:
-                status["socket_io"] = socket_id
+                status["socket_io"] = sid
+                break
 
     return render_template('worker.html', dialogues=dialogues, worker=status)
 
