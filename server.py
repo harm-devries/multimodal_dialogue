@@ -18,7 +18,7 @@ from database.db_utils import (get_dialogues, get_dialogue_stats,
                                remove_from_queue, insert_into_queue,
                                get_worker_status, get_assignment_stats,
                                get_one_worker_status, update_one_worker_status,
-                               assignment_completed)
+                               assignment_completed, is_worker_playing)
 from worker import (check_qualified, check_blocked, check_assignment_completed,
                     pay_questioner_bonus, pay_oracle_bonus)
 from players import QualifyOracle, Oracle, QualifyQuestioner, Questioner
@@ -408,6 +408,16 @@ def render_worker(id):
         dialogues = get_worker(conn, id)
         status = get_one_worker_status(conn, id)
 
+        is_playing, socket_id = is_worker_playing(conn, id)
+
+        status["playing"] = is_playing
+        status["socket_db"] = socket_id
+        status["socket_io"] = 0
+
+        for socket_id, player in players.iteritems():
+            if player.worker_id == id:
+                status["socket_io"] = socket_id
+
     return render_template('worker.html', dialogues=dialogues, worker=status)
 
 
@@ -424,7 +434,6 @@ def one_worker_questioner_status(id):
         update_one_worker_status(conn, id, "questioner_status", request.form['questioner_status'])
     return render_worker(id)
 
-
 @auth.login_required
 @app.route('/worker/<id>/oracle_status', methods=['POST'])
 def one_worker_oracle_status(id):
@@ -432,6 +441,22 @@ def one_worker_oracle_status(id):
         update_one_worker_status(conn, id, "oracle_status", request.form['oracle_status'])
     return render_worker(id)
 
+@auth.login_required
+@app.route('/worker/<id>/remove_socket', methods=['POST'])
+def one_worker_remove_socket(id):
+
+    # A cleaner way must exist to remove the player
+
+    to_remove = None
+    for socket_id, player in players.iteritems():
+        if player.worker_id == id:
+            to_remove = socket_id
+            break
+
+    if to_remove:
+        del players[to_remove]
+
+    return render_worker(id)
 
 @app.route('/stats')
 def stats():

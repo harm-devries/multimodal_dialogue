@@ -472,6 +472,28 @@ def remove_from_queue(conn, player, reason):
         print e
 
 
+def is_worker_playing(conn, id):
+
+
+    try:
+
+        result = conn.execute(" SELECT socket_id FROM session s "
+                            " INNER JOIN "
+                            "    ( SELECT oracle_session_id, questioner_session_id, status from dialogue WHERE status = 'ongoing') d "
+                            "    ON d.oracle_session_id = s.id OR d.questioner_session_id = s.id "
+                            " WHERE worker_id = %s", [id])
+
+        if result.rowcount > 0:
+            return True, result.first()[0]
+        else:
+            return False, 0
+
+    except Exception as e:
+        print "Fail to know whether the player is playing"
+        print e
+        return False, 0
+
+
 def get_workers(conn):
     workers = []
     rows = conn.execute("SELECT w.worker_id, \
