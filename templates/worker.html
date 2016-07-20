@@ -42,8 +42,37 @@
 	    </tr>
   </tbody>
   </table>
+</div>
+
+
+<div class="container" style="margin-top: 15px">
+  <table class="table table-striped">
+  	<thead>
+    <tr>
+      <th>Is playing</th>
+      <th>Socket id (DB) </th>
+      <th>Socket id (io) </th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+	    <tr>
+	      <td>{{ worker.playing }}</td>
+	      <td>{{ worker.socket_db }}</td>
+	      <td>{{ worker.socket_io }}</td>
+	      <td>
+             <form action="/worker/{{ worker.id }}/remove_socket" method="POST">
+                  <input type="submit" value="Remove from socket">
+             </form>
+		</td>
+	    </tr>
+  </tbody>
+  </table>
 
 </div>
+
+
+
 <div class="container" style="margin-top: 15px">
   <table class="table table-striped">
   	<thead>
