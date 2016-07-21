@@ -8,7 +8,9 @@ class Player():
         self.hit_id = hit_id
         self.worker_id = worker_id
         self.partner = None
-        self.dialogue = None
+        self.dialogue_id = None
+        self.oracle_sid = None
+        self.questioner_sid = None
 
 
 class QualifyOracle(Player):

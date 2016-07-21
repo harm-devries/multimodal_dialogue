@@ -1,4 +1,5 @@
 """Helper functions to connect to postgres database."""
+import datetime
 from sqlalchemy.sql import text
 
 from random import randint
@@ -82,6 +83,10 @@ class Dialogue:
         self.picture = picture
         self.object = object
         self.question_ids = []
+        self.oracle_sid = None
+        self.questioner_sid = None
+        self.turn = 'questioner'
+        self.deadline = datetime.datetime.now() + datetime.timedelta(seconds=90)
 
 
 def get_dialogues(connection):

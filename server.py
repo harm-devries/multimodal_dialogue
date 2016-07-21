@@ -1,3 +1,4 @@
+import datetime
 import json
 import os
 import random
@@ -41,6 +42,7 @@ app.config['SECRET_KEY'] = 'spywithmylittleeye!'
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['HEROKU_POSTGRESQL_SILVER_URL']
 db = SQLAlchemy(app)
 engine = db.engine
+thread = None
 
 """ Dictionaries for dialogue info that remains in RAM """
 q_oracle_queue = deque()
@@ -50,7 +52,53 @@ oracle_queue = deque()
 questioner_queue = deque()
 
 players = {}  # indexed by socket id
+dialogues = {}  # indexed by dialogue_id
 auth = HTTPBasicAuth()
+
+
+def time_out(dialogue):
+    conn = engine.connect()
+    oracle = players[dialogue.oracle_sid]
+    questioner = players[dialogue.questioner_sid]
+    if dialogue.turn == 'oracle':
+        # Oracle time out
+        update_dialogue_status(conn, dialogue.id, 'oracle_timeout')
+        delete_game([oracle, questioner])
+        sio.emit('timeout', '',
+                 room=oracle.sid, namespace=oracle.namespace)
+        sio.emit('partner timeout', '',
+                 room=questioner.sid, namespace=questioner.namespace)
+        if questioner.role == 'Questioner':
+            find_normal_oracle(questioner.sid)
+        else:
+            find_qualification_oracle(questioner.sid)
+        check_blocked(conn, oracle)
+    else:
+        # Questioner timeout
+        update_dialogue_status(conn, dialogue.id, 'questioner_timeout')
+        delete_game([oracle, questioner])
+        sio.emit('timeout', '',
+                 room=questioner.sid, namespace=questioner.namespace)
+        sio.emit('partner timeout', '',
+                 room=oracle.sid, namespace=oracle.namespace)
+        if oracle.role == 'Oracle':
+            find_normal_questioner(oracle.sid)
+        else:
+            find_qualification_questioner(oracle.sid)
+        check_blocked(conn, questioner)
+    conn.close()
+
+"""Background process checking for dialogues that time out."""
+def check_for_timeouts():
+    while True:
+        sio.sleep(0.01)  # return control so other threads can execute
+        keys = dialogues.keys()
+        for key in keys:
+            if key in dialogues:
+                dialogue = dialogues[key]
+                if datetime.datetime.now() > dialogue.deadline:
+                    time_out(dialogue)
+            sio.sleep(0.01)
 
 
 @auth.get_password
@@ -135,6 +183,10 @@ def q_oracle():
                        'multiple games at the same time.')
                 return render_template('error.html', title='Oracle - ',
                                        msg=msg)
+
+    global thread
+    if thread is None:
+        thread = sio.start_background_task(check_for_timeouts)
 
     return render_template('oracle.html',
                            title='Oracle - ',
@@ -266,6 +318,9 @@ def q_questioner():
                 return render_template('error.html', title='Questioner - ',
                                        msg=msg)
 
+    global thread
+    if thread is None:
+        thread = sio.start_background_task(check_for_timeouts)
 
     return render_template('questioner.html',
                            title='Questioner - ',
@@ -349,7 +404,7 @@ def questioner():
 
 @app.route('/dialogues')
 @auth.login_required
-def dialogues():
+def get_dialogues():
     return render_template('dialogues.html', dialogues=get_dialogues(engine))
 
 
@@ -482,30 +537,30 @@ def stats():
     return render_template('error.html', msg=msg)
 
 
-@sio.on('timeout', namespace='/q_questioner')
-@sio.on('timeout', namespace='/questioner')
-@sio.on('timeout', namespace='/q_oracle')
-@sio.on('timeout', namespace='/oracle')
-def time_out(sid):
-    player = players[sid]
-    partner = player.partner
-    conn = engine.connect()
-    if partner.role in ['QualifyOracle', 'Oracle']:
-        update_dialogue_status(conn, player.dialogue.id, 'questioner_timeout')
-    else:
-        update_dialogue_status(conn, player.dialogue.id, 'oracle_timeout')
-    delete_game([player, partner])
-    sio.emit('partner timeout', '',
-             room=partner.sid, namespace=partner.namespace)
-    if partner.role == 'Oracle':
-        find_normal_questioner(partner.sid)
-    elif partner.role == 'QualifyOracle':
-        find_qualification_questioner(partner.sid)
-    elif partner.role == 'QualifyQuestioner':
-        find_qualification_oracle(partner.sid)
-    else:
-        find_normal_oracle(partner.sid)
-    conn.close()
+# @sio.on('timeout', namespace='/q_questioner')
+# @sio.on('timeout', namespace='/questioner')
+# @sio.on('timeout', namespace='/q_oracle')
+# @sio.on('timeout', namespace='/oracle')
+# def time_out(sid):
+#     player = players[sid]
+#     partner = player.partner
+#     conn = engine.connect()
+#     if partner.role in ['QualifyOracle', 'Oracle']:
+#         update_dialogue_status(conn, player.dialogue.id, 'questioner_timeout')
+#     else:
+#         update_dialogue_status(conn, player.dialogue.id, 'oracle_timeout')
+#     delete_game([player, partner])
+#     sio.emit('partner timeout', '',
+#              room=partner.sid, namespace=partner.namespace)
+#     if partner.role == 'Oracle':
+#         find_normal_questioner(partner.sid)
+#     elif partner.role == 'QualifyOracle':
+#         find_qualification_questioner(partner.sid)
+#     elif partner.role == 'QualifyQuestioner':
+#         find_qualification_oracle(partner.sid)
+#     else:
+#         find_normal_oracle(partner.sid)
+#     conn.close()
 
 
 @sio.on('report oracle', namespace='/q_questioner')
@@ -513,8 +568,9 @@ def time_out(sid):
 def report_oracle(sid, reason):
     player = players[sid]
     partner = player.partner
+    dialogue = dialogues[player.dialogue_id]
     conn = engine.connect()
-    update_dialogue_status(conn, player.dialogue.id, 'oracle_reported',
+    update_dialogue_status(conn, dialogue.id, 'oracle_reported',
                            reason=reason)
     delete_game([player, partner])
     sio.emit('reported', '', room=partner.sid, namespace=partner.namespace)
@@ -532,8 +588,9 @@ def report_oracle(sid, reason):
 def report_questioner(sid, reason):
     player = players[sid]
     partner = player.partner
+    dialogue = dialogues[player.dialogue_id]
     conn = engine.connect()
-    update_dialogue_status(conn, player.dialogue.id, 'questioner_reported',
+    update_dialogue_status(conn, dialogue.id, 'questioner_reported',
                            reason=reason)
     delete_game([player, partner])
     sio.emit('reported', '', room=partner.sid, namespace=partner.namespace)
@@ -551,8 +608,10 @@ def report_questioner(sid, reason):
 def new_question(sid, message):
     player = players[sid]
     partner = player.partner
-    dialogue = player.dialogue
+    dialogue = dialogues[player.dialogue_id]
     conn = engine.connect()
+    dialogue.turn = 'oracle'
+    dialogue.deadline = datetime.datetime.now() + datetime.timedelta(seconds=30)
     dialogue.question_ids.append(insert_question(conn, dialogue.id, message))
     sio.emit('new question', message,
              room=player.partner.sid, namespace=partner.namespace)
@@ -564,9 +623,11 @@ def new_question(sid, message):
 def new_answer(sid, message):
     player = players[sid]
     partner = player.partner
-    dialogue = player.dialogue
+    dialogue = dialogues[player.dialogue_id]
     conn = engine.connect()
     insert_answer(conn, dialogue.question_ids[-1], message)
+    dialogue.turn = 'questioner'
+    dialogue.deadline = datetime.datetime.now() + datetime.timedelta(seconds=90)
     conn.close()
     sio.emit('new answer', message,
              room=partner.sid, namespace=partner.namespace)
@@ -577,7 +638,7 @@ def new_answer(sid, message):
 def update_answer(sid, msg):
     player = players[sid]
     partner = player.partner
-    dialogue = player.dialogue
+    dialogue = dialogues[player.dialogue_id]
     conn = engine.connect()
     ans = {'Yes': 'Yes', 'No': 'No', 'Not applicable': 'N/A'}[msg['new_msg']]
     insert_answer(conn, dialogue.question_ids[msg['round']],
@@ -591,7 +652,9 @@ def update_answer(sid, msg):
 @sio.on('guess', namespace='/questioner')
 def guess(sid):
     player = players[sid]
-    dialogue = player.dialogue
+    dialogue = dialogues[player.dialogue_id]
+    dialogue.turn = 'questioner'
+    dialogue.deadline = datetime.datetime.now() + datetime.timedelta(seconds=30)
     objs = [obj.to_json() for obj in dialogue.picture.objects]
     sio.emit('all annotations', {'objs': objs},
              room=sid, namespace=player.namespace)
@@ -602,7 +665,7 @@ def guess(sid):
 @sio.on('guess annotation', namespace='/q_questioner')
 def guess_annotation(sid, object_id):
     player = players[sid]
-    dialogue = player.dialogue
+    dialogue = dialogues[player.dialogue_id]
     conn = engine.connect()
     insert_guess(conn, dialogue.id, object_id)
     selected_obj = dialogue.object
@@ -645,7 +708,7 @@ def guess_annotation(sid, object_id):
 @sio.on('guess annotation', namespace='/questioner')
 def guess_annotation2(sid, object_id):
     player = players[sid]
-    dialogue = player.dialogue
+    dialogue = dialogues[player.dialogue_id]
     conn = engine.connect()
     insert_guess(conn, dialogue.id, object_id)
     selected_obj = dialogue.object
@@ -735,8 +798,12 @@ def find_questioner(sid, _questioner_queue, _oracle_queue, mode):
         remove_from_queue(conn, partner, 'dialogue')
         dialogue = start_dialogue(conn, player.session_id, partner.session_id,
                                   difficulty=difficulty, mode=mode)
-        partner.dialogue = dialogue
-        player.dialogue = dialogue
+        dialogue.oracle_sid = player.sid
+        dialogue.questioner_sid = partner.sid
+        dialogues[dialogue.id] = dialogue
+        partner.dialogue_id = dialogue.id
+        player.dialogue_id = dialogue.id
+
 
         image_src = ('https://msvocds.blob.core.windows.net/imgs/'
                      '{}.jpg').format(dialogue.picture.id)
@@ -795,8 +862,11 @@ def find_oracle(sid, _oracle_queue, _questioner_queue, mode):
         remove_from_queue(conn, partner, 'dialogue')
         dialogue = start_dialogue(conn, partner.session_id, player.session_id,
                                   difficulty=difficulty, mode=mode)
-        partner.dialogue = dialogue
-        player.dialogue = dialogue
+        dialogue.questioner_sid = player.sid
+        dialogue.oracle_sid = partner.sid
+        dialogues[dialogue.id] = dialogue
+        partner.dialogue_id = dialogue.id
+        player.dialogue_id = dialogue.id
 
         image_src = ('https://msvocds.blob.core.windows.net/imgs/'
                      '{}.jpg').format(dialogue.picture.id)
@@ -823,6 +893,7 @@ def find_oracle(sid, _oracle_queue, _questioner_queue, mode):
 def get_hit_info(url):
     par = urlparse.parse_qs(urlparse.urlparse(url).query)
     return par['hitId'][0], par['assignmentId'][0], par['workerId'][0]
+
 
 @sio.on('connect', namespace='/q_oracle')
 def q_oracle_connect(sid, re):
@@ -897,16 +968,17 @@ def disconnect(sid):
         """Four cases:
         1. Player is in involved in dialogue."""
         if player.partner is not None:
+            dialogue = dialogues[player.dialogue_id]
             partner = player.partner
             sio.emit('partner_disconnect',
                      '',
                      room=partner.sid,
                      namespace=partner.namespace)
             if partner.role in ['Oracle', 'QualifyOracle']:
-                update_dialogue_status(conn, player.dialogue.id,
+                update_dialogue_status(conn, dialogue.id,
                                        'questioner_disconnect')
             else:
-                update_dialogue_status(conn, player.dialogue.id,
+                update_dialogue_status(conn, dialogue.id,
                                        'oracle_disconnect')
             if player.role == 'QualifyOracle' or player.role == 'QualifyQuestioner':
                 check_blocked(conn, player)
@@ -944,8 +1016,11 @@ def disconnect(sid):
 def delete_game(players):
     """Remove dialogues"""
     for player in players:
+        if player.dialogue_id is not None and player.dialogue_id in dialogues:
+                del dialogues[player.dialogue_id]
         player.partner = None
-        player.dialogue = None
+        player.dialogue_id = None
+
 
 
 @app.errorhandler(500)

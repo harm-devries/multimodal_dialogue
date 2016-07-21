@@ -1,6 +1,6 @@
 $(document).ready(function() {
     namespace = $('#namespace').data().name;
-    var socket = io.connect('https://' + document.domain + ':' + location.port + namespace, {rememberTransport: false});
+    var socket = io.connect('http://' + document.domain + ':' + location.port + namespace, {rememberTransport: false});
     // var QueryString = function () {
     //       // This function is anonymous, is executed immediately and 
     //       // the return value is assigned to QueryString!
@@ -63,6 +63,11 @@ $(document).ready(function() {
     //     $('#info_text').text('Sorry! The server unexpectedly closed the connection. ');
     //     $('#info_text').show();
     // });
+    socket.on('timeout', function() {
+        setTimeout(function(){
+            window.location.reload(false);
+        }, 1000);
+    });
     socket.on('partner_disconnect', function() {
         partner_disconnect = true;
         deletegame();
@@ -224,11 +229,11 @@ $(document).ready(function() {
         }
         $(time_id).text(time);
         if (time == 0 && time_id != "#w_time") {
-            socket.emit('timeout');
+            // socket.emit('timeout');
             clearInterval(timer_id);
-            setTimeout(function(){
-                window.location.reload(false);
-            }, 3000);
+            // setTimeout(function(){
+            //     window.location.reload(false);
+            // }, 3000);
         }
     }
 
@@ -340,7 +345,7 @@ $(document).ready(function() {
             var no = $('<a href="#" style="margin-left: 10px" class="btn btn-danger">No</a>').on('click', function(){updateAnswer(r, cur_ans, 'No')});
         }
         $('#a'+r).append(no);
-        if (cur_ans == 'Not applicable') {
+        if (cur_ans == 'N\/A') {
             var na = $(colorizeAnswer(cur_ans)).css('margin-left', '10px');
         } else {
             var na = $('<a href="#" style="margin-left: 10px" class="btn btn-info">Not applicable</a>').on('click', function(){updateAnswer(r, cur_ans, 'Not applicable')});

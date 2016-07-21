@@ -1,6 +1,6 @@
 $(document).ready(function() {
     namespace = $('#namespace').data().name;
-    var socket = io.connect('https://' + document.domain + ':' + location.port + namespace, {rememberTransport: false});
+    var socket = io.connect('http://' + document.domain + ':' + location.port + namespace, {rememberTransport: false});
     /* parse url params and send assignmentId, hitId and workerId to server */
     // var QueryString = function () {
     //       // This function is anonymous, is executed immediately and 
@@ -60,6 +60,11 @@ $(document).ready(function() {
         partner_timeout = true;
         deletegame();
         noPartner();
+    });
+    socket.on('timeout', function() {
+        setTimeout(function(){
+            window.location.reload(false);
+        }, 1000);
     });
     socket.on('reported', function(){
         deletegame();
@@ -222,11 +227,11 @@ $(document).ready(function() {
         }
         $(time_id).text(time);
         if (time == 0 && time_id != "#w_time") {
-            socket.emit('timeout');
+            // socket.emit('timeout');
             clearInterval(timer_id);
-            setTimeout(function(){
-                window.location.reload(false);
-            }, 3000);
+            // setTimeout(function(){
+            //     window.location.reload(false);
+            // }, 3000);
         }
     }
 
