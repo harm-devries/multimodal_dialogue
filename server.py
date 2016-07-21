@@ -14,7 +14,7 @@ from database.db_utils import (get_dialogues, get_dialogue_stats,
                                get_dialogue_conversation, get_dialogue_info,
                                get_workers, get_worker,
                                insert_question, insert_answer, insert_guess,
-                               insert_session, end_session, update_session,
+                               insert_session, end_session, update_session, get_sessions,
                                update_dialogue_status, start_dialogue,
                                remove_from_queue, insert_into_queue,
                                get_worker_status, get_assignment_stats,
@@ -23,6 +23,8 @@ from database.db_utils import (get_dialogues, get_dialogue_stats,
 from worker import (check_qualified, check_blocked, check_assignment_completed,
                     pay_questioner_bonus, pay_oracle_bonus)
 from players import QualifyOracle, Oracle, QualifyQuestioner, Questioner
+
+
 
 
 # set this to 'threading', 'eventlet', or 'gevent'
@@ -469,9 +471,10 @@ def render_worker(id):
         status["socket_db"] = socket_id
         status["socket_io"] = 0
 
-        for socket_id, player in players.iteritems():
+        for sid, player in players.iteritems():
             if player.worker_id == id:
-                status["socket_io"] = socket_id
+                status["socket_io"] = sid
+                break
 
     return render_template('worker.html', dialogues=dialogues, worker=status)
 
@@ -514,53 +517,51 @@ def one_worker_remove_socket(id):
     return render_worker(id)
 
 
-@auth.login_required
-@app.route('/stats/io_error')
-def stats_io_error():
-
+def render_stats_io_error():
+    # retrieve workers that are currently playing a dialogue
     with engine.begin() as conn:
         ongoing_workers = get_ongoing_workers(conn)
 
-    error_workers = {}
+    # helper to get sid from worker id
+    def get_sid(worker_id):
+        for sid, w in players.iteritems():
+            if w.worker_id == worker_id:
+                return sid
+        return 0
+
+    # list all the current open sockets
+    workers = []
     for socket_id, player in players.iteritems():
-        if socket_id not in ongoing_workers:
-            error_workers[socket_id] = player
+        one_worker = dict()
+        one_worker["id"] = player.worker_id
+        one_worker["playing"]   = ongoing_workers[player.worker_id] is not None
+        one_worker["socket_db"] = ongoing_workers.get(player.worker_id, 0)
+        one_worker["socket_io"] = get_sid(player.worker_id)
+        workers.append(one_worker)
 
-    msg = '<br />'.join([', '.join([x.sid, x.worker_id, str(x.sid in sio.eio.sockets.keys())]) for x in error_workers.itervalues()])
+    return render_template('socket_io.html', workers=workers)
 
-    return render_template('error.html', msg=msg)
+
+@auth.login_required
+@app.route('/stats/io_error')
+def stats_io_error():
+    return render_stats_io_error()
+
+
+@auth.login_required
+@app.route('/stats/io_error', methods=['POST'])
+def stats_io_error_update():
+    # get the checkbox with the sid to remove
+    sid_to_remove = request.form.getlist('check')
+    for sid in sid_to_remove:
+        del players[sid]
+    return render_stats_io_error()
 
 
 @app.route('/stats')
 def stats():
     msg = '<br />'.join([', '.join([x.sid, x.worker_id, str(x.sid in sio.eio.sockets.keys())]) for x in players.itervalues()])
     return render_template('error.html', msg=msg)
-
-
-# @sio.on('timeout', namespace='/q_questioner')
-# @sio.on('timeout', namespace='/questioner')
-# @sio.on('timeout', namespace='/q_oracle')
-# @sio.on('timeout', namespace='/oracle')
-# def time_out(sid):
-#     player = players[sid]
-#     partner = player.partner
-#     conn = engine.connect()
-#     if partner.role in ['QualifyOracle', 'Oracle']:
-#         update_dialogue_status(conn, player.dialogue.id, 'questioner_timeout')
-#     else:
-#         update_dialogue_status(conn, player.dialogue.id, 'oracle_timeout')
-#     delete_game([player, partner])
-#     sio.emit('partner timeout', '',
-#              room=partner.sid, namespace=partner.namespace)
-#     if partner.role == 'Oracle':
-#         find_normal_questioner(partner.sid)
-#     elif partner.role == 'QualifyOracle':
-#         find_qualification_questioner(partner.sid)
-#     elif partner.role == 'QualifyQuestioner':
-#         find_qualification_oracle(partner.sid)
-#     else:
-#         find_normal_oracle(partner.sid)
-#     conn.close()
 
 
 @sio.on('report oracle', namespace='/q_questioner')
