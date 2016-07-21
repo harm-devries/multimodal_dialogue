@@ -7,6 +7,7 @@
     <tr>
       <th>Role</th>
       <th>Status</th>
+      <th>Previous Status</th>
       <th></th>
     </tr>
   </thead>
@@ -14,6 +15,7 @@
 	    <tr>
 	      <td>Oracle</td>
 	      <td>{{ worker.oracle_status }}</td>
+	      <td>{{ worker.prev_oracle_status }}</td>
 	      <td>
               <form action="/worker/{{ worker.id }}/oracle_status" method="POST">
                   <select name="oracle_status">
@@ -29,6 +31,7 @@
 	    <tr>
 	      <td>Questioner</td>
 	      <td>{{ worker.questioner_status }}</td>
+	      <td>{{ worker.prev_questioner_status }}</td>
 	      <td>
               <form action="/worker/{{ worker.id }}/questioner_status" method="POST">
                   <select name="questioner_status">

@@ -13,7 +13,7 @@ from database.db_utils import (get_dialogues, get_dialogue_stats,
                                get_dialogue_conversation, get_dialogue_info,
                                get_workers, get_worker,
                                insert_question, insert_answer, insert_guess,
-                               insert_session, end_session, update_session,
+                               insert_session, end_session, update_session, get_sessions,
                                update_dialogue_status, start_dialogue,
                                remove_from_queue, insert_into_queue,
                                get_worker_status, get_assignment_stats,
@@ -53,9 +53,6 @@ questioner_queue = deque()
 
 players = {}  # indexed by socket id
 auth = HTTPBasicAuth()
-
-
-
 
 
 @auth.get_password
@@ -465,17 +462,20 @@ def one_worker_remove_socket(id):
 
 
 def render_stats_io_error():
+
+    # retrieve workers that are currently playing a dialogue
     with engine.begin() as conn:
         ongoing_workers = get_ongoing_workers(conn)
 
+    # helper to get sid from worker id
     def get_sid(worker_id):
         for sid, w in players.iteritems():
             if w.worker_id == worker_id:
                 return sid
         return 0
 
+    # list all the current open sockets
     workers = []
-
     for socket_id, player in players.iteritems():
         one_worker = dict()
         one_worker["id"] = player.worker_id
@@ -496,12 +496,14 @@ def stats_io_error():
 @app.route('/stats/io_error', methods=['POST'])
 def stats_io_error_update():
 
+    # get the checkbox with the sid to remove
     sid_to_remove = request.form.getlist('check')
 
     for sid in sid_to_remove:
         del players[sid]
 
     return render_stats_io_error()
+
 
 
 

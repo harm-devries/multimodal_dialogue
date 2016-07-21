@@ -444,6 +444,30 @@ def end_session(conn, session_id):
         print "Fail to end session, id = ", session_id
         print e
 
+def get_sessions(conn):
+
+    sessions = []
+    try:
+        rows = conn.execute(" SELECT socket_id, worker_id, hit_id, assignment_id, ip, role  FROM session s "
+                            " INNER JOIN "
+                            "    ( SELECT oracle_session_id, questioner_session_id, status from dialogue WHERE status = 'ongoing') d "
+                            "    ON d.oracle_session_id = s.id OR d.questioner_session_id = s.id ")
+        for row in rows:
+            session = dict()
+            session["sid"] = row[0]
+            session["worker_id"] = row[1]
+            session["hit_id"] = row[2]
+            session["assignment_id"] = row[3]
+            session["ip"] = row[4]
+            session["role"] = row[5]
+
+            sessions.append(session)
+
+    except Exception as e:
+        print "Fail to get sessions"
+        print e
+
+    return sessions
 
 def insert_into_queue(conn, player):
     try:
@@ -536,11 +560,13 @@ def get_workers(conn):
 def get_one_worker_status(conn, id):
     status = defaultdict(lambda: 'Error')
     try:
-        rows = conn.execute("SELECT id, oracle_status, questioner_status FROM worker w WHERE w.id = %s", [id])
+        rows = conn.execute("SELECT id, oracle_status, questioner_status, prev_oracle_status, prev_questioner_status FROM worker w WHERE w.id = %s", [id])
         row = rows.first()	
         status["id"] = row[0]
         status["oracle_status"] = row[1]
         status["questioner_status"] = row[2]
+        status["prev_oracle_status"] = row[3]
+        status["prev_questioner_status"] = row[4]
         
     except Exception as e:
         print "Fail to load worker status"
