@@ -24,6 +24,8 @@ from worker import (check_qualified, check_blocked, check_assignment_completed,
 from players import QualifyOracle, Oracle, QualifyQuestioner, Questioner
 
 
+
+
 # set this to 'threading', 'eventlet', or 'gevent'
 async_mode = 'eventlet'
 
@@ -51,6 +53,9 @@ questioner_queue = deque()
 
 players = {}  # indexed by socket id
 auth = HTTPBasicAuth()
+
+
+
 
 
 @auth.get_password
@@ -446,7 +451,6 @@ def one_worker_oracle_status(id):
 def one_worker_remove_socket(id):
 
     # A cleaner way must exist to remove the player
-
     to_remove = None
     for socket_id, player in players.iteritems():
         if player.worker_id == id:
@@ -458,25 +462,52 @@ def one_worker_remove_socket(id):
 
     return render_worker(id)
 
-@auth.login_required
-@app.route('/stats/io_error')
-def stats_io_error():
 
+def render_stats_io_error():
     with engine.begin() as conn:
         ongoing_workers = get_ongoing_workers(conn)
 
-    error_workers = {}
+    def get_sid(worker_id):
+        for sid, w in players.iteritems():
+            if w.worker_id == worker_id:
+                return sid
+        return 0
+
+    workers = []
+
     for socket_id, player in players.iteritems():
-        if socket_id not in ongoing_workers:
-            error_workers[socket_id] = player
+        one_worker = dict()
+        one_worker["id"] = player.worker_id
+        one_worker["playing"]   = ongoing_workers[player.worker_id] is not None
+        one_worker["socket_db"] = ongoing_workers.get(player.worker_id, 0)
+        one_worker["socket_io"] = get_sid(player.worker_id)
+        workers.append(one_worker)
 
-    msg = '<br />'.join([', '.join([x.sid, x.worker_id, str(x.sid in sio.eio.sockets.keys())]) for x in error_workers.itervalues()])
+    return render_template('socket_io.html', workers=workers)
 
-    return render_template('error.html', msg=msg)
+
+@auth.login_required
+@app.route('/stats/io_error')
+def stats_io_error():
+    return render_stats_io_error()
+
+@auth.login_required
+@app.route('/stats/io_error', methods=['POST'])
+def stats_io_error_update():
+
+    sid_to_remove = request.form.getlist('check')
+
+    for sid in sid_to_remove:
+        del players[sid]
+
+    return render_stats_io_error()
+
+
 
 
 @app.route('/stats')
 def stats():
+
     msg = '<br />'.join([', '.join([x.sid, x.worker_id, str(x.sid in sio.eio.sockets.keys())]) for x in players.itervalues()])
     return render_template('error.html', msg=msg)
 
