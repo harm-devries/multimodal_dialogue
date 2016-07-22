@@ -406,7 +406,7 @@ def questioner():
 
 @app.route('/dialogues')
 @auth.login_required
-def get_dialogues():
+def getdialogues():
     return render_template('dialogues.html', dialogues=get_dialogues(engine))
 
 
