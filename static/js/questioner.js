@@ -1,6 +1,6 @@
 $(document).ready(function() {
     namespace = $('#namespace').data().name;
-    var socket = io.connect('http://' + document.domain + ':' + location.port + namespace, {rememberTransport: false});
+    var socket = io.connect('https://' + document.domain + ':' + location.port + namespace, {rememberTransport: false});
     /* parse url params and send assignmentId, hitId and workerId to server */
     // var QueryString = function () {
     //       // This function is anonymous, is executed immediately and 
