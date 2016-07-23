@@ -25,8 +25,6 @@ from worker import (check_qualified, check_blocked, check_assignment_completed,
 from players import QualifyOracle, Oracle, QualifyQuestioner, Questioner
 
 
-
-
 # set this to 'threading', 'eventlet', or 'gevent'
 async_mode = 'eventlet'
 
@@ -258,6 +256,9 @@ def oracle():
                        'one game at the same time.')
                 return render_template('error.html', title='Oracle - ',
                                        msg=msg)
+    global thread
+    if thread is None or not thread.is_alive():
+        thread = sio.start_background_task(check_for_timeouts)
 
     return render_template('oracle.html',
                            title='Oracle - ',
@@ -321,8 +322,9 @@ def q_questioner():
                                        msg=msg)
 
     global thread
-    if thread is None:
+    if thread is None or not thread.is_alive():
         thread = sio.start_background_task(check_for_timeouts)
+
 
     return render_template('questioner.html',
                            title='Questioner - ',
@@ -392,6 +394,10 @@ def questioner():
                        'one game at the same time.')
                 return render_template('error.html', title='Questioner - ',
                                        msg=msg)
+
+    global thread
+    if thread is None or not thread.is_alive():
+        thread = sio.start_background_task(check_for_timeouts)
 
     return render_template('questioner.html',
                            title='Questioner - ',

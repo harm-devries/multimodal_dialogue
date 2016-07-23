@@ -54,6 +54,8 @@ def check_blocked(conn, player):
                               'id = :worker_id'),
                          status='blocked', worker_id=player.worker_id)
             return stats, True
+    else:
+        stats = {}
     return stats, False
 
 
