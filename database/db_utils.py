@@ -504,6 +504,7 @@ def remove_from_queue(conn, player, reason):
 
 
 Ongoing_worker = namedtuple('Ongoing_worker', ['socket_id', 'role'])
+DEFAULT_ONGOING_WORKER = Ongoing_worker(socket_id=res[0], role=res[1])
 
 def is_worker_playing(conn, id):
     try:
@@ -517,18 +518,18 @@ def is_worker_playing(conn, id):
             res = result.first()
             return True, Ongoing_worker(socket_id=res[0], role=res[1])
         else:
-            return False, 0
+            return False, DEFAULT_ONGOING_WORKER
 
     except Exception as e:
         print ("Fail to know whether the player is playing")
         print (e)
-        return False, 0
+        return False, DEFAULT_ONGOING_WORKER
 
 
 
 def get_ongoing_workers(conn):
 
-    ongoing_workers = defaultdict(lambda: Ongoing_worker(socket_id=0, role="Error"))
+    ongoing_workers = defaultdict(lambda: DEFAULT_ONGOING_WORKER)
     try:
 
         rows = conn.execute(" SELECT socket_id, worker_id, role  FROM session s "
