@@ -53,7 +53,7 @@
   	<thead>
     <tr>
       <th>Is playing</th>
-      <th>Socket id (DB) </th>
+      <!--  <th>Socket id (DB) </th> -->
       <th>Socket id (io) </th>
       <th></th>
     </tr>
@@ -61,7 +61,7 @@
   <tbody>
 	    <tr>
 	      <td>{{ worker.playing }}</td>
-	      <td>{{ worker.socket_db }}</td>
+	      <!--  <td>{{ worker.socket_db }}</td> -->
 	      <td>{{ worker.socket_io }}</td>
 	      <td>
              <form action="/worker/{{ worker.id }}/remove_socket" method="POST">
