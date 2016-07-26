@@ -58,11 +58,13 @@ auth = HTTPBasicAuth()
 
 def time_out(dialogue):
     conn = engine.connect()
+
     oracle = players[dialogue.oracle_sid]
     questioner = players[dialogue.questioner_sid]
 
-    print("dialogue.oracle_sid: " + str(dialogue.oracle_sid))
-    print("dialogue.questioner_sid: " + str(dialogue.questioner_sid))
+    print("time out")
+    print("oracle    : " + oracle.worker_id     + " \t dialogue.sid: " + str(dialogue.oracle_sid))
+    print("questioner: " + questioner.worker_id + " \t dialogue.sid: " + str(dialogue.questioner_sid))
 
     if dialogue.turn == 'oracle':
         # Oracle time out
@@ -653,10 +655,10 @@ def update_answer(sid, msg):
     dialogue = dialogues[player.dialogue_id]
     conn = engine.connect()
     ans = {'Yes': 'Yes', 'No': 'No', 'Not applicable': 'N/A'}[msg['new_msg']]
-    insert_answer(conn, dialogue.question_ids[msg['round']],
-                  ans)
-    sio.emit('update answer', msg,
-             room=partner.sid, namespace=partner.namespace)
+
+    insert_answer(conn, dialogue.question_ids[msg['round']], ans)
+    sio.emit('update answer', msg, room=partner.sid, namespace=partner.namespace)
+
     conn.close()
 
 
@@ -785,47 +787,47 @@ def find_normal_questioner(sid):
     find_questioner(sid, questioner_queue, oracle_queue, 'normal')
 
 
+def get_difficulty(role):
+
+    sample = random.random()
+    if role.startswith('Qualify'):
+        if sample > 0.3:
+            difficulty = 1
+        else:
+            difficulty = 2
+    else:
+        if sample > 0.3:
+            difficulty = 2
+        else:
+            difficulty = 1
+
+    return difficulty
+
+
 def find_questioner(sid, _questioner_queue, _oracle_queue, mode):
-    partner = False
+
     player = players[sid]
     conn = engine.connect()
+
     if len(_questioner_queue) > 0:
         partner = _questioner_queue.pop()
 
-    if partner:
         partner.partner = player
         player.partner = partner
 
-        sample = random.random()
-        if player.role == 'QualifyOracle':
-            if sample > 0.3:
-                difficulty = 1
-            else:
-                difficulty = 2
-        else:
-            if sample > 0.3:
-                difficulty = 2
-            else:
-                difficulty = 1
-
         remove_from_queue(conn, partner, 'dialogue')
         dialogue = start_dialogue(conn, player.session_id, partner.session_id,
-                                  difficulty=difficulty, mode=mode)
+                                  difficulty=get_difficulty(player.role), mode=mode)
 
-        print("Start new dialogue with")
         dialogue.oracle_sid = player.sid
         dialogue.questioner_sid = partner.sid
-
-        print("oracle_sid: "  + str(dialogue.oracle_sid))
-        print("questioner_sid: " + str(dialogue.questioner_sid))
 
         dialogues[dialogue.id] = dialogue
         partner.dialogue_id = dialogue.id
         player.dialogue_id = dialogue.id
 
+        image_src = ('https://msvocds.blob.core.windows.net/imgs/{}.jpg').format(dialogue.picture.id)
 
-        image_src = ('https://msvocds.blob.core.windows.net/imgs/'
-                     '{}.jpg').format(dialogue.picture.id)
         sio.emit('questioner',
                  {'img': {'src': image_src,
                           'width': dialogue.picture.width,
@@ -843,6 +845,7 @@ def find_questioner(sid, _questioner_queue, _oracle_queue, mode):
         player.partner_sid = None
         player.queue_id = insert_into_queue(conn, player)
         _oracle_queue.appendleft(player)
+
     conn.close()
 
 
@@ -857,38 +860,26 @@ def find_normal_oracle(sid):
 
 
 def find_oracle(sid, _oracle_queue, _questioner_queue, mode):
-    partner = False
+
     player = players[sid]
     conn = engine.connect()
     if len(_oracle_queue) > 0:
         partner = _oracle_queue.pop()
 
-    if partner:
         partner.partner = player
         player.partner = partner
-        sample = random.random()
-        if player.role == 'QualifyQuestioner':
-            if sample > 0.3:
-                difficulty = 1
-            else:
-                difficulty = 2
-        else:
-            if sample > 0.3:
-                difficulty = 2
-            else:
-                difficulty = 1
 
         remove_from_queue(conn, partner, 'dialogue')
         dialogue = start_dialogue(conn, partner.session_id, player.session_id,
-                                  difficulty=difficulty, mode=mode)
+                                  difficulty=get_difficulty(player.role), mode=mode)
+
         dialogue.questioner_sid = player.sid
         dialogue.oracle_sid = partner.sid
         dialogues[dialogue.id] = dialogue
         partner.dialogue_id = dialogue.id
         player.dialogue_id = dialogue.id
 
-        image_src = ('https://msvocds.blob.core.windows.net/imgs/'
-                     '{}.jpg').format(dialogue.picture.id)
+        image_src = ('https://msvocds.blob.core.windows.net/imgs/{}.jpg').format(dialogue.picture.id)
         sio.emit('questioner',
                  {'img': {'src': image_src,
                           'width': dialogue.picture.width,
@@ -914,16 +905,16 @@ def get_hit_info(url):
     return par['hitId'][0], par['assignmentId'][0], par['workerId'][0]
 
 
-
-
-def connect_player(player_class, sid, response):
+def connect_player(_Player, sid, response):
 
     #Retrieve info from HTTP header
     ip = response['REMOTE_ADDR']
     hit_id, assignment_id, worker_id = get_hit_info(response['HTTP_REFERER'])
 
-    player = player_class(sid, hit_id, assignment_id, worker_id, ip)
+    # Create player
+    player = _Player(sid, hit_id, assignment_id, worker_id, ip)
 
+    # Insert player in the database
     with engine.begin() as conn:
         player.session_id = insert_session(conn, player)
 
@@ -970,52 +961,53 @@ def up_session(sid, msg):
 def disconnect(sid):
     if sid in players:
         player = players[sid]
-        conn = engine.connect()
-        """Four cases:
-        1. Player is in involved in dialogue."""
-        if player.partner is not None:
-            dialogue = dialogues[player.dialogue_id]
-            partner = player.partner
-            sio.emit('partner_disconnect',
-                     '',
-                     room=partner.sid,
-                     namespace=partner.namespace)
-            if partner.role in ['Oracle', 'QualifyOracle']:
-                update_dialogue_status(conn, dialogue.id,
-                                       'questioner_disconnect')
-            else:
-                update_dialogue_status(conn, dialogue.id,
-                                       'oracle_disconnect')
-            if player.role == 'QualifyOracle' or player.role == 'QualifyQuestioner':
-                check_blocked(conn, player)
-            delete_game([player, partner])
 
-            if partner.role == 'Oracle':
-                find_normal_questioner(partner.sid)
-            elif partner.role == 'QualifyOracle':
-                find_qualification_questioner(partner.sid)
-            elif partner.role == 'QualifyQuestioner':
-                find_qualification_oracle(partner.sid)
-            else:
-                find_normal_oracle(partner.sid)
-        """2. Player is in oracle queue."""
-        if player in oracle_queue:
-            oracle_queue.remove(player)
-            remove_from_queue(conn, player, 'disconnect')
-        if player in q_oracle_queue:
-            q_oracle_queue.remove(player)
-            remove_from_queue(conn, player, 'disconnect')
-        """3. Player is in questioner queue"""
-        if player in questioner_queue:
-            questioner_queue.remove(player)
-            remove_from_queue(conn, player, 'disconnect')
-        if player in q_questioner_queue:
-            q_questioner_queue.remove(player)
-            remove_from_queue(conn, player, 'disconnect')
-        """4. Player did not start a game yet"""
-        end_session(conn, player.session_id)
-        conn.close()
-        print 'del: ' + str(sid)
+        with engine.begin() as conn:
+            """Four cases:
+            1. Player is in involved in dialogue."""
+            if player.partner is not None:
+                dialogue = dialogues[player.dialogue_id]
+                partner = player.partner
+                sio.emit('partner_disconnect',
+                         '',
+                         room=partner.sid,
+                         namespace=partner.namespace)
+                if partner.role in ['Oracle', 'QualifyOracle']:
+                    update_dialogue_status(conn, dialogue.id,
+                                           'questioner_disconnect')
+                else:
+                    update_dialogue_status(conn, dialogue.id,
+                                           'oracle_disconnect')
+                if player.role == 'QualifyOracle' or player.role == 'QualifyQuestioner':
+                    check_blocked(conn, player)
+                delete_game([player, partner])
+
+                if partner.role == 'Oracle':
+                    find_normal_questioner(partner.sid)
+                elif partner.role == 'QualifyOracle':
+                    find_qualification_questioner(partner.sid)
+                elif partner.role == 'QualifyQuestioner':
+                    find_qualification_oracle(partner.sid)
+                else:
+                    find_normal_oracle(partner.sid)
+            """2. Player is in oracle queue."""
+            if player in oracle_queue:
+                oracle_queue.remove(player)
+                remove_from_queue(conn, player, 'disconnect')
+            if player in q_oracle_queue:
+                q_oracle_queue.remove(player)
+                remove_from_queue(conn, player, 'disconnect')
+            """3. Player is in questioner queue"""
+            if player in questioner_queue:
+                questioner_queue.remove(player)
+                remove_from_queue(conn, player, 'disconnect')
+            if player in q_questioner_queue:
+                q_questioner_queue.remove(player)
+                remove_from_queue(conn, player, 'disconnect')
+            """4. Player did not start a game yet"""
+            end_session(conn, player.session_id)
+
+        print ('del: ' + str(sid))
         del players[sid]
 
 
