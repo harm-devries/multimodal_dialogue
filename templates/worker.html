@@ -53,6 +53,7 @@
   	<thead>
     <tr>
       <th>Is playing</th>
+      <th>Role</th>
       <!--  <th>Socket id (DB) </th> -->
       <th>Socket id (io) </th>
       <th></th>
@@ -61,10 +62,12 @@
   <tbody>
 	    <tr>
 	      <td>{{ worker.playing }}</td>
+          <td>{{ worker.role }}</td>
 	      <!--  <td>{{ worker.socket_db }}</td> -->
 	      <td>{{ worker.socket_io }}</td>
 	      <td>
              <form action="/worker/{{ worker.id }}/remove_socket" method="POST">
+                  <input type="text" name="text_socket_io" value="worker.socket_io" style="display: none;">
                   <input type="submit" value="Remove from socket">
              </form>
 		</td>

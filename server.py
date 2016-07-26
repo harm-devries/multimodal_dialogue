@@ -477,10 +477,11 @@ def render_worker(id):
         worker_dialogues = get_worker(conn, id)
         status = get_one_worker_status(conn, id)
 
-        is_playing, socket_id = is_worker_playing(conn, id)
+        is_playing, ongoing_worker = is_worker_playing(conn, id)
 
         status["playing"] = is_playing
-        status["socket_db"] = socket_id
+        status["role"] = ongoing_worker.role
+        status["socket_db"] = ongoing_worker.socket_id
         status["socket_io"] = 0
 
         for sid, player in players.iteritems():
@@ -516,15 +517,9 @@ def one_worker_oracle_status(id):
 @auth.login_required
 @app.route('/worker/<id>/remove_socket', methods=['POST'])
 def one_worker_remove_socket(id):
-    # A cleaner way must exist to remove the player
-    to_remove = None
-    for socket_id, player in players.iteritems():
-        if player.worker_id == id:
-            to_remove = socket_id
-            break
-
-    if to_remove:
-        del players[to_remove]
+    sid_to_remove = request.form['text_socket_io']
+    if sid_to_remove in players:
+        del players[sid_to_remove]
 
     return render_worker(id)
 
@@ -546,11 +541,11 @@ def render_stats_io_error():
     for socket_id, player in players.iteritems():
         one_worker = dict()
         one_worker["id"] = player.worker_id
-        one_worker["playing"]   = player.worker_id in ongoing_workers
-        one_worker["socket_db"] = ongoing_workers.get(player.worker_id, 0)
+        one_worker["playing"] = player.worker_id in ongoing_workers
+        one_worker["role"] = ongoing_workers[player.worker_id].role
+        one_worker["socket_db"] = ongoing_workers[player.worker_id].socket_id
         one_worker["socket_io"] = get_sid(player.worker_id)
         workers.append(one_worker)
-
 
     return render_template('socket_io.html', workers=workers)
 

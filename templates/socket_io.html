@@ -10,6 +10,7 @@
     <tr>
 	  <th>Worker Id</th>
       <th>Is playing</th>
+        <th>Role</th>
       <!-- <th>Socket id (db) </th> -->
       <th>Socket id (io) </th>
    <th>Remove socket (io) </th>
@@ -21,6 +22,7 @@
      <tr>
        <th scope="row"><a href="/worker/{{ worker.id }}">{{ worker.id }}</a></th>
        <td>{{ worker.playing }}</td>
+       <td>{{ worker.role }}</td>
        <!-- <td>{{ worker.socket_db }}</td> -->
        <td>{{ worker.socket_io }}</td>
        <td><input type="checkbox" name="check" value="{{ worker.socket_io }}"></td>

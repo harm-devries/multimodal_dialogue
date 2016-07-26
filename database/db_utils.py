@@ -4,6 +4,8 @@ from sqlalchemy.sql import text
 
 from random import randint
 from collections import defaultdict
+from collections import namedtuple
+
 
 class Picture:
     """A picture object."""
@@ -501,16 +503,19 @@ def remove_from_queue(conn, player, reason):
         print (e)
 
 
+Ongoing_worker = namedtuple('Ongoing_worker', ['socket_id', 'role'])
+
 def is_worker_playing(conn, id):
     try:
-        result = conn.execute("SELECT socket_id FROM session s "
+        result = conn.execute("SELECT socket_id, role FROM session s "
                               " INNER JOIN "
                               "  (SELECT oracle_session_id, questioner_session_id, status FROM dialogue WHERE status = 'ongoing') d "
                               " ON d.oracle_session_id = s.id OR d.questioner_session_id = s.id "
                               " WHERE worker_id = %s", [id])
 
         if result.rowcount > 0:
-            return True, result.first()[0]
+            res = result.first()
+            return True, Ongoing_worker(socket_id=res[0], role=res[1])
         else:
             return False, 0
 
@@ -523,18 +528,16 @@ def is_worker_playing(conn, id):
 
 def get_ongoing_workers(conn):
 
-    ongoing_workers = []
+    ongoing_workers = defaultdict(lambda: Ongoing_worker(socket_id=0, role="Error"))
     try:
 
-        rows = conn.execute(" SELECT socket_id, worker_id  FROM session s "
+        rows = conn.execute(" SELECT socket_id, worker_id, role  FROM session s "
                             " INNER JOIN "
                             "    ( SELECT oracle_session_id, questioner_session_id, status from dialogue WHERE status = 'ongoing') d "
-                            "    ON d.oracle_session_id = s.id OR d.questioner_session_id = s.id ")
+                            "    ON d.oracle_session_id = s.id OR d.questioner_session_id = s.id ORDER BY worker_id")
 
-
-        ongoing_workers = {}
         for row in rows:
-            ongoing_workers[row[1]] = row[0]
+            ongoing_workers[row[1]] = Ongoing_worker(socket_id=row[0], role=row[2])
 
     except Exception as e:
         print ("Fail to find workers who are playing")
