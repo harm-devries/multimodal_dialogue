@@ -540,10 +540,11 @@ def render_stats_io_error():
     for socket_id, player in players.iteritems():
         one_worker = dict()
         one_worker["id"] = player.worker_id
-        one_worker["playing"]   = ongoing_workers[player.worker_id] is not None
+        one_worker["playing"]   = player.worker_id in ongoing_workers
         one_worker["socket_db"] = ongoing_workers.get(player.worker_id, 0)
         one_worker["socket_io"] = get_sid(player.worker_id)
         workers.append(one_worker)
+
 
     return render_template('socket_io.html', workers=workers)
 
