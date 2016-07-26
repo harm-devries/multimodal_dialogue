@@ -504,7 +504,7 @@ def remove_from_queue(conn, player, reason):
 
 
 Ongoing_worker = namedtuple('Ongoing_worker', ['socket_id', 'role'])
-DEFAULT_ONGOING_WORKER = Ongoing_worker(socket_id=res[0], role=res[1])
+DEFAULT_ONGOING_WORKER = Ongoing_worker(socket_id=0, role="Error")
 
 def is_worker_playing(conn, id):
     try:
