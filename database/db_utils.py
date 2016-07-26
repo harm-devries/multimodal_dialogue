@@ -503,8 +503,8 @@ def remove_from_queue(conn, player, reason):
         print (e)
 
 
-Ongoing_worker = namedtuple('Ongoing_worker', ['socket_id', 'role'])
-DEFAULT_ONGOING_WORKER = Ongoing_worker(socket_id=0, role="Error")
+Ongoing_worker = namedtuple('Ongoing_worker', ['is_playing', 'socket_id', 'role'])
+DEFAULT_ONGOING_WORKER = Ongoing_worker(is_playing=False, socket_id=0, role="N/A")
 
 def is_worker_playing(conn, id):
     try:
@@ -516,14 +516,14 @@ def is_worker_playing(conn, id):
 
         if result.rowcount > 0:
             res = result.first()
-            return True, Ongoing_worker(socket_id=res[0], role=res[1])
+            return Ongoing_worker(is_playing=True, socket_id=res[0], role=res[1])
         else:
-            return False, DEFAULT_ONGOING_WORKER
+            return DEFAULT_ONGOING_WORKER
 
     except Exception as e:
         print ("Fail to know whether the player is playing")
         print (e)
-        return False, DEFAULT_ONGOING_WORKER
+        return DEFAULT_ONGOING_WORKER
 
 
 
@@ -538,7 +538,7 @@ def get_ongoing_workers(conn):
                             "    ON d.oracle_session_id = s.id OR d.questioner_session_id = s.id ORDER BY worker_id")
 
         for row in rows:
-            ongoing_workers[row[1]] = Ongoing_worker(socket_id=row[0], role=row[2])
+            ongoing_workers[row[1]] = Ongoing_worker(is_playing=True, socket_id=row[0], role=row[2])
 
     except Exception as e:
         print ("Fail to find workers who are playing")
