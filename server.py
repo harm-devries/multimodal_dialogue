@@ -60,6 +60,10 @@ def time_out(dialogue):
     conn = engine.connect()
     oracle = players[dialogue.oracle_sid]
     questioner = players[dialogue.questioner_sid]
+
+    print("dialogue.oracle_sid: " + str(dialogue.oracle_sid))
+    print("dialogue.questioner_sid: " + str(dialogue.questioner_sid))
+
     if dialogue.turn == 'oracle':
         # Oracle time out
         update_dialogue_status(conn, dialogue.id, 'oracle_timeout')
@@ -419,7 +423,7 @@ def getdialogues():
 @app.route('/dialogue_stats/<mode>')
 @auth.login_required
 def dialogue_stats(mode):
-    print mode
+    print (mode)
     counts, avg_seconds, avg_questions = get_dialogue_stats(engine, mode=mode)
     return render_template('dialogue_stats.html', counts=counts,
                            avg_questions=avg_questions,
@@ -468,7 +472,7 @@ def workers():
 
 def render_worker(id):
     with engine.begin() as conn:
-        dialogues = get_worker(conn, id)
+        worker_dialogues = get_worker(conn, id)
         status = get_one_worker_status(conn, id)
 
         is_playing, socket_id = is_worker_playing(conn, id)
@@ -482,7 +486,7 @@ def render_worker(id):
                 status["socket_io"] = sid
                 break
 
-    return render_template('worker.html', dialogues=dialogues, worker=status)
+    return render_template('worker.html', dialogues=worker_dialogues, worker=status)
 
 
 @app.route('/worker/<id>')
@@ -728,6 +732,7 @@ def guess_annotation2(sid, object_id):
                                         'finished': finished_flag1,
                                         'qualified': True},
                  room=sid, namespace=player.namespace)
+
         stats = get_assignment_stats(conn, player.partner.worker_id,
                                      questioner=False)
 
@@ -806,8 +811,14 @@ def find_questioner(sid, _questioner_queue, _oracle_queue, mode):
         remove_from_queue(conn, partner, 'dialogue')
         dialogue = start_dialogue(conn, player.session_id, partner.session_id,
                                   difficulty=difficulty, mode=mode)
+
+        print("Start new dialogue with")
         dialogue.oracle_sid = player.sid
         dialogue.questioner_sid = partner.sid
+
+        print("oracle_sid: "  + str(dialogue.oracle_sid))
+        print("questioner_sid: " + str(dialogue.questioner_sid))
+
         dialogues[dialogue.id] = dialogue
         partner.dialogue_id = dialogue.id
         player.dialogue_id = dialogue.id
@@ -903,52 +914,38 @@ def get_hit_info(url):
     return par['hitId'][0], par['assignmentId'][0], par['workerId'][0]
 
 
+
+
+def connect_player(player_class, sid, response):
+
+    #Retrieve info from HTTP header
+    ip = response['REMOTE_ADDR']
+    hit_id, assignment_id, worker_id = get_hit_info(response['HTTP_REFERER'])
+
+    player = player_class(sid, hit_id, assignment_id, worker_id, ip)
+
+    with engine.begin() as conn:
+        player.session_id = insert_session(conn, player)
+
+    players[sid] = player
+    print('add: ' + str(sid))
+
 @sio.on('connect', namespace='/q_oracle')
 def q_oracle_connect(sid, re):
-    ip = re['REMOTE_ADDR']
-    hit_id, assignment_id, worker_id = get_hit_info(re['HTTP_REFERER'])
-    player = QualifyOracle(sid, hit_id, assignment_id, worker_id, ip)
-    conn = engine.connect()
-    player.session_id = insert_session(conn, player)
-    conn.close()
-    players[sid] = player
-    print 'add: ' + str(sid)
-
+    connect_player(QualifyOracle, sid, re)
 
 @sio.on('connect', namespace='/oracle')
 def oracle_connect(sid, re):
-    ip = re['REMOTE_ADDR']
-    hit_id, assignment_id, worker_id = get_hit_info(re['HTTP_REFERER'])
-    player = Oracle(sid, hit_id, assignment_id, worker_id, ip)
-    conn = engine.connect()
-    player.session_id = insert_session(conn, player)
-    conn.close()
-    players[sid] = player
-    print 'add: ' + str(sid)
-
+    connect_player(Oracle, sid, re)
 
 @sio.on('connect', namespace='/questioner')
 def questioner_connect(sid, re):
-    ip = re['REMOTE_ADDR']
-    hit_id, assignment_id, worker_id = get_hit_info(re['HTTP_REFERER'])
-    player = Questioner(sid, hit_id, assignment_id, worker_id, ip)
-    conn = engine.connect()
-    player.session_id = insert_session(conn, player)
-    conn.close()
-    players[sid] = player
-    print 'add: ' + str(sid)
-
+    connect_player(Questioner, sid, re)
 
 @sio.on('connect', namespace='/q_questioner')
 def q_questioner_connect(sid, re):
-    ip = re['REMOTE_ADDR']
-    hit_id, assignment_id, worker_id = get_hit_info(re['HTTP_REFERER'])
-    player = QualifyQuestioner(sid, hit_id, assignment_id, worker_id, ip)
-    conn = engine.connect()
-    player.session_id = insert_session(conn, player)
-    conn.close()
-    players[sid] = player
-    print 'add: ' + str(sid)
+    connect_player(QualifyQuestioner, sid, re)
+
 
 
 @sio.on('update session', namespace='/q_oracle')
@@ -960,9 +957,10 @@ def up_session(sid, msg):
     player.assignment_id = msg['assignmentId']
     player.hit_id = msg['hitId']
     player.worker_id = msg['workerId']
-    conn = engine.connect()
-    update_session(conn, player)
-    conn.close()
+
+    with engine.begin() as conn:
+        update_session(conn, player)
+
 
 
 @sio.on('disconnect', namespace='/oracle')
@@ -1033,5 +1031,5 @@ def delete_game(players):
 
 @app.errorhandler(500)
 def internal_error(error):
-    print error
+    print (error)
     return "500 error"
