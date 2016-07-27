@@ -391,9 +391,10 @@ $(document).ready(function() {
         $(d)
             .attr("id", 'dialogue_'+round)
             .attr('class', 'dialogues')
+            .attr("value", "False")
             .css('margin-top', '10px')
             .css("border-style", "hidden")
-            .css("border-color", "green")
+            .css("border-color", "red")
             .css("border-width", "3px")
             .append(question);
 
@@ -438,32 +439,31 @@ $(document).ready(function() {
 
                 $(".dialogues").each(function(index){
                         $( this )
-                            .mouseenter(function() { $(this).css("border-style", "outset"); })
-                            .mouseleave(function() { $(this).css("border-style", "hidden"); })
-                            .click(function(event) {
-                                vex.dialog.prompt({
-                                          message: 'The oracle will be reported for the following question/answer : <br>' +
-                                          ' - ' + $(this).find(".question").text() + '<br>' +
-                                          ' - ' + $(this).find(".answer").text(),
-                                          placeholder: 'Feel free to add more details',
-                                          callback: function(value) {
-                                            if( value !== false ) {
-
-                                                // restart game
-                                                deletegame();
-
-                                                //TODO: socket.emit
-
-                                                // prevent from reporting
-                                                $('#end_game_report').hide()
-
-                                                //Feed back to the user
-                                                vex.dialog.alert({message: 'The oracle was reported! Thank you for your feedback'});
-                                            }
-                                          }
-                                        });
+                            .mouseenter(function() {  $(this).css("border-style", "dotted");})
+                            .mouseleave(function()
+                            {
+                              if( $(this).attr("value") == "False")
+                              {
+                                 $(this).css("border-style", "hidden");
+                              }
+                              else
+                              {
+                                 $(this).css("border-style", "outset");
+                              }
                             })
-                        ;
+                            .click(function()
+                            {
+                                if( $(this).attr("value") == "False")
+                                {
+                                    $(this).attr("value", "True")
+                                    $(this).css("border-style", "outset");
+                                }
+                                else
+                                {
+                                    $(this).attr("value", "False")
+                                    $(this).css("border-style", "hidden");
+                                }
+                            })
                 });
             }
             log.fadeIn(fadeS);
