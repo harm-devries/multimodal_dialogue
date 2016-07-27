@@ -1024,7 +1024,7 @@ def delete_game(players):
     """Remove dialogues"""
     for player in players:
         if player.dialogue_id is not None and player.dialogue_id in dialogues:
-                del dialogues[player.dialogue_id]
+            del dialogues[player.dialogue_id]
         player.partner = None
         player.dialogue_id = None
 
