@@ -364,9 +364,9 @@ $(document).ready(function() {
     function addAnswer(msg){
         col_msg = colorizeAnswer(msg);
         if (round % 2 == 0) {
-            $('#q'+round).after('<div id="a'+round+'" class="well well-sm" style="font-weight: 500">' + col_msg + '</div>');
+            $('#q'+round).after('<div id="a'+round+'" class="well well-sm answer" style="font-weight: 500">' + col_msg + '</div>');
         } else {
-            $('#q'+round).after('<div id="a'+round+'" class="well well-sm" style="background-color: #fff; font-weight: 500">' + col_msg + '</div>');
+            $('#q'+round).after('<div id="a'+round+'" class="well well-sm answer" style="background-color: #fff; font-weight: 500">' + col_msg + '</div>');
         }
         scrollBottom();
         round += 1;
@@ -374,11 +374,11 @@ $(document).ready(function() {
     function addQuestion(msg){
 
         // Create yhe question
-        var question = document.createElement('div')
+        var question = document.createElement('div');
 
         $(question)
             .attr("id",'q'+round)
-            .attr("class", "well well-sm")
+            .attr("class", "well well-sm question")
             .css("font-weight", "500")
             .text(msg);
 
@@ -390,7 +390,11 @@ $(document).ready(function() {
         var d = document.createElement('div');
         $(d)
             .attr("id", 'dialogue_'+round)
+            .attr('class', 'dialogues')
             .css('margin-top', '10px')
+            .css("border-style", "hidden")
+            .css("border-color", "green")
+            .css("border-width", "3px")
             .append(question);
 
         // Plug the div to the DOM
@@ -424,13 +428,51 @@ $(document).ready(function() {
 
     $('#end_game_report').click(function(event) {
 
-        $('#log').prepend('<div id="report_info" class="well well-sm" style="font-weight: 500 font-weight:bold;">"Please select the misleading answer to report"</div>');
+        var log = $('#log')
 
+        if(!log.is(':visible'))
+        {
+            // Display instructions TODO : improve div
+            if($("#report_info").length == 0) {
+                log.prepend('<div id="report_info" class="well well-sm" style="font-weight: 500 font-weight:bold;">Please select the misleading answer to report</div>');
 
+                $(".dialogues").each(function(index){
+                        $( this )
+                            .mouseenter(function() { $(this).css("border-style", "outset"); })
+                            .mouseleave(function() { $(this).css("border-style", "hidden"); })
+                            .click(function(event) {
+                                vex.dialog.prompt({
+                                          message: 'The oracle will be reported for the following question/answer : <br>' +
+                                          ' - ' + $(this).find(".question").text() + '<br>' +
+                                          ' - ' + $(this).find(".answer").text(),
+                                          placeholder: 'Feel free to add more details',
+                                          callback: function(value) {
+                                            if( value !== false ) {
 
+                                                // restart game
+                                                deletegame();
 
+                                                //TODO: socket.emit
 
-        $('#log').fadeIn(fadeS);
+                                                // prevent from reporting
+                                                $('#end_game_report').hide()
+
+                                                //Feed back to the user
+                                                vex.dialog.alert({message: 'The oracle was reported! Thank you for your feedback'});
+                                            }
+                                          }
+                                        });
+                            })
+                        ;
+                });
+            }
+            log.fadeIn(fadeS);
+        }
+        else
+        {
+            log.fadeOut(fadeS);
+        }
+
     });
 
 
