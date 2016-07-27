@@ -1,6 +1,6 @@
 $(document).ready(function() {
     namespace = $('#namespace').data().name;
-    var socket = io.connect('https://' + document.domain + ':' + location.port + namespace, {rememberTransport: false});
+    var socket = io.connect('http://' + document.domain + ':' + location.port + namespace, {rememberTransport: false});
     /* parse url params and send assignmentId, hitId and workerId to server */
     // var QueryString = function () {
     //       // This function is anonymous, is executed immediately and 
@@ -161,7 +161,7 @@ $(document).ready(function() {
         set_score(msg.stats.success, msg.stats.failure, msg.stats.questioner_disconnect + msg.stats.questioner_timeout);
     });
     socket.on('wrong annotation', function(msg) {
-        deletegame();
+
         clearInterval(timer_id);
         $('#log').hide();
         $('#waiting').hide();
@@ -177,8 +177,11 @@ $(document).ready(function() {
         set_object();
         renderSegment(object.segment, scale, segment_ctx, correct_obj);
 
+
         $('#info_text').html(text); 
         $('#info_text').fadeIn(fadeS);
+        $('#end_game_report').show();
+
         if (msg.qualified) {
             if (msg.blocked) {
                 $('#newgame_text').html('<p>You have made too many mistakes to successfully complete this HIT. Please return this HIT and start a new one!</p>');
@@ -198,6 +201,7 @@ $(document).ready(function() {
         $('#intro').show();
         $('#prevbtn').hide();
         set_score(msg.stats.success, msg.stats.failure, msg.stats.questioner_disconnect + msg.stats.questioner_timeout);
+
     });
 
     function wait_for_answer() {
@@ -368,14 +372,30 @@ $(document).ready(function() {
         round += 1;
     }
     function addQuestion(msg){
-        if (round % 2 == 0) {
-            $('#log').prepend('<div id="q'+round+'" class="well well-sm" style="font-weight: 500">' + msg + '</div>');
-        } else {
-            $('#log').prepend('<div id="q'+round+'" class="well well-sm" style="background-color: #fff; font-weight: 500">' + msg + '</div>');
+
+        // Create yhe question
+        var question = document.createElement('div')
+
+        $(question)
+            .attr("id",'q'+round)
+            .attr("class", "well well-sm")
+            .css("font-weight", "500")
+            .text(msg);
+
+        if (round % 2 == 1) {
+            $(question).css("background-color", "#fff");
         }
-        if (round > 0) {
-            $('#q'+(round - 1)).css('margin-top', '10px');
-        }
+
+        // Create a div that contains question/answer
+        var d = document.createElement('div');
+        $(d)
+            .attr("id", 'dialogue_'+round)
+            .css('margin-top', '10px')
+            .append(question);
+
+        // Plug the div to the DOM
+        $('#log').prepend(d);
+
         scrollBottom();
     }
 
@@ -401,6 +421,19 @@ $(document).ready(function() {
           }
         });
     });
+
+    $('#end_game_report').click(function(event) {
+
+        $('#log').prepend('<div id="report_info" class="well well-sm" style="font-weight: 500 font-weight:bold;">"Please select the misleading answer to report"</div>');
+
+
+
+
+
+        $('#log').fadeIn(fadeS);
+    });
+
+
     $('a#guessbtn').click(function(event) {
         if (round > 0) {
             $('#guessbtn').attr('disabled', false); 

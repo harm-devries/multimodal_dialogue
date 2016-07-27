@@ -54,7 +54,6 @@
 <div class="container">
   <div class="row">
     <div class="col-sm-9" id="left">
-      <div id="log"></div>
       <div id="intro" style="font-weight: 400">
         <div id="group">
           {% if namespace == '/q_questioner' %}
@@ -182,6 +181,7 @@
         <div class="row" id="navigation">
           <div class="col-xs-6">
             <a id="prevbtn" class="btn btn-info" style="display: none">Previous</a>
+            <a class="btn btn-danger" id="end_game_report" style="display: none; float: left" role="button">&laquo; Report Oracle</a>
           </div>
           <div class="col-xs-6">
             <a id="nextbtn" class="btn btn-info" style="float:right">Next &raquo;</a>
@@ -196,6 +196,7 @@
           </div>
         </div>
       </div>
+      <div id="log"></div>
     </div>
     <div class="col-sm-3" id ="right">
       <div style="position: relative;" id="image">

@@ -235,6 +235,11 @@ Intro
 .login.page h3 {
   color: #0d2c40;
 }
+
+#intro{
+    margin-bottom: 2em;
+}
+
 #image{
   display: none;
 }
