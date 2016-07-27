@@ -4,6 +4,8 @@ from sqlalchemy.sql import text
 
 from random import randint
 from collections import defaultdict
+from collections import namedtuple
+
 
 class Picture:
     """A picture object."""
@@ -115,7 +117,7 @@ def get_dialogue_stats(connection, mode='qualification'):
                                    "dialogue AS d WHERE d.mode = :mode "
                                    "ORDER BY d.start_timestamp DESC"),
                               mode=mode)
-    print mode
+
     counts = {'success': 0, 'failure': 0, 'ongoing': 0,
               'oracle_disconnect': 0, 'questioner_disconnect': 0,
               'oracle_timeout': 0, 'questioner_timeout': 0,
@@ -287,8 +289,8 @@ def start_dialogue(conn, oracle_session_id, questioner_session_id,
                                 object=obj)
 
     except Exception as e:
-        print("Fail to start a new dialogue -> could not find object")
-        print e
+        print ("Fail to start a new dialogue -> could not find object")
+        print (e)
 
     return dialogue
 
@@ -322,8 +324,8 @@ def insert_dialogue(conn, picture_id, object_id,
             return dialogue_id
 
     except Exception as e:
-        print "Fail to insert new dialogue"
-        print e
+        print ("Fail to insert new dialogue")
+        print (e)
 
 
 def update_dialogue_status(conn, dialogue_id, status, reason=None):
@@ -340,8 +342,8 @@ def update_dialogue_status(conn, dialogue_id, status, reason=None):
                               "WHERE dialogue_id = :id;"),
                          status=status, id=dialogue_id)
     except Exception as e:
-        print "Fail to update dialogue status"
-        print e
+        print ("Fail to update dialogue status")
+        print (e)
 
 
 def insert_question(conn, dialogue_id, message):
@@ -355,8 +357,8 @@ def insert_question(conn, dialogue_id, message):
         return question_id
 
     except Exception as e:
-        print "Fail to insert new question"
-        print e
+        print ("Fail to insert new question")
+        print (e)
 
 
 def insert_answer(conn, question_id, message):
@@ -371,8 +373,8 @@ def insert_answer(conn, question_id, message):
         return answer_id
 
     except Exception as e:
-        print "Fail to insert new answer"
-        print e
+        print ("Fail to insert new answer")
+        print (e)
 
 
 def insert_guess(conn, dialogue_id, object_id):
@@ -383,8 +385,8 @@ def insert_guess(conn, dialogue_id, object_id):
                      did=dialogue_id, oid=object_id)
 
     except Exception as e:
-        print "Fail to insert new guess"
-        print e
+        print ("Fail to insert new guess")
+        print (e)
 
 
 def insert_session(conn, player):
@@ -414,8 +416,8 @@ def insert_session(conn, player):
         return session_id
 
     except Exception as e:
-        print "Fail to insert new session"
-        print e
+        print ("Fail to insert new session")
+        print (e)
 
 
 def update_session(conn, player):
@@ -434,8 +436,8 @@ def update_session(conn, player):
                      wid=player.worker_id,
                      sid=player.session_id)
     except Exception as e:
-        print "Fail to update session"
-        print e
+        print ("Fail to update session")
+        print (e)
 
 
 def end_session(conn, session_id):
@@ -446,8 +448,8 @@ def end_session(conn, session_id):
                      id=session_id)
 
     except Exception as e:
-        print "Fail to end session, id = ", session_id
-        print e
+        print ("Fail to end session, id = ", session_id)
+        print (e)
 
 def get_sessions(conn):
 
@@ -469,8 +471,8 @@ def get_sessions(conn):
             sessions.append(session)
 
     except Exception as e:
-        print "Fail to get sessions"
-        print e
+        print ("Fail to get sessions")
+        print (e)
 
     return sessions
 
@@ -484,8 +486,8 @@ def insert_into_queue(conn, player):
         queue_id = result.first()[0]
         return queue_id
     except Exception as e:
-        print "Fail to insert queue"
-        print e
+        print ("Fail to insert queue")
+        print (e)
 
 
 def remove_from_queue(conn, player, reason):
@@ -497,48 +499,50 @@ def remove_from_queue(conn, player, reason):
                      id=player.queue_id)
         player.queue_id = None
     except Exception as e:
-        print "Fail to remove from queue"
-        print e
+        print ("Fail to remove from queue")
+        print (e)
 
+
+Ongoing_worker = namedtuple('Ongoing_worker', ['is_playing', 'socket_id', 'role'])
+DEFAULT_ONGOING_WORKER = Ongoing_worker(is_playing=False, socket_id=0, role="N/A")
 
 def is_worker_playing(conn, id):
     try:
-        result = conn.execute("SELECT socket_id FROM session s "
+        result = conn.execute("SELECT socket_id, role FROM session s "
                               " INNER JOIN "
                               "  (SELECT oracle_session_id, questioner_session_id, status FROM dialogue WHERE status = 'ongoing') d "
                               " ON d.oracle_session_id = s.id OR d.questioner_session_id = s.id "
                               " WHERE worker_id = %s", [id])
 
         if result.rowcount > 0:
-            return True, result.first()[0]
+            res = result.first()
+            return Ongoing_worker(is_playing=True, socket_id=res[0], role=res[1])
         else:
-            return False, 0
+            return DEFAULT_ONGOING_WORKER
 
     except Exception as e:
-        print "Fail to know whether the player is playing"
-        print e
-        return False, 0
+        print ("Fail to know whether the player is playing")
+        print (e)
+        return DEFAULT_ONGOING_WORKER
 
 
 
 def get_ongoing_workers(conn):
 
-    ongoing_workers = []
+    ongoing_workers = defaultdict(lambda: DEFAULT_ONGOING_WORKER)
     try:
 
-        rows = conn.execute(" SELECT socket_id, worker_id  FROM session s "
+        rows = conn.execute(" SELECT socket_id, worker_id, role  FROM session s "
                             " INNER JOIN "
                             "    ( SELECT oracle_session_id, questioner_session_id, status from dialogue WHERE status = 'ongoing') d "
-                            "    ON d.oracle_session_id = s.id OR d.questioner_session_id = s.id ")
+                            "    ON d.oracle_session_id = s.id OR d.questioner_session_id = s.id ORDER BY worker_id")
 
-
-        ongoing_workers = {}
         for row in rows:
-            ongoing_workers[row[1]] = row[0]
+            ongoing_workers[row[1]] = Ongoing_worker(is_playing=True, socket_id=row[0], role=row[2])
 
     except Exception as e:
-        print "Fail to find workers who are playing"
-        print e
+        print ("Fail to find workers who are playing")
+        print (e)
 
     return ongoing_workers
 
@@ -572,8 +576,8 @@ def get_one_worker_status(conn, id):
         status["prev_questioner_status"] = row[4]
         
     except Exception as e:
-        print "Fail to load worker status"
-        print e
+        print ("Fail to load worker status")
+        print (e)
 
     return status
 
@@ -583,8 +587,8 @@ def update_one_worker_status(conn, id, status_name, status):
         conn.execute("UPDATE worker SET " + status_name + " = %s WHERE id = %s", [status, id])
 
     except Exception as e:
-        print "Fail to update worker status"
-        print e
+        print ("Fail to update worker status")
+        print (e)
 
 
 def get_worker(conn, id):

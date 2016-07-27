@@ -58,8 +58,14 @@ auth = HTTPBasicAuth()
 
 def time_out(dialogue):
     conn = engine.connect()
+
     oracle = players[dialogue.oracle_sid]
     questioner = players[dialogue.questioner_sid]
+
+    print("time out")
+    print("oracle    : " + oracle.worker_id     + " \t dialogue.sid: " + str(dialogue.oracle_sid))
+    print("questioner: " + questioner.worker_id + " \t dialogue.sid: " + str(dialogue.questioner_sid))
+
     if dialogue.turn == 'oracle':
         # Oracle time out
         update_dialogue_status(conn, dialogue.id, 'oracle_timeout')
@@ -419,7 +425,7 @@ def getdialogues():
 @app.route('/dialogue_stats/<mode>')
 @auth.login_required
 def dialogue_stats(mode):
-    print mode
+    print (mode)
     counts, avg_seconds, avg_questions = get_dialogue_stats(engine, mode=mode)
     return render_template('dialogue_stats.html', counts=counts,
                            avg_questions=avg_questions,
@@ -468,13 +474,14 @@ def workers():
 
 def render_worker(id):
     with engine.begin() as conn:
-        dialogues = get_worker(conn, id)
+        worker_dialogues = get_worker(conn, id)
         status = get_one_worker_status(conn, id)
 
-        is_playing, socket_id = is_worker_playing(conn, id)
+        is_playing, ongoing_worker = is_worker_playing(conn, id)
 
         status["playing"] = is_playing
-        status["socket_db"] = socket_id
+        status["role"] = ongoing_worker.role
+        status["socket_db"] = ongoing_worker.socket_id
         status["socket_io"] = 0
 
         for sid, player in players.iteritems():
@@ -482,7 +489,7 @@ def render_worker(id):
                 status["socket_io"] = sid
                 break
 
-    return render_template('worker.html', dialogues=dialogues, worker=status)
+    return render_template('worker.html', dialogues=worker_dialogues, worker=status)
 
 
 @app.route('/worker/<id>')
@@ -510,15 +517,9 @@ def one_worker_oracle_status(id):
 @auth.login_required
 @app.route('/worker/<id>/remove_socket', methods=['POST'])
 def one_worker_remove_socket(id):
-    # A cleaner way must exist to remove the player
-    to_remove = None
-    for socket_id, player in players.iteritems():
-        if player.worker_id == id:
-            to_remove = socket_id
-            break
-
-    if to_remove:
-        del players[to_remove]
+    sid_to_remove = request.form['text_socket_io']
+    if sid_to_remove in players:
+        del players[sid_to_remove]
 
     return render_worker(id)
 
@@ -540,8 +541,9 @@ def render_stats_io_error():
     for socket_id, player in players.iteritems():
         one_worker = dict()
         one_worker["id"] = player.worker_id
-        one_worker["playing"]   = ongoing_workers[player.worker_id] is not None
-        one_worker["socket_db"] = ongoing_workers.get(player.worker_id, 0)
+        one_worker["playing"] = player.worker_id in ongoing_workers
+        one_worker["role"] = ongoing_workers[player.worker_id].role
+        one_worker["socket_db"] = ongoing_workers[player.worker_id].socket_id
         one_worker["socket_io"] = get_sid(player.worker_id)
         workers.append(one_worker)
 
@@ -648,10 +650,10 @@ def update_answer(sid, msg):
     dialogue = dialogues[player.dialogue_id]
     conn = engine.connect()
     ans = {'Yes': 'Yes', 'No': 'No', 'Not applicable': 'N/A'}[msg['new_msg']]
-    insert_answer(conn, dialogue.question_ids[msg['round']],
-                  ans)
-    sio.emit('update answer', msg,
-             room=partner.sid, namespace=partner.namespace)
+
+    insert_answer(conn, dialogue.question_ids[msg['round']], ans)
+    sio.emit('update answer', msg, room=partner.sid, namespace=partner.namespace)
+
     conn.close()
 
 
@@ -727,6 +729,7 @@ def guess_annotation2(sid, object_id):
                                         'finished': finished_flag1,
                                         'qualified': True},
                  room=sid, namespace=player.namespace)
+
         stats = get_assignment_stats(conn, player.partner.worker_id,
                                      questioner=False)
 
@@ -779,41 +782,47 @@ def find_normal_questioner(sid):
     find_questioner(sid, questioner_queue, oracle_queue, 'normal')
 
 
+def get_difficulty(role):
+
+    sample = random.random()
+    if role.startswith('Qualify'):
+        if sample > 0.3:
+            difficulty = 1
+        else:
+            difficulty = 2
+    else:
+        if sample > 0.3:
+            difficulty = 2
+        else:
+            difficulty = 1
+
+    return difficulty
+
+
 def find_questioner(sid, _questioner_queue, _oracle_queue, mode):
-    partner = False
+
     player = players[sid]
     conn = engine.connect()
+
     if len(_questioner_queue) > 0:
         partner = _questioner_queue.pop()
 
-    if partner:
         partner.partner = player
         player.partner = partner
 
-        sample = random.random()
-        if player.role == 'QualifyOracle':
-            if sample > 0.3:
-                difficulty = 1
-            else:
-                difficulty = 2
-        else:
-            if sample > 0.3:
-                difficulty = 2
-            else:
-                difficulty = 1
-
         remove_from_queue(conn, partner, 'dialogue')
         dialogue = start_dialogue(conn, player.session_id, partner.session_id,
-                                  difficulty=difficulty, mode=mode)
+                                  difficulty=get_difficulty(player.role), mode=mode)
+
         dialogue.oracle_sid = player.sid
         dialogue.questioner_sid = partner.sid
+
         dialogues[dialogue.id] = dialogue
         partner.dialogue_id = dialogue.id
         player.dialogue_id = dialogue.id
 
+        image_src = ('https://msvocds.blob.core.windows.net/imgs/{}.jpg').format(dialogue.picture.id)
 
-        image_src = ('https://msvocds.blob.core.windows.net/imgs/'
-                     '{}.jpg').format(dialogue.picture.id)
         sio.emit('questioner',
                  {'img': {'src': image_src,
                           'width': dialogue.picture.width,
@@ -831,6 +840,7 @@ def find_questioner(sid, _questioner_queue, _oracle_queue, mode):
         player.partner_sid = None
         player.queue_id = insert_into_queue(conn, player)
         _oracle_queue.appendleft(player)
+
     conn.close()
 
 
@@ -845,38 +855,26 @@ def find_normal_oracle(sid):
 
 
 def find_oracle(sid, _oracle_queue, _questioner_queue, mode):
-    partner = False
+
     player = players[sid]
     conn = engine.connect()
     if len(_oracle_queue) > 0:
         partner = _oracle_queue.pop()
 
-    if partner:
         partner.partner = player
         player.partner = partner
-        sample = random.random()
-        if player.role == 'QualifyQuestioner':
-            if sample > 0.3:
-                difficulty = 1
-            else:
-                difficulty = 2
-        else:
-            if sample > 0.3:
-                difficulty = 2
-            else:
-                difficulty = 1
 
         remove_from_queue(conn, partner, 'dialogue')
         dialogue = start_dialogue(conn, partner.session_id, player.session_id,
-                                  difficulty=difficulty, mode=mode)
+                                  difficulty=get_difficulty(player.role), mode=mode)
+
         dialogue.questioner_sid = player.sid
         dialogue.oracle_sid = partner.sid
         dialogues[dialogue.id] = dialogue
         partner.dialogue_id = dialogue.id
         player.dialogue_id = dialogue.id
 
-        image_src = ('https://msvocds.blob.core.windows.net/imgs/'
-                     '{}.jpg').format(dialogue.picture.id)
+        image_src = ('https://msvocds.blob.core.windows.net/imgs/{}.jpg').format(dialogue.picture.id)
         sio.emit('questioner',
                  {'img': {'src': image_src,
                           'width': dialogue.picture.width,
@@ -902,52 +900,38 @@ def get_hit_info(url):
     return par['hitId'][0], par['assignmentId'][0], par['workerId'][0]
 
 
+def connect_player(_Player, sid, response):
+
+    #Retrieve info from HTTP header
+    ip = response['REMOTE_ADDR']
+    hit_id, assignment_id, worker_id = get_hit_info(response['HTTP_REFERER'])
+
+    # Create player
+    player = _Player(sid, hit_id, assignment_id, worker_id, ip)
+
+    # Insert player in the database
+    with engine.begin() as conn:
+        player.session_id = insert_session(conn, player)
+
+    players[sid] = player
+    print('add: ' + str(sid))
+
 @sio.on('connect', namespace='/q_oracle')
 def q_oracle_connect(sid, re):
-    ip = re['REMOTE_ADDR']
-    hit_id, assignment_id, worker_id = get_hit_info(re['HTTP_REFERER'])
-    player = QualifyOracle(sid, hit_id, assignment_id, worker_id, ip)
-    conn = engine.connect()
-    player.session_id = insert_session(conn, player)
-    conn.close()
-    players[sid] = player
-    print 'add: ' + str(sid)
-
+    connect_player(QualifyOracle, sid, re)
 
 @sio.on('connect', namespace='/oracle')
 def oracle_connect(sid, re):
-    ip = re['REMOTE_ADDR']
-    hit_id, assignment_id, worker_id = get_hit_info(re['HTTP_REFERER'])
-    player = Oracle(sid, hit_id, assignment_id, worker_id, ip)
-    conn = engine.connect()
-    player.session_id = insert_session(conn, player)
-    conn.close()
-    players[sid] = player
-    print 'add: ' + str(sid)
-
+    connect_player(Oracle, sid, re)
 
 @sio.on('connect', namespace='/questioner')
 def questioner_connect(sid, re):
-    ip = re['REMOTE_ADDR']
-    hit_id, assignment_id, worker_id = get_hit_info(re['HTTP_REFERER'])
-    player = Questioner(sid, hit_id, assignment_id, worker_id, ip)
-    conn = engine.connect()
-    player.session_id = insert_session(conn, player)
-    conn.close()
-    players[sid] = player
-    print 'add: ' + str(sid)
-
+    connect_player(Questioner, sid, re)
 
 @sio.on('connect', namespace='/q_questioner')
 def q_questioner_connect(sid, re):
-    ip = re['REMOTE_ADDR']
-    hit_id, assignment_id, worker_id = get_hit_info(re['HTTP_REFERER'])
-    player = QualifyQuestioner(sid, hit_id, assignment_id, worker_id, ip)
-    conn = engine.connect()
-    player.session_id = insert_session(conn, player)
-    conn.close()
-    players[sid] = player
-    print 'add: ' + str(sid)
+    connect_player(QualifyQuestioner, sid, re)
+
 
 
 @sio.on('update session', namespace='/q_oracle')
@@ -959,9 +943,10 @@ def up_session(sid, msg):
     player.assignment_id = msg['assignmentId']
     player.hit_id = msg['hitId']
     player.worker_id = msg['workerId']
-    conn = engine.connect()
-    update_session(conn, player)
-    conn.close()
+
+    with engine.begin() as conn:
+        update_session(conn, player)
+
 
 
 @sio.on('disconnect', namespace='/oracle')
@@ -971,52 +956,53 @@ def up_session(sid, msg):
 def disconnect(sid):
     if sid in players:
         player = players[sid]
-        conn = engine.connect()
-        """Four cases:
-        1. Player is in involved in dialogue."""
-        if player.partner is not None:
-            dialogue = dialogues[player.dialogue_id]
-            partner = player.partner
-            sio.emit('partner_disconnect',
-                     '',
-                     room=partner.sid,
-                     namespace=partner.namespace)
-            if partner.role in ['Oracle', 'QualifyOracle']:
-                update_dialogue_status(conn, dialogue.id,
-                                       'questioner_disconnect')
-            else:
-                update_dialogue_status(conn, dialogue.id,
-                                       'oracle_disconnect')
-            if player.role == 'QualifyOracle' or player.role == 'QualifyQuestioner':
-                check_blocked(conn, player)
-            delete_game([player, partner])
 
-            if partner.role == 'Oracle':
-                find_normal_questioner(partner.sid)
-            elif partner.role == 'QualifyOracle':
-                find_qualification_questioner(partner.sid)
-            elif partner.role == 'QualifyQuestioner':
-                find_qualification_oracle(partner.sid)
-            else:
-                find_normal_oracle(partner.sid)
-        """2. Player is in oracle queue."""
-        if player in oracle_queue:
-            oracle_queue.remove(player)
-            remove_from_queue(conn, player, 'disconnect')
-        if player in q_oracle_queue:
-            q_oracle_queue.remove(player)
-            remove_from_queue(conn, player, 'disconnect')
-        """3. Player is in questioner queue"""
-        if player in questioner_queue:
-            questioner_queue.remove(player)
-            remove_from_queue(conn, player, 'disconnect')
-        if player in q_questioner_queue:
-            q_questioner_queue.remove(player)
-            remove_from_queue(conn, player, 'disconnect')
-        """4. Player did not start a game yet"""
-        end_session(conn, player.session_id)
-        conn.close()
-        print 'del: ' + str(sid)
+        with engine.begin() as conn:
+            """Four cases:
+            1. Player is in involved in dialogue."""
+            if player.partner is not None:
+                dialogue = dialogues[player.dialogue_id]
+                partner = player.partner
+                sio.emit('partner_disconnect',
+                         '',
+                         room=partner.sid,
+                         namespace=partner.namespace)
+                if partner.role in ['Oracle', 'QualifyOracle']:
+                    update_dialogue_status(conn, dialogue.id,
+                                           'questioner_disconnect')
+                else:
+                    update_dialogue_status(conn, dialogue.id,
+                                           'oracle_disconnect')
+                if player.role == 'QualifyOracle' or player.role == 'QualifyQuestioner':
+                    check_blocked(conn, player)
+                delete_game([player, partner])
+
+                if partner.role == 'Oracle':
+                    find_normal_questioner(partner.sid)
+                elif partner.role == 'QualifyOracle':
+                    find_qualification_questioner(partner.sid)
+                elif partner.role == 'QualifyQuestioner':
+                    find_qualification_oracle(partner.sid)
+                else:
+                    find_normal_oracle(partner.sid)
+            """2. Player is in oracle queue."""
+            if player in oracle_queue:
+                oracle_queue.remove(player)
+                remove_from_queue(conn, player, 'disconnect')
+            if player in q_oracle_queue:
+                q_oracle_queue.remove(player)
+                remove_from_queue(conn, player, 'disconnect')
+            """3. Player is in questioner queue"""
+            if player in questioner_queue:
+                questioner_queue.remove(player)
+                remove_from_queue(conn, player, 'disconnect')
+            if player in q_questioner_queue:
+                q_questioner_queue.remove(player)
+                remove_from_queue(conn, player, 'disconnect')
+            """4. Player did not start a game yet"""
+            end_session(conn, player.session_id)
+
+        print ('del: ' + str(sid))
         del players[sid]
 
 
@@ -1032,5 +1018,5 @@ def delete_game(players):
 
 @app.errorhandler(500)
 def internal_error(error):
-    print error
+    print (error)
     return "500 error"
