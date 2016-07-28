@@ -14,12 +14,13 @@ from database.db_utils import (get_dialogues, get_dialogue_stats,
                                get_dialogue_conversation, get_dialogue_info,
                                get_workers, get_worker,
                                insert_question, insert_answer, insert_guess,
-                               insert_session, end_session, update_session, get_sessions,
+                               insert_session, end_session, update_session,
                                update_dialogue_status, start_dialogue,
                                remove_from_queue, insert_into_queue,
                                get_worker_status, get_assignment_stats,
                                get_one_worker_status, update_one_worker_status,
-                               assignment_completed, is_worker_playing, get_ongoing_workers)
+                               assignment_completed, is_worker_playing, get_ongoing_workers,
+                               report_answer)
 from worker import (check_qualified, check_blocked, check_assignment_completed,
                     pay_questioner_bonus, pay_oracle_bonus)
 from players import QualifyOracle, Oracle, QualifyQuestioner, Questioner
@@ -572,56 +573,83 @@ def stats():
     return render_template('error.html', msg=msg)
 
 
-@sio.on('report oracle', namespace='/q_questioner')
-@sio.on('report oracle', namespace='/questioner')
-def report_oracle(sid, reason):
+
+
+def get_dialogue_and_players(sid):
     player = players[sid]
     partner = player.partner
     dialogue = dialogues[player.dialogue_id]
-    conn = engine.connect()
-    update_dialogue_status(conn, dialogue.id, 'oracle_reported',
-                           reason=reason)
-    delete_game([player, partner])
-    sio.emit('reported', '', room=partner.sid, namespace=partner.namespace)
-    if partner.role == "QualifyOracle":
-        find_qualification_oracle(player.sid)
-        find_qualification_questioner(partner.sid)
-    else:
-        find_normal_oracle(player.sid)
-        find_normal_questioner(partner.sid)
-    conn.close()
+    return player, partner, dialogue
+
+
+@sio.on('report oracle', namespace='/q_questioner')
+@sio.on('report oracle', namespace='/questioner')
+def report_oracle(sid, reason):
+    player, partner, dialogue = get_dialogue_and_players(sid)
+
+    with engine.begin() as conn:
+        update_dialogue_status(conn, dialogue.id, 'oracle_reported',
+                               reason=reason)
+        delete_game([player, partner])
+        sio.emit('reported', '', room=partner.sid, namespace=partner.namespace)
+        if partner.role == "QualifyOracle":
+            find_qualification_oracle(player.sid)
+            find_qualification_questioner(partner.sid)
+        else:
+            find_normal_oracle(player.sid)
+            find_normal_questioner(partner.sid)
+
+
+
+@sio.on('report oracle endgame', namespace='/q_questioner')
+@sio.on('report oracle endgame', namespace='/questioner')
+def report_oracle(sid, data):
+
+    print data
+
+    # Retrieve json data
+    ranks_to_report = data["id_to_report"]
+    dialogue_id = data["dialogue_id"]
+    comments = data["comments"]
+
+    # store reported data in db
+    with engine.begin() as conn:
+        report_answer(conn, dialogue_id=dialogue_id, ranks=ranks_to_report)
+        update_dialogue_status(conn, dialogue_id, 'oracle_reported',reason = comments)
+
+
 
 
 @sio.on('report questioner', namespace='/q_oracle')
 @sio.on('report questioner', namespace='/oracle')
 def report_questioner(sid, reason):
-    player = players[sid]
-    partner = player.partner
-    dialogue = dialogues[player.dialogue_id]
-    conn = engine.connect()
-    update_dialogue_status(conn, dialogue.id, 'questioner_reported',
-                           reason=reason)
-    delete_game([player, partner])
-    sio.emit('reported', '', room=partner.sid, namespace=partner.namespace)
-    if partner.role == "QualifyQuestioner":
-        find_qualification_questioner(player.sid)
-        find_qualification_oracle(partner.sid)
-    else:
-        find_normal_questioner(player.sid)
-        find_normal_oracle(partner.sid)
-    conn.close()
+    player, partner, dialogue = get_dialogue_and_players(sid)
+
+    with engine.begin() as conn:
+        update_dialogue_status(conn, dialogue.id, 'questioner_reported',
+                               reason=reason)
+        delete_game([player, partner])
+        sio.emit('reported', '', room=partner.sid, namespace=partner.namespace)
+        if partner.role == "QualifyQuestioner":
+            find_qualification_questioner(player.sid)
+            find_qualification_oracle(partner.sid)
+        else:
+            find_normal_questioner(player.sid)
+            find_normal_oracle(partner.sid)
+
 
 
 @sio.on('newquestion', namespace='/q_questioner')
 @sio.on('newquestion', namespace='/questioner')
 def new_question(sid, message):
-    player = players[sid]
-    partner = player.partner
-    dialogue = dialogues[player.dialogue_id]
-    conn = engine.connect()
+    player, partner, dialogue = get_dialogue_and_players(sid)
+
+    with engine.begin() as conn:
+        dialogue.question_ids.append(insert_question(conn, dialogue.id, message))
+
     dialogue.turn = 'oracle'
     dialogue.deadline = datetime.datetime.now() + datetime.timedelta(seconds=30)
-    dialogue.question_ids.append(insert_question(conn, dialogue.id, message))
+
     sio.emit('new question', message,
              room=player.partner.sid, namespace=partner.namespace)
     conn.close()
@@ -630,14 +658,14 @@ def new_question(sid, message):
 @sio.on('new answer', namespace='/q_oracle')
 @sio.on('new answer', namespace='/oracle')
 def new_answer(sid, message):
-    player = players[sid]
-    partner = player.partner
-    dialogue = dialogues[player.dialogue_id]
-    conn = engine.connect()
-    insert_answer(conn, dialogue.question_ids[-1], message)
+    player, partner, dialogue = get_dialogue_and_players(sid)
+
+    with engine.begin() as conn:
+        insert_answer(conn, dialogue.question_ids[-1], message)
+
     dialogue.turn = 'questioner'
     dialogue.deadline = datetime.datetime.now() + datetime.timedelta(seconds=90)
-    conn.close()
+
     sio.emit('new answer', message,
              room=partner.sid, namespace=partner.namespace)
 
@@ -645,9 +673,7 @@ def new_answer(sid, message):
 @sio.on('update answer', namespace='/q_oracle')
 @sio.on('update answer', namespace='/oracle')
 def update_answer(sid, msg):
-    player = players[sid]
-    partner = player.partner
-    dialogue = dialogues[player.dialogue_id]
+    player, partner, dialogue = get_dialogue_and_players(sid)
     conn = engine.connect()
     ans = {'Yes': 'Yes', 'No': 'No', 'Not applicable': 'N/A'}[msg['new_msg']]
 
@@ -826,16 +852,19 @@ def find_questioner(sid, _questioner_queue, _oracle_queue, mode):
         sio.emit('questioner',
                  {'img': {'src': image_src,
                           'width': dialogue.picture.width,
-                          'height': dialogue.picture.height}},
+                          'height': dialogue.picture.height},
+                  'dialogue_id': dialogue.id},
                  room=partner.sid,
                  namespace=partner.namespace)
         sio.emit('answerer',
                  {'img': {'src': image_src,
                           'width': dialogue.picture.width,
                           'height': dialogue.picture.height},
-                  'object': dialogue.object.to_json()},
+                  'object': dialogue.object.to_json(),
+                  'dialogue_id': dialogue.id},
                  room=sid,
-                 namespace=player.namespace)
+                 namespace=player.namespace,
+                 )
     else:
         player.partner_sid = None
         player.queue_id = insert_into_queue(conn, player)

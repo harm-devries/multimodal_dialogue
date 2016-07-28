@@ -154,6 +154,7 @@ def get_dialogue_guess(connection, dialogue_id):
         return None
 
 
+
 def get_dialogue_object(connection, dialogue_id):
     rows = connection.execute(text("SELECT "
                                    "o.object_id, o.category_id, c.name, o.segment, "
@@ -169,13 +170,19 @@ def get_dialogue_object(connection, dialogue_id):
     return obj
 
 
-def get_dialogue_conversation(conn, dialogue_id):
-    rows = conn.execute(text("SELECT q.content, a.content FROM question AS q, "
-                             "answer AS a WHERE a.question_id = q.question_id "
-                             "AND q.dialogue_id = :id ORDER BY q.timestamp DESC;"),
-                        id=dialogue_id)
+Exchange = namedtuple('Exchange', ['question', 'answer', 'question_id', 'answer_id', 'timestamps'])
 
-    return [dict(question=row[0], answer=row[1]) for row in rows]
+def get_dialogue_conversation(conn, dialogue_id):
+    rows = conn.execute(text("SELECT q.content, a.content, q.question_id, a.answer_id, 'timestamp' FROM question AS q, "
+                             "answer AS a WHERE a.question_id = q.question_id "
+                             "AND q.dialogue_id = :id ORDER BY q.timestamp DESC;"), id=dialogue_id)
+
+
+
+
+    return [Exchange(question=row[0], answer=row[1],
+                     question_id=row[2], answer_id=row[3],
+                     timestamps=row[4]) for row in rows ]
 
 
 def get_dialogue_info(conn, id):
@@ -245,6 +252,28 @@ def get_last_unfinished_picture(conn, session_id, questioner=True):
             objects = get_objects(conn, row[2])
             return Picture(row[2], row[3], row[4], row[5], objects), row[1], row[6]
     return None
+
+
+
+
+
+def report_answer(conn, dialogue_id, ranks):
+
+    try:
+
+        str_ranks = ','.join((str(n) for n in ranks))
+
+        conn.execute(
+            text(" UPDATE answer a SET was_reported = True "
+                 " FROM question q WHERE "
+                 " a.question_id = q.question_id AND "
+                 " q.dialogue_id = :dialogue_id AND "
+                 " q.order in (:ranks)"), dialogue_id=dialogue_id, ranks=str_ranks)
+
+    except Exception as e:
+        print ("Fail to report answers from oracle for dialogue : " + str(dialogue_id) )
+        print (e)
+
 
 
 def start_dialogue(conn, oracle_session_id, questioner_session_id,
@@ -590,7 +619,7 @@ def update_one_worker_status(conn, id, status_name, status):
         print ("Fail to update worker status")
         print (e)
 
-
+#SELECT * FROM answer a INNER JOIN ( SELECT * FROm question WHERE dialogue_id = '29189') q ON q.question_id = a.question_id order by "order";
 def get_worker(conn, id):
     dialogues = []
     rows = conn.execute("SELECT d.dialogue_id, d.status, d.start_timestamp, d.end_timestamp, "
@@ -598,7 +627,7 @@ def get_worker(conn, id):
                         "(SELECT count(*) FROM object AS o WHERE o.picture_id = d.picture_id)"
                         " AS nr_o, (d.oracle_session_id = s.id) AS oracle FROM "
                         "dialogue AS d, session AS s WHERE (d.oracle_session_id = s.id OR d.questioner_session_id = s.id) "
-                        "AND s.worker_id = %s AND d.status != '' "
+                           "AND s.worker_id = %s AND d.status != '' "
                         "ORDER BY d.start_timestamp DESC", [id])
     for row in rows:
         seconds = -1

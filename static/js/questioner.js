@@ -90,6 +90,9 @@ $(document).ready(function() {
             show_question_form();
             $('#report').fadeIn(fadeS);
         }, 1400);
+
+        $("#dialogue_id").attr("value", msg.dialogue_id);
+
     });
     socket.on('new answer', function(msg) {
         addAnswer(msg);
@@ -442,12 +445,10 @@ $(document).ready(function() {
                     var question = $(this).find(".questions");
                     var answer = $(this).find(".answers");
 
-                    console.log(question);
-
                     // Create checkbox to report answers
                     var _checkbox = $('<input>', {
                         type: 'checkbox',
-                        name: 'log_report',
+                        class: 'id_to_report',
                         value: exchange_id,
                         text: ' '
                     });
@@ -476,7 +477,27 @@ $(document).ready(function() {
                   <tbody id="exchange_table">
                   </tbody>
                   </table>
-                `
+                `,
+            callback: function(comments) {
+
+                // Retrieve values
+                var id_to_report = [];
+                $(".id_to_report").filter(":checked").each(function () {
+                    id_to_report.push($(this).attr("value"));
+                });
+
+                // Check for data
+                if (id_to_report.length > 0 || comments !== "")
+                {
+                    socket.emit('report oracle endgame', {
+                        comments: comments,
+                        id_to_report : id_to_report,
+                        dialogue_id : $("#dialogue_id").attr("value")
+                    });
+                    vex.dialog.alert({message : 'The other player was successfully reported.'});
+                }
+            }
+
         });
     });
 
