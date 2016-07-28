@@ -261,14 +261,14 @@ def report_answer(conn, dialogue_id, ranks):
 
     try:
 
-        str_ranks = ','.join((str(n) for n in ranks))
+        str_ranks = ','.join((str(int(n)) for n in ranks)) # Use str(int()) to escape non-integer string
 
         conn.execute(
             text(" UPDATE answer a SET was_reported = True "
                  " FROM question q WHERE "
                  " a.question_id = q.question_id AND "
                  " q.dialogue_id = :dialogue_id AND "
-                 " q.order in (:ranks)"), dialogue_id=dialogue_id, ranks=str_ranks)
+                 " q.order IN ("+str_ranks+")"), dialogue_id=dialogue_id)
 
     except Exception as e:
         print ("Fail to report answers from oracle for dialogue : " + str(dialogue_id) )
