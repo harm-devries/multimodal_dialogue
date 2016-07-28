@@ -73,7 +73,6 @@ $(document).ready(function() {
             message: 'Your partner has reported your playing behavior. We will start a new game, but please play appropriately to avoid further consequences.',
         });
     });
-
     socket.on('questioner', function(msg) {
         setTimeout(function(){
             $('#info_text').html('<span class="loader"><span class="loader-inner"></span></span> We have found a partner!');
@@ -543,6 +542,8 @@ $(document).ready(function() {
             var mouseX = arr[0], mouseY = arr[1];
             var id = getObjectFromClick(mouseX, mouseY, objs, scale);
             if (id != undefined) {
+                objs = null;
+                clearCanvas(segment_ctx, segment_canvas);
                 $('canvas#segment').css('cursor', 'default');
                 socket.emit('guess annotation', id);
             }
