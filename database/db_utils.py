@@ -154,7 +154,6 @@ def get_dialogue_guess(connection, dialogue_id):
         return None
 
 
-
 def get_dialogue_object(connection, dialogue_id):
     rows = connection.execute(text("SELECT "
                                    "o.object_id, o.category_id, c.name, o.segment, "
@@ -172,13 +171,11 @@ def get_dialogue_object(connection, dialogue_id):
 
 Exchange = namedtuple('Exchange', ['question', 'answer', 'question_id', 'answer_id', 'timestamps'])
 
+
 def get_dialogue_conversation(conn, dialogue_id):
     rows = conn.execute(text("SELECT q.content, a.content, q.question_id, a.answer_id, 'timestamp' FROM question AS q, "
                              "answer AS a WHERE a.question_id = q.question_id "
                              "AND q.dialogue_id = :id ORDER BY q.timestamp DESC;"), id=dialogue_id)
-
-
-
 
     return [Exchange(question=row[0], answer=row[1],
                      question_id=row[2], answer_id=row[3],
@@ -254,13 +251,9 @@ def get_last_unfinished_picture(conn, session_id, questioner=True):
     return None
 
 
-
-
-
 def report_answer(conn, dialogue_id, ranks):
 
     try:
-
         str_ranks = ','.join((str(int(n)) for n in ranks)) # Use str(int()) to escape non-integer string
 
         conn.execute(
@@ -271,9 +264,8 @@ def report_answer(conn, dialogue_id, ranks):
                  " q.order IN ("+str_ranks+")"), dialogue_id=dialogue_id)
 
     except Exception as e:
-        print ("Fail to report answers from oracle for dialogue : " + str(dialogue_id) )
-        print (e)
-
+        print("Fail to report answers from oracle for dialogue : " + str(dialogue_id) )
+        print(e)
 
 
 def start_dialogue(conn, oracle_session_id, questioner_session_id,
@@ -318,8 +310,8 @@ def start_dialogue(conn, oracle_session_id, questioner_session_id,
                                 object=obj)
 
     except Exception as e:
-        print ("Fail to start a new dialogue -> could not find object")
-        print (e)
+        print("Fail to start a new dialogue -> could not find object")
+        print(e)
 
     return dialogue
 
@@ -353,8 +345,8 @@ def insert_dialogue(conn, picture_id, object_id,
             return dialogue_id
 
     except Exception as e:
-        print ("Fail to insert new dialogue")
-        print (e)
+        print("Fail to insert new dialogue")
+        print(e)
 
 
 def update_dialogue_status(conn, dialogue_id, status, reason=None):
@@ -371,8 +363,8 @@ def update_dialogue_status(conn, dialogue_id, status, reason=None):
                               "WHERE dialogue_id = :id;"),
                          status=status, id=dialogue_id)
     except Exception as e:
-        print ("Fail to update dialogue status")
-        print (e)
+        print("Fail to update dialogue status")
+        print(e)
 
 
 def insert_question(conn, dialogue_id, message):
@@ -386,8 +378,8 @@ def insert_question(conn, dialogue_id, message):
         return question_id
 
     except Exception as e:
-        print ("Fail to insert new question")
-        print (e)
+        print("Fail to insert new question")
+        print(e)
 
 
 def insert_answer(conn, question_id, message):
@@ -402,8 +394,8 @@ def insert_answer(conn, question_id, message):
         return answer_id
 
     except Exception as e:
-        print ("Fail to insert new answer")
-        print (e)
+        print("Fail to insert new answer")
+        print(e)
 
 
 def insert_guess(conn, dialogue_id, object_id):
@@ -414,8 +406,8 @@ def insert_guess(conn, dialogue_id, object_id):
                      did=dialogue_id, oid=object_id)
 
     except Exception as e:
-        print ("Fail to insert new guess")
-        print (e)
+        print("Fail to insert new guess")
+        print(e)
 
 
 def insert_session(conn, player):
@@ -445,8 +437,8 @@ def insert_session(conn, player):
         return session_id
 
     except Exception as e:
-        print ("Fail to insert new session")
-        print (e)
+        print("Fail to insert new session")
+        print(e)
 
 
 def update_session(conn, player):
@@ -465,8 +457,8 @@ def update_session(conn, player):
                      wid=player.worker_id,
                      sid=player.session_id)
     except Exception as e:
-        print ("Fail to update session")
-        print (e)
+        print("Fail to update session")
+        print(e)
 
 
 def end_session(conn, session_id):
@@ -477,33 +469,9 @@ def end_session(conn, session_id):
                      id=session_id)
 
     except Exception as e:
-        print ("Fail to end session, id = ", session_id)
-        print (e)
+        print("Fail to end session, id = ", session_id)
+        print(e)
 
-def get_sessions(conn):
-
-    sessions = []
-    try:
-        rows = conn.execute(" SELECT socket_id, worker_id, hit_id, assignment_id, ip, role  FROM session s "
-                            " INNER JOIN "
-                            "    ( SELECT oracle_session_id, questioner_session_id, status from dialogue WHERE status = 'ongoing') d "
-                            "    ON d.oracle_session_id = s.id OR d.questioner_session_id = s.id ")
-        for row in rows:
-            session = dict()
-            session["sid"] = row[0]
-            session["worker_id"] = row[1]
-            session["hit_id"] = row[2]
-            session["assignment_id"] = row[3]
-            session["ip"] = row[4]
-            session["role"] = row[5]
-
-            sessions.append(session)
-
-    except Exception as e:
-        print ("Fail to get sessions")
-        print (e)
-
-    return sessions
 
 def insert_into_queue(conn, player):
     try:
@@ -515,8 +483,8 @@ def insert_into_queue(conn, player):
         queue_id = result.first()[0]
         return queue_id
     except Exception as e:
-        print ("Fail to insert queue")
-        print (e)
+        print("Fail to insert queue")
+        print(e)
 
 
 def remove_from_queue(conn, player, reason):
@@ -528,12 +496,13 @@ def remove_from_queue(conn, player, reason):
                      id=player.queue_id)
         player.queue_id = None
     except Exception as e:
-        print ("Fail to remove from queue")
-        print (e)
+        print("Fail to remove from queue")
+        print(e)
 
 
 Ongoing_worker = namedtuple('Ongoing_worker', ['is_playing', 'socket_id', 'role'])
 DEFAULT_ONGOING_WORKER = Ongoing_worker(is_playing=False, socket_id=0, role="N/A")
+
 
 def is_worker_playing(conn, id):
     try:
@@ -550,10 +519,9 @@ def is_worker_playing(conn, id):
             return DEFAULT_ONGOING_WORKER
 
     except Exception as e:
-        print ("Fail to know whether the player is playing")
-        print (e)
+        print("Fail to know whether the player is playing")
+        print(e)
         return DEFAULT_ONGOING_WORKER
-
 
 
 def get_ongoing_workers(conn):
@@ -570,20 +538,24 @@ def get_ongoing_workers(conn):
             ongoing_workers[row[1]] = Ongoing_worker(is_playing=True, socket_id=row[0], role=row[2])
 
     except Exception as e:
-        print ("Fail to find workers who are playing")
-        print (e)
+        print("Fail to find workers who are playing")
+        print(e)
 
     return ongoing_workers
 
 
+# TODO use the with statement to have intermediate table -> big speed up!!
 def get_workers(conn):
     workers = []
     rows = conn.execute("SELECT w.worker_id, \
     (SELECT oracle_status FROM worker AS t WHERE t.id = w.worker_id ), \
     (SELECT questioner_status FROM worker AS t WHERE t.id = w.worker_id ), \
-    (SELECT count(*) FROM session AS s, dialogue AS d WHERE s.worker_id = w.worker_id AND (d.oracle_session_id = s.id OR questioner_session_id = s.id) AND d.status = 'success') AS d_success, \
-    (SELECT count(*) FROM session AS s, dialogue AS d WHERE s.worker_id = w.worker_id AND (d.oracle_session_id = s.id OR questioner_session_id = s.id) AND d.status = 'failure') AS d_failure, \
-    (SELECT count(*) FROM session AS s, dialogue AS d WHERE s.worker_id = w.worker_id AND (d.oracle_session_id = s.id OR questioner_session_id = s.id) AND (d.status = 'oracle_disconnect' OR d.status = 'questioner_disconnect')) AS d_disconnect \
+    (SELECT count(*) FROM session AS s, dialogue AS d WHERE s.worker_id = w.worker_id AND (d.oracle_session_id = s.id "
+                        "OR questioner_session_id = s.id) AND d.status = 'success') AS d_success, \
+    (SELECT count(*) FROM session AS s, dialogue AS d WHERE s.worker_id = w.worker_id AND (d.oracle_session_id = s.id "
+                        "OR questioner_session_id = s.id) AND d.status = 'failure') AS d_failure, \
+    (SELECT count(*) FROM session AS s, dialogue AS d WHERE s.worker_id = w.worker_id AND (d.oracle_session_id = s.id "
+                        "OR questioner_session_id = s.id) AND (d.status = 'oracle_disconnect' OR d.status = 'questioner_disconnect')) AS d_disconnect \
     FROM (SELECT worker_id FROM session AS s WHERE worker_id != '' GROUP BY worker_id) AS w ORDER BY d_success DESC")
 
     for row in rows:
@@ -592,11 +564,12 @@ def get_workers(conn):
     return workers
 
 
-
 def get_one_worker_status(conn, id):
     status = defaultdict(lambda: 'Error')
     try:
-        rows = conn.execute("SELECT id, oracle_status, questioner_status, prev_oracle_status, prev_questioner_status FROM worker w WHERE w.id = %s", [id])
+        rows = conn.execute("SELECT id, oracle_status, questioner_status, prev_oracle_status, prev_questioner_status "
+                            "FROM worker w WHERE w.id = %s", [id])
+
         row = rows.first()	
         status["id"] = row[0]
         status["oracle_status"] = row[1]
@@ -605,8 +578,8 @@ def get_one_worker_status(conn, id):
         status["prev_questioner_status"] = row[4]
         
     except Exception as e:
-        print ("Fail to load worker status")
-        print (e)
+        print("Fail to load worker status")
+        print(e)
 
     return status
 
@@ -616,10 +589,10 @@ def update_one_worker_status(conn, id, status_name, status):
         conn.execute("UPDATE worker SET " + status_name + " = %s WHERE id = %s", [status, id])
 
     except Exception as e:
-        print ("Fail to update worker status")
-        print (e)
+        print("Fail to update worker status")
+        print(e)
 
-#SELECT * FROM answer a INNER JOIN ( SELECT * FROm question WHERE dialogue_id = '29189') q ON q.question_id = a.question_id order by "order";
+
 def get_worker(conn, id):
     dialogues = []
     rows = conn.execute("SELECT d.dialogue_id, d.status, d.start_timestamp, d.end_timestamp, "
@@ -639,53 +612,30 @@ def get_worker(conn, id):
     return dialogues
 
 
-def get_recent_worker_stats(conn, id, limit=15, questioner=True):
+def get_assignment_stats(conn, id, questioner=True, limit=None):
+
     if questioner:
-        stats = {'success': 0, 'failure': 0, 'questioner_disconnect': 0, 'questioner_timeout': 0}
+        role = "questioner"
     else:
-        stats = {'success': 0, 'failure': 0, 'oracle_disconnect': 0, 'oracle_timeout': 0}
-    if questioner:
-        rows = conn.execute(text("SELECT status, count(status) FROM "
-                                 "(SELECT status FROM dialogue WHERE status IN ('success', 'failure', 'questioner_timeout', 'questioner_disconnect') AND questioner_session_id IN"
-                                 " (SELECT id FROM session WHERE worker_id = :wid) ORDER BY start_timestamp DESC LIMIT :limit)"
-                                 " AS s GROUP BY status"), wid=id, limit=limit)
+        role = "oracle"
+
+    if limit:
+        limit_sql = "ORDER BY start_timestamp DESC LIMIT " + str(int(limit))
     else:
-        rows = conn.execute(text("SELECT status, count(status) FROM "
-                                 "(SELECT status FROM dialogue WHERE status IN ('success', 'failure', 'oracle_timeout', 'oracle_disconnect') AND oracle_session_id IN"
-                                 " (SELECT id FROM session WHERE worker_id = :wid) ORDER BY start_timestamp DESC LIMIT :limit)"
-                                 " AS s GROUP BY status"), wid=id, limit=limit)
+        limit_sql = ""
+
+    stats = {'success': 0, 'failure': 0, role+'_disconnect': 0, role+'_timeout': 0}
+
+    sql_statement = (" SELECT status, count(status) FROM "
+                     " (SELECT status FROM dialogue WHERE status IN ('success', 'failure', '{0}_timeout', '{0}_disconnect') AND {0}_session_id IN"
+                     " (SELECT id FROM session WHERE assignment_id = :aid) {1} )"
+                     " AS s GROUP BY status").format(role, limit_sql)
+
+    rows = conn.execute(text(sql_statement), aid=id)
     for row in rows:
         stats[row[0]] = int(row[1])
+
     return stats
-
-
-def get_assignment_stats(conn, id, questioner=True):
-    if questioner:
-        stats = {'success': 0, 'failure': 0, 'questioner_disconnect': 0, 'questioner_timeout': 0}
-    else:
-        stats = {'success': 0, 'failure': 0, 'oracle_disconnect': 0, 'oracle_timeout': 0}
-    if questioner:
-        rows = conn.execute(text("SELECT status, count(status) FROM "
-                                 "(SELECT status FROM dialogue WHERE status IN ('success', 'failure', 'questioner_timeout', 'questioner_disconnect') AND questioner_session_id IN"
-                                 " (SELECT id FROM session WHERE assignment_id = :aid))"
-                                 " AS s GROUP BY status"), aid=id)
-    else:
-        rows = conn.execute(text("SELECT status, count(status) FROM "
-                                 "(SELECT status FROM dialogue WHERE status IN ('success', 'failure', 'oracle_timeout', 'oracle_disconnect') AND oracle_session_id IN"
-                                 " (SELECT id FROM session WHERE assignment_id = :aid))"
-                                 " AS s GROUP BY status"), aid=id)
-    for row in rows:
-        stats[row[0]] = int(row[1])
-    return stats
-
-
-def get_number_of_success(conn, id, questioner=False):
-    result = conn.execute(text("SELECT count(*) FROM dialogue WHERE status = 'success'"
-                               " AND questioner_session_id IN (SELECT id FROM session WHERE worker_id = :wid)"), wid=id)
-    if result.rowcount > 0:
-        return result.first()[0]
-    else:
-        return 0
 
 
 def get_worker_status(conn, id, questioner=False):
