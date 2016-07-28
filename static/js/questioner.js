@@ -429,48 +429,56 @@ $(document).ready(function() {
 
     $('#end_game_report').click(function(event) {
 
-        var log = $('#log')
-
         vex.dialog.prompt({
-            message: 'Select a date and color sdvgfds gdfg d fgdf gdg fdsgfsgh srfgsd gdfg df gdfg dfg dfg dfg dfsg!',
+            message: 'Please select the misleading answer from the other player:',
+
             placeholder: 'Please specify a reason',
-            afterOpen: function(vexContent)
-            {
-                $(".vex-dialog-input").prepend(log.html());
-                $(".vex-dialog-input").prepend('<div class="vex-dialog-message">Select the question you want report!</div>');
+            afterOpen: function() {
 
-                $(".vex-dialog-input .dialogues").each(function(index){
-                        $( this )
+                var tab = $("#exchange_table");
 
-                            .mouseenter(function() {  $(this).css("border-style", "dotted");})
-                            .mouseleave(function()
-                            {
-                              if( $(this).attr("value") == "False")
-                              {
-                                 $(this).css("border-style", "hidden");
-                              }
-                              else
-                              {
-                                 $(this).css("border-style", "outset");
-                              }
-                            })
-                            .click(function()
-                            {
-                                if( $(this).attr("value") == "False")
-                                {
-                                    $(this).attr("value", "True")
-                                    $(this).css("border-style", "outset");
-                                }
-                                else
-                                {
-                                    $(this).attr("value", "False")
-                                    $(this).css("border-style", "hidden");
-                                }
-                            })
+                $('.dialogues').each(function(exchange_id) {
+
+                    //retrieve content from the logs
+                    var question = $(this).find(".questions");
+                    var answer = $(this).find(".answers");
+
+                    console.log(question);
+
+                    // Create checkbox to report answers
+                    var _checkbox = $('<input>', {
+                        type: 'checkbox',
+                        name: 'log_report',
+                        value: exchange_id,
+                        text: ' '
+                    });
+
+                    // Append the column check box / question / answer
+                    var row = $('<tr/>')
+                    $('<td/>').append(_checkbox).appendTo(row);
+                    $('<td/>').text(question.text()).appendTo(row);
+                    $('<td/>').text(answer.text()).appendTo(row);
+
+                    row.appendTo(tab)
+
                 });
-            }
-        });
 
+            },
+            input : `
+                  <input name="vex" type="text" class="vex-dialog-prompt-input" placeholder="Additional comments" value="">
+                  <table class="table table-striped">
+                    <thead>
+                    <tr>
+                      <th></th>
+                      <th>Question</th>
+                      <th>Answer</th>
+                    </tr>
+                  </thead>
+                  <tbody id="exchange_table">
+                  </tbody>
+                  </table>
+                `
+        });
     });
 
     $('a#guessbtn').click(function(event) {
