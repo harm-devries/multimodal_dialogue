@@ -253,9 +253,20 @@ Intro
 #question{
   display: none;
 }
+
 #answer{
   display: none;
 }
+
+.questions {
+  margin: 1px
+}
+
+.answers {
+  margin: 1px
+}
+
+
 #welcome{
   display: none;
 }

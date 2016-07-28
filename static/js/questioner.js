@@ -364,9 +364,9 @@ $(document).ready(function() {
     function addAnswer(msg){
         col_msg = colorizeAnswer(msg);
         if (round % 2 == 0) {
-            $('#q'+round).after('<div id="a'+round+'" class="well well-sm answer" style="font-weight: 500">' + col_msg + '</div>');
+            $('#q'+round).after('<div id="a'+round+'" class="well well-sm answers" style="font-weight: 500">' + col_msg + '</div>');
         } else {
-            $('#q'+round).after('<div id="a'+round+'" class="well well-sm answer" style="background-color: #fff; font-weight: 500">' + col_msg + '</div>');
+            $('#q'+round).after('<div id="a'+round+'" class="well well-sm answers" style="background-color: #fff; font-weight: 500">' + col_msg + '</div>');
         }
         scrollBottom();
         round += 1;
@@ -378,7 +378,7 @@ $(document).ready(function() {
 
         $(question)
             .attr("id",'q'+round)
-            .attr("class", "well well-sm question")
+            .attr("class", "well well-sm questions")
             .css("font-weight", "500")
             .text(msg);
 
@@ -431,14 +431,17 @@ $(document).ready(function() {
 
         var log = $('#log')
 
-        if(!log.is(':visible'))
-        {
-            // Display instructions TODO : improve div
-            if($("#report_info").length == 0) {
-                log.prepend('<div id="report_info" class="well well-sm" style="font-weight: 500 font-weight:bold;">Please select the misleading answer to report</div>');
+        vex.dialog.prompt({
+            message: 'Select a date and color sdvgfds gdfg d fgdf gdg fdsgfsgh srfgsd gdfg df gdfg dfg dfg dfg dfsg!',
+            placeholder: 'Please specify a reason',
+            afterOpen: function(vexContent)
+            {
+                $(".vex-dialog-input").prepend(log.html());
+                $(".vex-dialog-input").prepend('<div class="vex-dialog-message">Select the question you want report!</div>');
 
-                $(".dialogues").each(function(index){
+                $(".vex-dialog-input .dialogues").each(function(index){
                         $( this )
+
                             .mouseenter(function() {  $(this).css("border-style", "dotted");})
                             .mouseleave(function()
                             {
@@ -466,15 +469,9 @@ $(document).ready(function() {
                             })
                 });
             }
-            log.fadeIn(fadeS);
-        }
-        else
-        {
-            log.fadeOut(fadeS);
-        }
+        });
 
     });
-
 
     $('a#guessbtn').click(function(event) {
         if (round > 0) {
