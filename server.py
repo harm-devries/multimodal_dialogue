@@ -478,9 +478,9 @@ def render_worker(id):
         worker_dialogues = get_worker(conn, id)
         status = get_one_worker_status(conn, id)
 
-        is_playing, ongoing_worker = is_worker_playing(conn, id)
+        ongoing_worker = is_worker_playing(conn, id)
 
-        status["playing"] = is_playing
+        status["playing"] = ongoing_worker.is_playing
         status["role"] = ongoing_worker.role
         status["socket_db"] = ongoing_worker.socket_id
         status["socket_io"] = 0
