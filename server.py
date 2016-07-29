@@ -855,7 +855,6 @@ def find_normal_oracle(sid):
 
 
 def find_oracle(sid, _oracle_queue, _questioner_queue, mode):
-
     player = players[sid]
     conn = engine.connect()
     if len(_oracle_queue) > 0:
