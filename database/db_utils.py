@@ -544,23 +544,31 @@ def get_ongoing_workers(conn):
     return ongoing_workers
 
 
-# TODO use the with statement to have intermediate table -> big speed up!!
 def get_workers(conn):
     workers = []
-    rows = conn.execute("SELECT w.worker_id, \
-    (SELECT oracle_status FROM worker AS t WHERE t.id = w.worker_id ), \
-    (SELECT questioner_status FROM worker AS t WHERE t.id = w.worker_id ), \
-    (SELECT count(*) FROM session AS s, dialogue AS d WHERE s.worker_id = w.worker_id AND (d.oracle_session_id = s.id "
-                        "OR questioner_session_id = s.id) AND d.status = 'success') AS d_success, \
-    (SELECT count(*) FROM session AS s, dialogue AS d WHERE s.worker_id = w.worker_id AND (d.oracle_session_id = s.id "
-                        "OR questioner_session_id = s.id) AND d.status = 'failure') AS d_failure, \
-    (SELECT count(*) FROM session AS s, dialogue AS d WHERE s.worker_id = w.worker_id AND (d.oracle_session_id = s.id "
-                        "OR questioner_session_id = s.id) AND (d.status = 'oracle_disconnect' OR d.status = 'questioner_disconnect')) AS d_disconnect \
-    FROM (SELECT worker_id FROM session AS s WHERE worker_id != '' GROUP BY worker_id) AS w ORDER BY d_success DESC")
+    try:
+        rows = conn.execute("WITH _workers AS ("
+                            "      SELECT worker_id, status FROM dialogue AS d, session AS s"
+                            "      WHERE d.oracle_session_id = s.id OR d.questioner_session_id = s.id"
+                            "      AND worker_id != ''"
+                            "   )"
+                            "    SELECT worker_id,"
+                            "       (SELECT oracle_status FROM worker AS t WHERE t.id = worker_id ),"
+                            "       (SELECT questioner_status FROM worker AS t WHERE t.id = worker_id ),"
+                            "       count(case when status = 'success' then 1 else null end) AS d_success,"
+                            "       count(case when status = 'failure' then 1 else null end) AS d_failure,"
+                            "       count(case when status = 'oracle_disconnect' "
+                            "               OR status = 'questioner_disconnect' then 1 else null end) AS d_disconnect"
+                            "    FROM _workers GROUP BY worker_id ORDER BY d_success DESC")
 
-    for row in rows:
-        workers.append({'id': row[0], 'oracle_status' : row[1], 'questioner_status' : row[2], 'success': row[3],
-                        'failure': row[4], 'disconnect': row[5]})
+        for row in rows:
+            workers.append({'id': row[0], 'oracle_status': row[1], 'questioner_status': row[2], 'success': row[3],
+                            'failure': row[4], 'disconnect': row[5]})
+
+    except Exception as e:
+        print("Fail to load workers")
+        print(e)
+
     return workers
 
 
