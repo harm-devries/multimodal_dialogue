@@ -88,7 +88,7 @@ $(document).ready(function() {
             img = msg.img;
             renderImageAndSegment();
             show_question_form();
-            $('#report').fadeIn(fadeS);
+            //$('#report').fadeIn(fadeS);
         }, 1400);
 
         $("#dialogue_id").attr("value", msg.dialogue_id);
@@ -272,7 +272,7 @@ $(document).ready(function() {
         $('#log').html('');
         $('#log').show();
         clearCanvas(segment_ctx, segment_canvas);
-        $('#report').hide();
+        //$('#report').hide();
     }
 
     function hideAll() {
