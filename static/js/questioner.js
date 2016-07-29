@@ -1,6 +1,6 @@
 $(document).ready(function() {
     namespace = $('#namespace').data().name;
-    var socket = io.connect('http://' + document.domain + ':' + location.port + namespace, {rememberTransport: false});
+    var socket = io.connect('https://' + document.domain + ':' + location.port + namespace, {rememberTransport: false});
     /* parse url params and send assignmentId, hitId and workerId to server */
     // var QueryString = function () {
     //       // This function is anonymous, is executed immediately and 
@@ -433,7 +433,6 @@ $(document).ready(function() {
 
         vex.dialog.prompt({
             message: 'Please select the misleading answer from the other player:',
-
             placeholder: 'Please specify a reason',
             afterOpen: function() {
 
@@ -464,7 +463,6 @@ $(document).ready(function() {
 
             },
             input : `
-                  <input name="vex" type="text" class="vex-dialog-prompt-input" placeholder="Additional comments" value="">
                   <table class="table table-striped">
                     <thead>
                     <tr>
@@ -476,6 +474,7 @@ $(document).ready(function() {
                   <tbody id="exchange_table">
                   </tbody>
                   </table>
+                  <input name="vex" type="text" class="vex-dialog-prompt-input" placeholder="Additional comments" value="">
                 `,
             callback: function(comments) {
 
@@ -486,8 +485,10 @@ $(document).ready(function() {
                 });
 
                 // Check for data
-                if (id_to_report.length > 0 || comments !== "")
+                if (id_to_report.length > 0)
                 {
+                    console.log(id_to_report.length);
+                    console.log(comments);
                     socket.emit('report oracle endgame', {
                         comments: comments,
                         id_to_report : id_to_report,

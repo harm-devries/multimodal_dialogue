@@ -181,7 +181,7 @@ def q_oracle():
                                    msg='You are already qualified as an oracle. Please search for Guesswhat?! HIT with [QUALIFIED ONLY] in the title.')
 
         stats = get_assignment_stats(conn, assignment_id, questioner=False)
-        nr_success, nr_failure = stats['success'], stats['failure']
+        nr_success, nr_failure = stats['success'], stats['failure'] + stats['oracle_reported']
         nr_disconnects = stats['oracle_disconnect'] + stats['oracle_timeout']
 
         for player in players.itervalues():
@@ -250,7 +250,7 @@ def oracle():
                                    msg='You have already completed this assignment.')
 
         stats = get_assignment_stats(conn, assignment_id, questioner=False)
-        nr_success, nr_failure = stats['success'], stats['failure']
+        nr_success, nr_failure = stats['success'], stats['failure'] + stats['oracle_reported']
         nr_disconnects = stats['oracle_disconnect'] + stats['oracle_timeout']
 
         if (nr_failure + nr_disconnects) > 3:
@@ -319,7 +319,7 @@ def q_questioner():
                                    msg='You are already qualified as a questioner. Please search for GuessWhat?! HIT with [QUALIFIED ONLY] in the title.')
 
         stats = get_assignment_stats(conn, assignment_id, questioner=True)
-        nr_success, nr_failure = stats['success'], stats['failure']
+        nr_success, nr_failure = stats['success'], stats['failure'] + stats['oracle_reported']
         nr_disconnects = stats['questioner_disconnect'] + stats['questioner_timeout']
         for player in players.itervalues():
             if player.worker_id == request.args['workerId'] and player.role == 'QualifyOracle':
@@ -388,7 +388,7 @@ def questioner():
                                    msg='You have already completed this assignment.')
 
         stats = get_assignment_stats(conn, assignment_id, questioner=True)
-        nr_success, nr_failure = stats['success'], stats['failure']
+        nr_success, nr_failure = stats['success'], stats['failure'] + stats['oracle_reported']
         nr_disconnects = stats['questioner_disconnect'] + stats['questioner_timeout']
 
         if (nr_failure + nr_disconnects) > 3:
@@ -573,8 +573,6 @@ def stats():
     return render_template('error.html', msg=msg)
 
 
-
-
 def get_dialogue_and_players(sid):
     player = players[sid]
     partner = player.partner
@@ -590,20 +588,21 @@ def report_oracle(sid, reason):
     with engine.begin() as conn:
         update_dialogue_status(conn, dialogue.id, 'oracle_reported',
                                reason=reason)
-        delete_game([player, partner])
-        sio.emit('reported', '', room=partner.sid, namespace=partner.namespace)
-        if partner.role == "QualifyOracle":
-            find_qualification_oracle(player.sid)
-            find_qualification_questioner(partner.sid)
-        else:
-            find_normal_oracle(player.sid)
-            find_normal_questioner(partner.sid)
+
+    delete_game([player, partner])
+    sio.emit('reported', '', room=partner.sid, namespace=partner.namespace)
+    if partner.role == "QualifyOracle":
+        find_qualification_oracle(player.sid)
+        find_qualification_questioner(partner.sid)
+    else:
+        find_normal_oracle(player.sid)
+        find_normal_questioner(partner.sid)
 
 
 
 @sio.on('report oracle endgame', namespace='/q_questioner')
 @sio.on('report oracle endgame', namespace='/questioner')
-def report_oracle(sid, data):
+def report_oracle_end(sid, data):
 
     # Retrieve json data
     ranks_to_report = data["id_to_report"]
@@ -616,8 +615,6 @@ def report_oracle(sid, data):
         update_dialogue_status(conn, dialogue_id, 'oracle_reported', reason=comments)
 
 
-
-
 @sio.on('report questioner', namespace='/q_oracle')
 @sio.on('report questioner', namespace='/oracle')
 def report_questioner(sid, reason):
@@ -626,14 +623,14 @@ def report_questioner(sid, reason):
     with engine.begin() as conn:
         update_dialogue_status(conn, dialogue.id, 'questioner_reported',
                                reason=reason)
-        delete_game([player, partner])
-        sio.emit('reported', '', room=partner.sid, namespace=partner.namespace)
-        if partner.role == "QualifyQuestioner":
-            find_qualification_questioner(player.sid)
-            find_qualification_oracle(partner.sid)
-        else:
-            find_normal_questioner(player.sid)
-            find_normal_oracle(partner.sid)
+    delete_game([player, partner])
+    sio.emit('reported', '', room=partner.sid, namespace=partner.namespace)
+    if partner.role == "QualifyQuestioner":
+        find_qualification_questioner(player.sid)
+        find_qualification_oracle(partner.sid)
+    else:
+        find_normal_questioner(player.sid)
+        find_normal_oracle(partner.sid)
 
 
 
@@ -643,14 +640,14 @@ def new_question(sid, message):
     player, partner, dialogue = get_dialogue_and_players(sid)
 
     with engine.begin() as conn:
-        dialogue.question_ids.append(insert_question(conn, dialogue.id, message))
+        dialogue.question_ids.append(
+            insert_question(conn, dialogue.id, message))
 
     dialogue.turn = 'oracle'
     dialogue.deadline = datetime.datetime.now() + datetime.timedelta(seconds=30)
 
     sio.emit('new question', message,
              room=player.partner.sid, namespace=partner.namespace)
-    conn.close()
 
 
 @sio.on('new answer', namespace='/q_oracle')
@@ -672,13 +669,11 @@ def new_answer(sid, message):
 @sio.on('update answer', namespace='/oracle')
 def update_answer(sid, msg):
     player, partner, dialogue = get_dialogue_and_players(sid)
-    conn = engine.connect()
-    ans = {'Yes': 'Yes', 'No': 'No', 'Not applicable': 'N/A'}[msg['new_msg']]
-
-    insert_answer(conn, dialogue.question_ids[msg['round']], ans)
+    with engine.begin() as conn:
+        ans = {'Yes': 'Yes', 'No': 'No', 'Not applicable': 'N/A'}[msg['new_msg']]
+        insert_answer(conn, dialogue.question_ids[msg['round']], ans)
     sio.emit('update answer', msg, room=partner.sid, namespace=partner.namespace)
 
-    conn.close()
 
 
 @sio.on('guess', namespace='/q_questioner')
@@ -814,7 +809,7 @@ def get_difficulty(player):
 
 @sio.on('next questioner', namespace='/q_oracle')
 def find_qualification_questioner(sid):
-    find_player(sid, _player_queue=oracle_queue, _partner_queue=questioner_queue, mode='qualification')
+    find_player(sid, _player_queue=q_oracle_queue, _partner_queue=q_questioner_queue, mode='qualification')
 
 
 @sio.on('next questioner', namespace='/oracle')
@@ -824,7 +819,7 @@ def find_normal_questioner(sid):
 
 @sio.on('next oracle', namespace='/q_questioner')
 def find_qualification_oracle(sid):
-    find_player(sid, _player_queue=questioner_queue, _partner_queue=oracle_queue, mode='qualification')
+    find_player(sid, _player_queue=q_questioner_queue, _partner_queue=q_oracle_queue, mode='qualification')
 
 
 @sio.on('next oracle', namespace='/questioner')
@@ -1023,7 +1018,6 @@ def delete_game(players):
                 del dialogues[player.dialogue_id]
         player.partner = None
         player.dialogue_id = None
-
 
 
 @app.errorhandler(500)

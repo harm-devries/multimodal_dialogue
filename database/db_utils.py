@@ -245,7 +245,7 @@ def get_last_unfinished_picture(conn, session_id, questioner=True):
                                    "ORDER BY d.start_timestamp DESC LIMIT 1"), sid=session_id)
     if result.rowcount > 0:
         row = result.first()
-        if row[0] in ['questioner_disconnect', 'oracle_disconnect', 'questioner_timeout', 'oracle_timeout']:
+        if row[0] in ['questioner_disconnect', 'oracle_disconnect', 'questioner_timeout', 'oracle_timeout', 'questioner_reported']:
             objects = get_objects(conn, row[2])
             return Picture(row[2], row[3], row[4], row[5], objects), row[1], row[6]
     return None
@@ -274,7 +274,7 @@ def start_dialogue(conn, oracle_session_id, questioner_session_id,
     dialogue = None
 
     try:
-        # If player disconnected during previous dialogue, 
+        # If player disconnected during previous dialogue,
         # we restart with the same image
         prev_dialogue = get_last_unfinished_picture(conn, questioner_session_id,
                                                     questioner=True)
@@ -632,10 +632,10 @@ def get_assignment_stats(conn, id, questioner=True, limit=None):
     else:
         limit_sql = ""
 
-    stats = {'success': 0, 'failure': 0, role+'_disconnect': 0, role+'_timeout': 0}
+    stats = {'success': 0, 'failure': 0, role+'_disconnect': 0, role+'_timeout': 0, 'oracle_reported': 0}
 
     sql_statement = (" SELECT status, count(status) FROM "
-                     " (SELECT status FROM dialogue WHERE status IN ('success', 'failure', '{0}_timeout', '{0}_disconnect') AND {0}_session_id IN"
+                     " (SELECT status FROM dialogue WHERE status IN ('success', 'failure', '{0}_timeout', '{0}_disconnect', 'oracle_reported') AND {0}_session_id IN"
                      " (SELECT id FROM session WHERE assignment_id = :aid) {1} )"
                      " AS s GROUP BY status").format(role, limit_sql)
 
