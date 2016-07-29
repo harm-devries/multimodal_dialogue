@@ -460,7 +460,6 @@ $(document).ready(function() {
                     $('<td/>').text(answer.text()).appendTo(row);
 
                     row.appendTo(tab)
-
                 });
 
             },
@@ -495,6 +494,9 @@ $(document).ready(function() {
                         dialogue_id : $("#dialogue_id").attr("value")
                     });
                     vex.dialog.alert({message : 'The other player was successfully reported.'});
+
+                    // prevent from reporting again
+                    $('#end_game_report').hide()
                 }
             }
 
