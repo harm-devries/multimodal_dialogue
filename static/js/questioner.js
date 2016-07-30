@@ -73,7 +73,6 @@ $(document).ready(function() {
             message: 'Your partner has reported your playing behavior. We will start a new game, but please play appropriately to avoid further consequences.',
         });
     });
-
     socket.on('questioner', function(msg) {
         setTimeout(function(){
             $('#info_text').html('<span class="loader"><span class="loader-inner"></span></span> We have found a partner!');
@@ -89,8 +88,11 @@ $(document).ready(function() {
             img = msg.img;
             renderImageAndSegment();
             show_question_form();
-            $('#report').fadeIn(fadeS);
+            //$('#report').fadeIn(fadeS);
         }, 1400);
+
+        $("#dialogue_id").attr("value", msg.dialogue_id);
+
     });
     socket.on('new answer', function(msg) {
         addAnswer(msg);
@@ -161,7 +163,7 @@ $(document).ready(function() {
         set_score(msg.stats.success, msg.stats.failure, msg.stats.questioner_disconnect + msg.stats.questioner_timeout);
     });
     socket.on('wrong annotation', function(msg) {
-        deletegame();
+
         clearInterval(timer_id);
         $('#log').hide();
         $('#waiting').hide();
@@ -177,8 +179,11 @@ $(document).ready(function() {
         set_object();
         renderSegment(object.segment, scale, segment_ctx, correct_obj);
 
+
         $('#info_text').html(text); 
         $('#info_text').fadeIn(fadeS);
+        $('#end_game_report').show();
+
         if (msg.qualified) {
             if (msg.blocked) {
                 $('#newgame_text').html('<p>You have made too many mistakes to successfully complete this HIT. Please return this HIT and start a new one!</p>');
@@ -198,6 +203,7 @@ $(document).ready(function() {
         $('#intro').show();
         $('#prevbtn').hide();
         set_score(msg.stats.success, msg.stats.failure, msg.stats.questioner_disconnect + msg.stats.questioner_timeout);
+
     });
 
     function wait_for_answer() {
@@ -266,7 +272,7 @@ $(document).ready(function() {
         $('#log').html('');
         $('#log').show();
         clearCanvas(segment_ctx, segment_canvas);
-        $('#report').hide();
+        //$('#report').hide();
     }
 
     function hideAll() {
@@ -360,22 +366,43 @@ $(document).ready(function() {
     function addAnswer(msg){
         col_msg = colorizeAnswer(msg);
         if (round % 2 == 0) {
-            $('#q'+round).after('<div id="a'+round+'" class="well well-sm" style="font-weight: 500">' + col_msg + '</div>');
+            $('#q'+round).after('<div id="a'+round+'" class="well well-sm answers" style="font-weight: 500">' + col_msg + '</div>');
         } else {
-            $('#q'+round).after('<div id="a'+round+'" class="well well-sm" style="background-color: #fff; font-weight: 500">' + col_msg + '</div>');
+            $('#q'+round).after('<div id="a'+round+'" class="well well-sm answers" style="background-color: #fff; font-weight: 500">' + col_msg + '</div>');
         }
         scrollBottom();
         round += 1;
     }
     function addQuestion(msg){
-        if (round % 2 == 0) {
-            $('#log').prepend('<div id="q'+round+'" class="well well-sm" style="font-weight: 500">' + msg + '</div>');
-        } else {
-            $('#log').prepend('<div id="q'+round+'" class="well well-sm" style="background-color: #fff; font-weight: 500">' + msg + '</div>');
+
+        // Create yhe question
+        var question = document.createElement('div');
+
+        $(question)
+            .attr("id",'q'+round)
+            .attr("class", "well well-sm questions")
+            .css("font-weight", "500")
+            .text(msg);
+
+        if (round % 2 == 1) {
+            $(question).css("background-color", "#fff");
         }
-        if (round > 0) {
-            $('#q'+(round - 1)).css('margin-top', '10px');
-        }
+
+        // Create a div that contains question/answer
+        var d = document.createElement('div');
+        $(d)
+            .attr("id", 'dialogue_'+round)
+            .attr('class', 'dialogues')
+            .attr("value", "False")
+            .css('margin-top', '10px')
+            .css("border-style", "hidden")
+            .css("border-color", "red")
+            .css("border-width", "3px")
+            .append(question);
+
+        // Plug the div to the DOM
+        $('#log').prepend(d);
+
         scrollBottom();
     }
 
@@ -401,6 +428,82 @@ $(document).ready(function() {
           }
         });
     });
+
+    $('#end_game_report').click(function(event) {
+
+        vex.dialog.prompt({
+            message: 'Please select the misleading answer from the other player:',
+            placeholder: 'Please specify a reason',
+            afterOpen: function() {
+
+                var tab = $("#exchange_table");
+
+                $('.dialogues').each(function(exchange_id) {
+
+                    //retrieve content from the logs
+                    var question = $(this).find(".questions");
+                    var answer = $(this).find(".answers");
+
+                    // Create checkbox to report answers
+                    var _checkbox = $('<input>', {
+                        type: 'checkbox',
+                        class: 'id_to_report',
+                        value: exchange_id,
+                        text: ' '
+                    });
+
+                    // Append the column check box / question / answer
+                    var row = $('<tr/>')
+                    $('<td/>').append(_checkbox).appendTo(row);
+                    $('<td/>').text(question.text()).appendTo(row);
+                    $('<td/>').text(answer.text()).appendTo(row);
+
+                    row.appendTo(tab)
+                });
+
+            },
+            input : `
+                  <table class="table table-striped">
+                    <thead>
+                    <tr>
+                      <th></th>
+                      <th>Question</th>
+                      <th>Answer</th>
+                    </tr>
+                  </thead>
+                  <tbody id="exchange_table">
+                  </tbody>
+                  </table>
+                  <input name="vex" type="text" class="vex-dialog-prompt-input" placeholder="Additional comments" value="">
+                `,
+            callback: function(comments) {
+
+                // Retrieve values
+                var id_to_report = [];
+                $(".id_to_report").filter(":checked").each(function () {
+                    id_to_report.push($(this).attr("value"));
+                });
+
+                // Check for data
+                if (id_to_report.length > 0)
+                {
+                    console.log(id_to_report.length);
+                    console.log(comments);
+                    socket.emit('report oracle endgame', {
+                        comments: comments,
+                        id_to_report : id_to_report,
+                        dialogue_id : $("#dialogue_id").attr("value")
+                    });
+                    vex.dialog.alert({message : 'The other player was successfully reported.'});
+
+                    // prevent from reporting again
+                    $('#end_game_report').hide()
+                }
+            }
+
+        });
+    });
+
     $('a#guessbtn').click(function(event) {
         if (round > 0) {
             $('#guessbtn').attr('disabled', false); 
@@ -463,6 +566,8 @@ $(document).ready(function() {
             var mouseX = arr[0], mouseY = arr[1];
             var id = getObjectFromClick(mouseX, mouseY, objs, scale);
             if (id != undefined) {
+                objs = null;
+                clearCanvas(segment_ctx, segment_canvas);
                 $('canvas#segment').css('cursor', 'default');
                 socket.emit('guess annotation', id);
             }

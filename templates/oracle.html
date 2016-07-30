@@ -39,7 +39,7 @@
         </div>
         <div class="col-sm-2">
           <div id="report">
-            <a id="report_user" class="btn btn-danger">Report player</a>
+            <a id="report_user" class="btn btn-danger" style="float: right">Report player</a>
           </div>
         </div>
       </div>
@@ -126,11 +126,17 @@
               <h3>Important rules for this HIT</h3>
               <ul>
               <li>In this HIT we ask you to successfully complete <b>10 games</b>.</li>
-              <li>You are only allowed to make <b>up to 3 mistakes</b>. Your HIT will be rejected otherwise.</li>
+              <li>You are only allowed to make <b>up to 3 mistakes</b>.</li>
               <li>Because this is a live game, we consider it a <b>mistake when you disconnect from the server</b> while you are participating in a game.</li>
               <li>Your mturk rating is not affected when you fail to qualify. You work won't be rejected and you just need to return your accepted HIT. </li>
               </ul>
               <p>Do not hesitate to contact Harm de Vries at mail (at) harmdevries.com if you have any further questions. Click on "start a game" to begin your first game!</p>
+              <span style="height: 100px; overflow-y: scroll;">
+                <h4>Release note 29-07-2016:</h4>
+                <ul>
+                  <li>To prevent players from skipping difficult pictures, we use the same picture and object in your next game when you report the other player. </li>
+                </ul>
+              </span>
             </div>
           {% else %}
             <div class="well current">
@@ -158,6 +164,12 @@
               </tr>
               </table>
               <p>Do not hesitate to contact Harm de Vries at guesswhat.mturk@gmail.com if you have any further questions. </p>
+              <span style="height: 100px; overflow-y: scroll;">
+                <h4>Release note 29-07-2016:</h4>
+                <ul>
+                  <li>To prevent players from skipping difficult pictures, we use the same picture and object in your next game when you report your partner. </li>
+                </ul>
+              </span>
             </div>
           {% endif %}
         </div>

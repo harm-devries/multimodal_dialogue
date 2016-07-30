@@ -41,7 +41,7 @@
           </div>
         </div>
         <div class="col-sm-2">
-          <div id="report"><a id="report_user" class="btn btn-danger">Report player</a>
+          <!-- <div id="report"><a id="report_user" class="btn btn-danger">Report player</a> -->
           </div>
         </div>
       </div>
@@ -54,7 +54,6 @@
 <div class="container">
   <div class="row">
     <div class="col-sm-9" id="left">
-      <div id="log"></div>
       <div id="intro" style="font-weight: 400">
         <div id="group">
           {% if namespace == '/q_questioner' %}
@@ -148,7 +147,16 @@
               <li>Your mturk rating is not affected when you fail to qualify. You work won't be rejected and you just need to return your accepted HIT. </li> 
               </ul>
               <p>Do not hesitate to contact Harm de Vries at guesswhat.mturk@gmail.com if you have any further questions. Click on "start a game" to begin your first game!</p>
+              <br>
+              <span style="height: 100px; overflow-y: scroll;">
+                <h4>Release note 29-07-2016:</h4>
+                <ul>
+                  <li>Did you fail your game because your partner gave misleading answers to your questions? Click on the report player button after the game and select which answers were incorrect. </li>
+                  <li>
+                </ul>
+              </span>
             </div>
+
           {% else %}
             <div class="well current">
               <h3>Important information for this HIT</h3>
@@ -159,6 +167,7 @@
               <li>Because this is a live game, we consider it a <b>mistake when you disconnect from the server</b> while you are participating in a game.</li>
               <li>If you do not successfully complete the HIT, you are allowed to return your accepted HIT and start a new one. </li>
               </ul>
+
               <table class="table table-striped">
               <tr>
                 <th>Number of failures</th>
@@ -174,6 +183,14 @@
                 <td>2</td><td>0.05</td>
               </tr>
               </table>
+
+              <span style="height: 100px; overflow-y: scroll;">
+                <h4>Release note 29-07-2016:</h4>
+                <ul>
+                  <li>Did you fail your game because your partner gave misleading answers to your questions? Click on the report player button after the game and select which answers were incorrect. </li>
+                  <li>
+                </ul>
+              </span>
             </div>
           {% endif %}
         </div>
@@ -182,6 +199,7 @@
         <div class="row" id="navigation">
           <div class="col-xs-6">
             <a id="prevbtn" class="btn btn-info" style="display: none">Previous</a>
+            <a class="btn btn-danger" id="end_game_report" style="display: none; float: left" role="button">&laquo; Report Oracle</a>
           </div>
           <div class="col-xs-6">
             <a id="nextbtn" class="btn btn-info" style="float:right">Next &raquo;</a>
@@ -195,6 +213,10 @@
             {% endif %}
           </div>
         </div>
+      </div>
+      <div id="log"></div>
+      <div id="additional_info">
+        <input type="hidden" id="dialogue_id" name="dialogue_id" value="" />
       </div>
     </div>
     <div class="col-sm-3" id ="right">
