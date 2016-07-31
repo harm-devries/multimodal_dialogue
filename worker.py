@@ -63,7 +63,7 @@ def check_assignment_completed(conn, player):
     if player.role == 'Oracle':
         stats = get_assignment_stats(conn, player.assignment_id,
                                      questioner=False)
-        if stats['success'] >= 10 and (stats['failure'] + stats['oracle_disconnect'] + stats['oracle_reported']) <= 3:
+        if stats['success'] >= 10 and (stats['failure'] + stats['oracle_disconnect'] + stats['oracle_timeout'] + stats['oracle_reported']) <= 3:
             conn.execute(text('UPDATE assignment SET completed = :completed '
                               'WHERE assignment_id = :ass_id AND worker_id = :wid'),
                          completed=True, wid=player.worker_id,
@@ -73,7 +73,7 @@ def check_assignment_completed(conn, player):
         stats = get_assignment_stats(conn, player.assignment_id,
                                      questioner=True)
 
-        if stats['success'] >= 10 and (stats['failure'] + stats['questioner_disconnect'] + stats['oracle_reported']) <= 3:
+        if stats['success'] >= 10 and (stats['failure'] + stats['questioner_disconnect'] + stats['questioner_timeout'] + stats['oracle_reported']) <= 3:
             conn.execute(text('UPDATE assignment SET completed = :completed '
                               'WHERE assignment_id = :ass_id AND worker_id = :wid'),
                          completed=True, wid=player.worker_id,

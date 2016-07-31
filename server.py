@@ -770,7 +770,7 @@ def guess_annotation2(sid, object_id):
         stats = get_assignment_stats(conn, player.assignment_id,
                                      questioner=True)
         blocked = False
-        if (stats['failure']) > 3:
+        if (stats['failure'] + stats['questioner_disconnect'] + stats['questioner_timeout'] + stats['oracle_reported']) > 3:
             blocked = True
         sio.emit('wrong annotation', {'object': selected_obj.to_json(),
                                       'stats': stats,
@@ -780,7 +780,7 @@ def guess_annotation2(sid, object_id):
         stats = get_assignment_stats(conn, player.partner.assignment_id,
                                      questioner=False)
         blocked = False
-        if (stats['failure']) > 3:
+        if (stats['failure'] + stats['oracle_disconnect'] + stats['oracle_timeout'] + stats['oracle_reported']) > 3:
             blocked = True
         sio.emit('wrong annotation', {'object': guessed_obj.to_json(),
                                       'stats': stats,
