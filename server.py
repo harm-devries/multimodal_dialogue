@@ -795,14 +795,14 @@ def get_difficulty(player):
     sample = random.random()
     if player.is_qualified():
         if sample > 0.3:
-            difficulty = 1
-        else:
             difficulty = 2
+        else:
+            difficulty = 1
     else:
         if sample > 0.3:
-            difficulty = 2
-        else:
             difficulty = 1
+        else:
+            difficulty = 2
 
     return difficulty
 
