@@ -152,7 +152,7 @@ $(document).ready(function() {
         $('#newgame_text').show();
         $('#intro').show();
         $('#prevbtn').hide();
-        set_score(msg.stats.success, msg.stats.failure, msg.stats.oracle_disconnect + msg.stats.oracle_timeout);
+        set_score(msg.stats.success, msg.stats.failure + msg.stats.oracle_reported, msg.stats.oracle_disconnect + msg.stats.oracle_timeout);
     });
 
     socket.on('wrong annotation', function(msg) {
@@ -192,7 +192,7 @@ $(document).ready(function() {
         $('#newgame_text').show();
         $('#intro').show();
         $('#prevbtn').hide();
-        set_score(msg.stats.success, msg.stats.failure, msg.stats.oracle_disconnect + msg.stats.oracle_timeout);
+        set_score(msg.stats.success, msg.stats.failure + msg.stats.oracle_reported, msg.stats.oracle_disconnect + msg.stats.oracle_timeout);
     });
 
     function wait_for_question() {
