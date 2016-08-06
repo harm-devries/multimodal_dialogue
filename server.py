@@ -592,12 +592,11 @@ def report_oracle(sid, reason):
     delete_game([player, partner])
     sio.emit('reported', '', room=partner.sid, namespace=partner.namespace)
     if partner.role == "QualifyOracle":
-        find_qualification_oracle(player.sid)
         find_qualification_questioner(partner.sid)
+        find_qualification_oracle(player.sid)
     else:
-        find_normal_oracle(player.sid)
         find_normal_questioner(partner.sid)
-
+        find_normal_oracle(player.sid)
 
 
 @sio.on('report oracle endgame', namespace='/q_questioner')
@@ -626,11 +625,11 @@ def report_questioner(sid, reason):
     delete_game([player, partner])
     sio.emit('reported', '', room=partner.sid, namespace=partner.namespace)
     if partner.role == "QualifyQuestioner":
-        find_qualification_questioner(player.sid)
         find_qualification_oracle(partner.sid)
+        find_qualification_questioner(player.sid)
     else:
-        find_normal_questioner(player.sid)
         find_normal_oracle(partner.sid)
+        find_normal_questioner(player.sid)
 
 
 
@@ -857,12 +856,15 @@ def find_player(sid, _player_queue, _partner_queue, mode):
 
 def instantiate_dialogue(player, partner, mode):
     # define roles
+    oracle_ping, questioner_ping = False, False
     if player.is_questioner():
         _questioner = player
         _oracle = partner
+        oracle_ping = True
     else:
         _questioner = partner
         _oracle = player
+        questioner_ping = True
 
     # Instantiate a new dialogue in the db
     with engine.begin() as conn:
@@ -886,7 +888,8 @@ def instantiate_dialogue(player, partner, mode):
              {'img': {'src': image_src,
                       'width': dialogue.picture.width,
                       'height': dialogue.picture.height},
-              'dialogue_id': dialogue.id},
+              'dialogue_id': dialogue.id,
+              'ping': questioner_ping},
              room=_questioner.sid,
              namespace=_questioner.namespace)
     sio.emit('answerer',
@@ -894,7 +897,8 @@ def instantiate_dialogue(player, partner, mode):
                       'width': dialogue.picture.width,
                       'height': dialogue.picture.height},
               'object': dialogue.object.to_json(),
-              'dialogue_id': dialogue.id},
+              'dialogue_id': dialogue.id,
+              'ping': oracle_ping},
              room=_oracle.sid,
              namespace=_oracle.namespace,
              )

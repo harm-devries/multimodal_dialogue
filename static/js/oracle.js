@@ -89,6 +89,9 @@ $(document).ready(function() {
     socket.on('answerer', function(msg) {
         setTimeout(function(){
             $('#info_text').html('<span class="loader"><span class="loader-inner"></span></span> We have found a partner!');
+            if (msg.ping) {
+                document.getElementById('ping').play();  
+            } 
         }, 700);
 
         setTimeout(function(){
