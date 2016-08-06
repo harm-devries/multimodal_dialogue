@@ -67,7 +67,7 @@
 	      <td>{{ worker.socket_io }}</td>
 	      <td>
              <form action="/worker/{{ worker.id }}/remove_socket" method="POST">
-                  <input type="text" name="text_socket_io" value="worker.socket_io" style="display: none;">
+                  <input type="text" name="text_socket_io" value="{{ worker.socket_io }}" style="display: none;">
                   <input type="submit" value="Remove from socket">
              </form>
 		</td>
