@@ -60,8 +60,8 @@ auth = HTTPBasicAuth()
 def time_out(dialogue):
     conn = engine.connect()
 
-    oracle = players[dialogue.oracle_sid]
-    questioner = players[dialogue.questioner_sid]
+    oracle = players[dialogue.oracle_sid] if dialogue.oracle_sid in players else None
+    questioner = players[dialogue.questioner_sid] if dialogue.questioner_sid in players else None
 
     print("time out")
     print("oracle    : " + oracle.worker_id     + " \t dialogue.sid: " + str(dialogue.oracle_sid))
@@ -1028,3 +1028,6 @@ def delete_game(players):
 def internal_error(error):
     print (error)
     return "500 error"
+
+if async_mode == 'eventlet':
+    eventlet.wsgi.server(eventlet.listen(('', int(os.environ['PORT']))), app)
