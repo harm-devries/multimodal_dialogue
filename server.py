@@ -36,7 +36,7 @@ if async_mode == 'eventlet':
     import eventlet
     eventlet.monkey_patch()
 
-sio = socketio.Server(logger=True, engineio_logger=True, async_mode=async_mode, ping_timeout=25)
+sio = socketio.Server(logger=True, engineio_logger=True, async_mode=async_mode, ping_timeout=90)
 app = Flask(__name__)
 app.wsgi_app = socketio.Middleware(sio, app.wsgi_app)
 app.config['SECRET_KEY'] = 'spywithmylittleeye!'
@@ -569,7 +569,7 @@ def stats_io_error_update():
 
 @app.route('/stats')
 def stats():
-    msg = '<br />'.join([', '.join([sid, players[sid].worker_id, str(sio.eio.sockets[sid].closed), str(sio.eio.sockets[sid].upgraded), str(sio.eio.sockets[sid].connected), str(sio.eio.sockets[sid].last_ping)]) for sid in sio.eio.sockets.keys()])
+    msg = '<br />'.join([', '.join([sid, str(sio.eio.sockets[sid].closed), str(sio.eio.sockets[sid].upgraded), str(sio.eio.sockets[sid].connected), str(sio.eio.sockets[sid].last_ping)]) for sid in sio.eio.sockets.keys()])
     return render_template('error.html', msg=msg)
 
 
