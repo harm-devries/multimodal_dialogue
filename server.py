@@ -569,7 +569,7 @@ def stats_io_error_update():
 
 @app.route('/stats')
 def stats():
-    msg = '<br />'.join([', '.join([sid, players[sid].worker_id, sio.eio.sockets[sid].closed, sio.eio.sockets[sid].upgraded, sio.eio.sockets[sid].connected, sio.eio.sockets[sid].last_ping]) for sid in sio.eio.sockets.keys()])
+    msg = '<br />'.join([', '.join([sid, players[sid].worker_id, str(sio.eio.sockets[sid].closed), str(sio.eio.sockets[sid].upgraded), str(sio.eio.sockets[sid].connected), str(sio.eio.sockets[sid].last_ping)]) for sid in sio.eio.sockets.keys()])
     return render_template('error.html', msg=msg)
 
 
