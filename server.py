@@ -36,7 +36,7 @@ if async_mode == 'eventlet':
     import eventlet
     eventlet.monkey_patch()
 
-sio = socketio.Server(logger=True, engineio_logger=True, async_mode=async_mode, ping_timeout=90)
+sio = socketio.Server(logger=True, engineio_logger=True, async_mode=async_mode, ping_interval=20)
 app = Flask(__name__)
 app.wsgi_app = socketio.Middleware(sio, app.wsgi_app)
 app.config['SECRET_KEY'] = 'spywithmylittleeye!'
