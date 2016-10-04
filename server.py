@@ -136,23 +136,23 @@ def q_oracle():
     #    thread = sio.start_background_task(check_for_timeouts)
 
 
-    id=46206
+    dialogue_id=46206
     question_id = 181134
 
     with engine.begin() as conn:
         (picture_id, width, height, status,
-         oracle_id, questioner_id, time) = get_dialogue_info(conn, id)
+         oracle_id, questioner_id, time) = get_dialogue_info(conn, dialogue_id)
 
         if picture_id is None:
             return render_template('error.html', msg='Dialogue not found.')
 
         image = ('https://msvocds.blob.core.windows.net/imgs/{}.jpg').format(picture_id)
-        guess = get_dialogue_guess(conn, id)
-        obj = get_dialogue_object(conn, id)
+        guess = get_dialogue_guess(conn, dialogue_id)
+        obj = get_dialogue_object(conn, dialogue_id)
         objs = [obj.to_json()]
         if guess is not None and guess.object_id != obj.object_id:
             objs.append(guess.to_json())
-        qas = get_dialogue_conversation(conn, id)
+        qas = get_dialogue_conversation(conn, dialogue_id)
         qas = [_qas for _qas in reversed(qas)]
 
     for i, x in enumerate(qas):
@@ -162,15 +162,13 @@ def q_oracle():
     else:
         question_index = 0
 
-    print("coucou")
     question1 = {}
     question1["dialogue_id"] = id
     question1["question_id"] = question_id
     question1["question_index"] = question_index
-    question1["question"] = "is it left most in the pic"
+    question1["question"] = qas[question_index].question
     question1["qas"] = qas
     question1["img"] = image
-
 
     questions_to_fix = [question1]
 
