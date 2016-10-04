@@ -20,17 +20,15 @@
     </tr>
   </thead>
   <tbody>
-  	{% for mistake in mistakes%}
     {% set m = 0 %}
-    <tr>
-        <td>{{mistake.question}}</td>
-        <td><input type="text" class="fix" value=""></td>
-        <td><a class="btn btn-success show_dialogue" value="{{ m }}" id="dialogue_{{ m }}" role="button">Display dialogues &raquo;</a></td>
-        <input type="hidden" class="question_id" value="{{ mistake.question_id }}">
-        <input type="hidden" class="dialogue_id" value="{{ mistake.dialogue_id }}">
-	    </tr >
-            <td>
-			<div id="log_{{ m }}" style="display: none">
+  	{% for mistake in mistakes%}
+    <tr class="row">
+        <td> <span>{{mistake.question}} </span></td>
+        <td><input type="text" id="text_{{ m }}" class="fixed_question" value=""></td>
+        <td><a class="btn btn-success show_dialogue" value="{{ m }}" role="button">Display dialogues &raquo;</a>
+        <input type="hidden" id="question_id_{{ m }}" class="question_id" value="{{ mistake.question_id }}">
+        <input type="hidden" id="dialogue_id_{{ m }}" class="dialogue_id" value="{{ mistake.dialogue_id }}">
+         <div id="log_{{ m }}" style="display: none">
                 <img src="{{ mistake.img }}">
                 <table class="table table-striped">
                      <thead>
@@ -56,11 +54,14 @@
                       </tbody>
                 </table>
             </div>
-            </td>
+        </td>
         {% set m = m +1 %}
 	{% endfor %}
   </tbody>
   </table>
+    <input type="submit" id="submit_button" value="Send hit!">
 </div>
+
 {% endblock %}
+
 

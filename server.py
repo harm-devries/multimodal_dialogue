@@ -104,39 +104,10 @@ def update_answer(sid, msg):
 
 
 
-@app.route('/fix_mistake')
-def q_oracle():
-    if not check_browser(request.user_agent.string):
-        # Handler for IE users if IE is not supported.
-        msg = 'Your browser is not supported.'
-        return render_template('error.html', msg=msg)
-
-    if not ('hitId' in request.args and
-            'assignmentId' in request.args):
-        return render_template('error.html', title='Oracle - ',
-                               msg='Missing mturk parameters.')
-
-    assignment_id = request.args['assignmentId']
-
-    if len(players) > 1000:
-        msg = ('Sorry, there are currently'
-               'more than 1000 players.')
-        return render_template('error.html', title='Oracle - ',
-                               msg=msg)
-
-    turk_submit_to = 'https://workersandbox.mturk.com'
-    if 'turkSubmitTo' in request.args:
-        turk_submit_to = request.args['turkSubmitTo']
-
-    accepted_hit = False
 
 
-    global thread
-    #if thread is None:
-    #    thread = sio.start_background_task(check_for_timeouts)
-
-
-    dialogue_id=46206
+def start_new_fix():
+    dialogue_id = 46206
     question_id = 181134
 
     with engine.begin() as conn:
@@ -163,7 +134,7 @@ def q_oracle():
         question_index = 0
 
     question1 = {}
-    question1["dialogue_id"] = id
+    question1["dialogue_id"] = dialogue_id
     question1["question_id"] = question_id
     question1["question_index"] = question_index
     question1["question"] = qas[question_index].question
@@ -172,7 +143,52 @@ def q_oracle():
 
     questions_to_fix = [question1]
 
-    return render_template('mistakes.html',  title='Mistake - ', mistakes=questions_to_fix)
+    return render_template('mistakes.html', title='Mistake - ', mistakes=questions_to_fix)
+
+@app.route('/fix_mistake')
+def fix_mistake():
+    if not check_browser(request.user_agent.string):
+        # Handler for IE users if IE is not supported.
+        msg = 'Your browser is not supported.'
+        return render_template('error.html', msg=msg)
+
+    if not ('hitId' in request.args and
+            'assignmentId' in request.args):
+        return render_template('error.html', title='Oracle - ',
+                               msg='Missing mturk parameters.')
+
+    assignment_id = request.args['assignmentId']
+
+    if len(players) > 1000:
+        msg = ('Sorry, there are currently'
+               'more than 1000 players.')
+        return render_template('error.html', title='Oracle - ',
+                               msg=msg)
+
+    turk_submit_to = 'https://workersandbox.mturk.com'
+    if 'turkSubmitTo' in request.args:
+        turk_submit_to = request.args['turkSubmitTo']
+
+    accepted_hit = False
+
+
+    global thread
+    if thread is None:
+        thread = sio.start_background_task(check_for_timeouts)
+
+    return start_new_fix()
+
+
+@sio.on('dialogue fix')
+def report_questioner(sid, data):
+    with engine.begin() as conn:
+
+        for x in data:
+            print(x)
+            print(x["dialogue_id"])
+            print(x["question_id"])
+            print(x["text"])
+
 
 
 
@@ -329,32 +345,6 @@ def get_dialogue_and_players(sid):
 
 
 
-@sio.on('new answer', namespace='/q_oracle')
-@sio.on('new answer', namespace='/oracle')
-def new_answer(sid, message):
-    player, partner, dialogue = get_dialogue_and_players(sid)
-
-    with engine.begin() as conn:
-        insert_answer(conn, dialogue.question_ids[-1], message)
-
-    dialogue.turn = 'questioner'
-    dialogue.deadline = datetime.datetime.now() + datetime.timedelta(seconds=90)
-
-    sio.emit('new answer', message,
-             room=partner.sid, namespace=partner.namespace)
-
-
-@sio.on('update answer', namespace='/q_oracle')
-@sio.on('update answer', namespace='/oracle')
-def update_answer(sid, msg):
-    player, partner, dialogue = get_dialogue_and_players(sid)
-    with engine.begin() as conn:
-        ans = {'Yes': 'Yes', 'No': 'No', 'Not applicable': 'N/A'}[msg['new_msg']]
-        insert_answer(conn, dialogue.question_ids[msg['round']], ans)
-    sio.emit('update answer', msg, room=partner.sid, namespace=partner.namespace)
-
-
-
 
 def get_hit_info(url):
     par = urlparse.parse_qs(urlparse.urlparse(url).query)
@@ -402,7 +392,17 @@ def disconnect(sid):
         player = players[sid]
 
 
-
+"""Background process checking for dialogues that time out."""
+def check_for_timeouts():
+    while True:
+        sio.sleep(0.01)  # return control so other threads can execute
+        keys = dialogues.keys()
+        for key in keys:
+            if key in dialogues:
+                dialogue = dialogues[key]
+                if datetime.datetime.now() > dialogue.deadline:
+                    time_out(dialogue)
+            sio.sleep(0.01)
 
 
 @app.errorhandler(500)
