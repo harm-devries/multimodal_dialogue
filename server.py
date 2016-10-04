@@ -57,55 +57,7 @@ dialogues = {}  # indexed by dialogue_id
 auth = HTTPBasicAuth()
 
 
-def time_out(dialogue):
-    conn = engine.connect()
 
-    oracle = players[dialogue.oracle_sid] if dialogue.oracle_sid in players else None
-    questioner = players[dialogue.questioner_sid] if dialogue.questioner_sid in players else None
-
-    print("time out")
-    print("oracle    : " + oracle.worker_id     + " \t dialogue.sid: " + str(dialogue.oracle_sid))
-    print("questioner: " + questioner.worker_id + " \t dialogue.sid: " + str(dialogue.questioner_sid))
-
-    if dialogue.turn == 'oracle':
-        # Oracle time out
-        update_dialogue_status(conn, dialogue.id, 'oracle_timeout')
-        delete_game([oracle, questioner])
-        sio.emit('timeout', '',
-                 room=oracle.sid, namespace=oracle.namespace)
-        sio.emit('partner timeout', '',
-                 room=questioner.sid, namespace=questioner.namespace)
-        if questioner.role == 'Questioner':
-            find_normal_oracle(questioner.sid)
-        else:
-            find_qualification_oracle(questioner.sid)
-        check_blocked(conn, oracle)
-    else:
-        # Questioner timeout
-        update_dialogue_status(conn, dialogue.id, 'questioner_timeout')
-        delete_game([oracle, questioner])
-        sio.emit('timeout', '',
-                 room=questioner.sid, namespace=questioner.namespace)
-        sio.emit('partner timeout', '',
-                 room=oracle.sid, namespace=oracle.namespace)
-        if oracle.role == 'Oracle':
-            find_normal_questioner(oracle.sid)
-        else:
-            find_qualification_questioner(oracle.sid)
-        check_blocked(conn, questioner)
-    conn.close()
-
-"""Background process checking for dialogues that time out."""
-def check_for_timeouts():
-    while True:
-        sio.sleep(0.01)  # return control so other threads can execute
-        keys = dialogues.keys()
-        for key in keys:
-            if key in dialogues:
-                dialogue = dialogues[key]
-                if datetime.datetime.now() > dialogue.deadline:
-                    time_out(dialogue)
-            sio.sleep(0.01)
 
 
 @auth.get_password
@@ -141,7 +93,18 @@ def check_browser(user_agent_string):
     return browser_ok
 
 
-@app.route('/qualify_oracle')
+
+@sio.on('show dialogue')
+def update_answer(sid, msg):
+    player, partner, dialogue = get_dialogue_and_players(sid)
+    with engine.begin() as conn:
+        ans = {'Yes': 'Yes', 'No': 'No', 'Not applicable': 'N/A'}[msg['new_msg']]
+        insert_answer(conn, dialogue.question_ids[msg['round']], ans)
+    sio.emit('update answer', msg, room=partner.sid, namespace=partner.namespace)
+
+
+
+@app.route('/fix_mistake')
 def q_oracle():
     if not check_browser(request.user_agent.string):
         # Handler for IE users if IE is not supported.
@@ -166,255 +129,54 @@ def q_oracle():
         turk_submit_to = request.args['turkSubmitTo']
 
     accepted_hit = False
-    nr_success, nr_failure, nr_disconnects = 0, 0, 0
-    if 'workerId' in request.args:
-        worker_id = request.args['workerId']
-        accepted_hit = True
-        conn = engine.connect()
-        worker_status = get_worker_status(conn, worker_id)
-        if worker_status == 'blocked':
-            return render_template('error.html', title='Oracle - ',
-                                   msg='Your account is currently blocked, probably because you\'ve made too many mistakes or disconnected too many times while completing the HIT. Contact Harm de Vries at guesswhat.mturk@gmail.com for more information about your account (include your worker id).')
 
-        if worker_status == 'qualified':
-            return render_template('error.html', title='Oracle - ',
-                                   msg='You are already qualified as an oracle. Please search for Guesswhat?! HIT with [QUALIFIED ONLY] in the title.')
-
-        stats = get_assignment_stats(conn, assignment_id, questioner=False)
-        nr_success, nr_failure = stats['success'], stats['failure'] + stats['oracle_reported']
-        nr_disconnects = stats['oracle_disconnect'] + stats['oracle_timeout']
-
-        for player in players.itervalues():
-            if player.worker_id == worker_id and player.role == 'QualifyQuestioner':
-                msg = ('You are not allowed to play '
-                       'multiple games at the same time.')
-                return render_template('error.html', title='Oracle - ',
-                                       msg=msg)
 
     global thread
-    if thread is None:
-        thread = sio.start_background_task(check_for_timeouts)
-
-    return render_template('oracle.html',
-                           title='Oracle - ',
-                           accepted_hit=accepted_hit,
-                           assignmentId=assignment_id,
-                           success=nr_success,
-                           failure=nr_failure,
-                           disconnect=nr_disconnects,
-                           turkSubmitTo=turk_submit_to,
-                           namespace='/q_oracle')
+    #if thread is None:
+    #    thread = sio.start_background_task(check_for_timeouts)
 
 
-@app.route('/oracle')
-def oracle():
-    if not check_browser(request.user_agent.string):
-        # Handler for IE users if IE is not supported.
-        msg = 'Your browswer is not supported.'
-        return render_template('error.html', msg=msg)
+    id=46206
+    question_id = 181134
 
-    if not ('hitId' in request.args and
-            'assignmentId' in request.args):
-        return render_template('error.html', title='Oracle - ',
-                               msg='Missing mturk parameters.')
+    with engine.begin() as conn:
+        (picture_id, width, height, status,
+         oracle_id, questioner_id, time) = get_dialogue_info(conn, id)
 
-    assignment_id = request.args['assignmentId']
+        if picture_id is None:
+            return render_template('error.html', msg='Dialogue not found.')
 
-    if len(players) > 1000:
-        msg = ('Sorry, there are currently'
-               'more than 1000 players.')
-        return render_template('error.html', title='Oracle - ',
-                               msg=msg)
+        image = ('https://msvocds.blob.core.windows.net/imgs/{}.jpg').format(picture_id)
+        guess = get_dialogue_guess(conn, id)
+        obj = get_dialogue_object(conn, id)
+        objs = [obj.to_json()]
+        if guess is not None and guess.object_id != obj.object_id:
+            objs.append(guess.to_json())
+        qas = get_dialogue_conversation(conn, id)
+        qas = [_qas for _qas in reversed(qas)]
 
-    turk_submit_to = 'https://workersandbox.mturk.com'
-    if 'turkSubmitTo' in request.args:
-        turk_submit_to = request.args['turkSubmitTo']
+    for i, x in enumerate(qas):
+        if x.question_id == question_id:
+            question_index = i
+            break
+    else:
+        question_index = 0
 
-    accepted_hit = False
-    nr_success, nr_failure, nr_disconnects = 0, 0, 0
-    if 'workerId' in request.args:
-        worker_id = request.args['workerId']
-        accepted_hit = True
-        conn = engine.connect()
-        worker_status = get_worker_status(conn, worker_id, questioner=False)
-        if worker_status == 'blocked':
-            return render_template('error.html', title='Oracle - ',
-                                   msg='Your account is currently blocked, probably because you\'ve made too many mistakes or disconnected too many times while completing the HIT. Contact Harm de Vries - guesswhat.mturk@gmail.com - for more information.')
-
-        if worker_status is None or worker_status == 'default':
-            return render_template('error.html', title='Oracle - ',
-                                   msg='You are not qualified yet to play Guesswhat?!. Please search for GuessWhat?! HIT without [QUALIFIED ONLY] in the title.')
-
-        if assignment_completed(conn, assignment_id):
-            return render_template('error.html', title='Questioner - ',
-                                   msg='You have already completed this assignment.')
-
-        stats = get_assignment_stats(conn, assignment_id, questioner=False)
-        nr_success, nr_failure = stats['success'], stats['failure'] + stats['oracle_reported']
-        nr_disconnects = stats['oracle_disconnect'] + stats['oracle_timeout']
-
-        if (nr_failure + nr_disconnects) > 3:
-            return render_template('error.html', title='Oracle - ',
-                                   msg='You have made too many mistakes to successfully complete this assignment. Please return accepted HIT. ')
-
-        for player in players.itervalues():
-            if player.worker_id == request.args['workerId'] and player.role == 'Questioner':
-                msg = ('You are allowed to play at most '
-                       'one game at the same time.')
-                return render_template('error.html', title='Oracle - ',
-                                       msg=msg)
-    global thread
-    if thread is None or not thread.is_alive():
-        thread = sio.start_background_task(check_for_timeouts)
-
-    return render_template('oracle.html',
-                           title='Oracle - ',
-                           success=nr_success,
-                           failure=nr_failure,
-                           disconnect=nr_disconnects,
-                           accepted_hit=accepted_hit,
-                           assignmentId=assignment_id,
-                           turkSubmitTo=turk_submit_to,
-                           namespace='/oracle')
+    print("coucou")
+    question1 = {}
+    question1["dialogue_id"] = id
+    question1["question_id"] = question_id
+    question1["question_index"] = question_index
+    question1["question"] = "is it left most in the pic"
+    question1["qas"] = qas
+    question1["img"] = image
 
 
-@app.route('/qualify_questioner')
-def q_questioner():
-    if not check_browser(request.user_agent.string):
-        # Handler for IE users if IE is not supported.
-        msg = 'Your browswer is not supported.'
-        return render_template('error.html', title='Questioner - ', msg=msg)
-
-    if not ('hitId' in request.args and
-            'assignmentId' in request.args):
-        return render_template('error.html', title='Questioner - ',
-                               msg='Missing mturk parameters.')
-
-    if len(players) > 1000:
-        msg = ('Sorry, there are currently'
-               'more than 1000 players.')
-        return render_template('error.html', title='Questioner - ',
-                               msg=msg)
-
-    assignment_id = request.args['assignmentId']
-
-    turk_submit_to = 'https://workersandbox.mturk.com'
-    if 'turkSubmitTo' in request.args:
-        turk_submit_to = request.args['turkSubmitTo']
-
-    accepted_hit = False
-    nr_success, nr_failure, nr_disconnects = 0, 0, 0
-
-    if 'workerId' in request.args:
-        worker_id = request.args['workerId']
-        accepted_hit = True
-        conn = engine.connect()
-        worker_status = get_worker_status(conn, worker_id, questioner=True)
-        if worker_status == 'blocked':
-            return render_template('error.html', title='Questioner - ',
-                                   msg='Your account is currently blocked, probably because you\'ve made too many mistakes or disconnected too many times while completing the HIT. Contact Harm de Vries - guesswhat.mturk@gmail.com - for more information.')
-
-        if worker_status == 'qualified':
-            return render_template('error.html', title='Questioner - ',
-                                   msg='You are already qualified as a questioner. Please search for GuessWhat?! HIT with [QUALIFIED ONLY] in the title.')
-
-        stats = get_assignment_stats(conn, assignment_id, questioner=True)
-        nr_success, nr_failure = stats['success'], stats['failure'] + stats['oracle_reported']
-        nr_disconnects = stats['questioner_disconnect'] + stats['questioner_timeout']
-        for player in players.itervalues():
-            if player.worker_id == request.args['workerId'] and player.role == 'QualifyOracle':
-                msg = ('You are allowed to play at most '
-                       'one game at the same time.')
-                return render_template('error.html', title='Questioner - ',
-                                       msg=msg)
-
-    global thread
-    if thread is None or not thread.is_alive():
-        thread = sio.start_background_task(check_for_timeouts)
+    questions_to_fix = [question1]
+    print("coucou")
+    return render_template('mistakes.html',  title='Mistake - ', mistakes=questions_to_fix)
 
 
-    return render_template('questioner.html',
-                           title='Questioner - ',
-                           assignmentId=assignment_id,
-                           accepted_hit=accepted_hit,
-                           success=nr_success,
-                           failure=nr_failure,
-                           disconnect=nr_disconnects,
-                           turkSubmitTo=turk_submit_to,
-                           namespace='/q_questioner')
-
-
-@app.route('/questioner')
-def questioner():
-    if not check_browser(request.user_agent.string):
-        # Handler for IE users if IE is not supported.
-        msg = 'Your browswer is not supported.'
-        return render_template('error.html', title='Questioner - ', msg=msg)
-
-    if not ('hitId' in request.args and
-            'assignmentId' in request.args):
-        return render_template('error.html', title='Questioner - ',
-                               msg='Missing mturk parameters.')
-
-    assignment_id = request.args['assignmentId']
-
-    if len(players) > 1000:
-        msg = ('Sorry, there are currently'
-               'more than 1000 players.')
-        return render_template('error.html', title='Questioner - ',
-                               msg=msg)
-
-    turk_submit_to = 'https://workersandbox.mturk.com'
-    if 'turkSubmitTo' in request.args:
-        turk_submit_to = request.args['turkSubmitTo']
-
-    accepted_hit = False
-    nr_success, nr_failure, nr_disconnects = 0, 0, 0
-    if 'workerId' in request.args:
-        accepted_hit = True
-        worker_id = request.args['workerId']
-
-        conn = engine.connect()
-        worker_status = get_worker_status(conn, worker_id, questioner=True)
-        if worker_status == 'blocked':
-            return render_template('error.html', title='Questioner - ',
-                                   msg='Your account is currently blocked, probably because you\'ve made too many mistakes or disconnected too many times while completing the HIT. Contact Harm de Vries - guesswhat.mturk@gmail.com - for more information.')
-
-        if worker_status is None or worker_status == 'default':
-            return render_template('error.html', title='Questioner - ',
-                                   msg='You are not qualified yet to play Guesswhat?!. Please search for GuessWhat?! HIT without [QUALIFIED ONLY] in the title.')
-        if assignment_completed(conn, assignment_id):
-            return render_template('error.html', title='Questioner - ',
-                                   msg='You have already completed this assignment.')
-
-        stats = get_assignment_stats(conn, assignment_id, questioner=True)
-        nr_success, nr_failure = stats['success'], stats['failure'] + stats['oracle_reported']
-        nr_disconnects = stats['questioner_disconnect'] + stats['questioner_timeout']
-
-        if (nr_failure + nr_disconnects) > 3:
-            return render_template('error.html', title='Questioner - ',
-                                   msg='You have made too many mistakes to successfully complete this assignment. Please return accepted HIT. ')
-
-        for player in players.itervalues():
-            if player.worker_id == request.args['workerId'] and player.role == 'Oracle':
-                msg = ('You are allowed to play at most '
-                       'one game at the same time.')
-                return render_template('error.html', title='Questioner - ',
-                                       msg=msg)
-
-    global thread
-    if thread is None or not thread.is_alive():
-        thread = sio.start_background_task(check_for_timeouts)
-
-    return render_template('questioner.html',
-                           title='Questioner - ',
-                           success=nr_success,
-                           failure=nr_failure,
-                           disconnect=nr_disconnects,
-                           accepted_hit=accepted_hit,
-                           assignmentId=assignment_id,
-                           turkSubmitTo=turk_submit_to,
-                           namespace='/questioner')
 
 
 @app.route('/dialogues')
@@ -445,6 +207,9 @@ def show_dialogue(id):
 
     image = ('https://msvocds.blob.core.windows.net/imgs/'
              '{}.jpg').format(picture_id)
+
+    print(image)
+
     guess = get_dialogue_guess(conn, id)
     obj = get_dialogue_object(conn, id)
     objs = [obj.to_json()]
@@ -498,21 +263,6 @@ def render_worker(id):
 def worker(id):
     return render_worker(id)
 
-
-@auth.login_required
-@app.route('/worker/<id>/questioner_status', methods=['POST'])
-def one_worker_questioner_status(id):
-    with engine.begin() as conn:
-        update_one_worker_status(conn, id, "questioner_status", request.form['questioner_status'])
-    return render_worker(id)
-
-
-@auth.login_required
-@app.route('/worker/<id>/oracle_status', methods=['POST'])
-def one_worker_oracle_status(id):
-    with engine.begin() as conn:
-        update_one_worker_status(conn, id, "oracle_status", request.form['oracle_status'])
-    return render_worker(id)
 
 
 @auth.login_required
@@ -580,74 +330,6 @@ def get_dialogue_and_players(sid):
     return player, partner, dialogue
 
 
-@sio.on('report oracle', namespace='/q_questioner')
-@sio.on('report oracle', namespace='/questioner')
-def report_oracle(sid, reason):
-    player, partner, dialogue = get_dialogue_and_players(sid)
-
-    with engine.begin() as conn:
-        update_dialogue_status(conn, dialogue.id, 'oracle_reported',
-                               reason=reason)
-
-    delete_game([player, partner])
-    sio.emit('reported', '', room=partner.sid, namespace=partner.namespace)
-    if partner.role == "QualifyOracle":
-        find_qualification_questioner(partner.sid)
-        find_qualification_oracle(player.sid)
-    else:
-        find_normal_questioner(partner.sid)
-        find_normal_oracle(player.sid)
-
-
-@sio.on('report oracle endgame', namespace='/q_questioner')
-@sio.on('report oracle endgame', namespace='/questioner')
-def report_oracle_end(sid, data):
-
-    # Retrieve json data
-    ranks_to_report = data["id_to_report"]
-    dialogue_id = data["dialogue_id"]
-    comments = data["comments"]
-
-    # store reported data in db
-    with engine.begin() as conn:
-        report_answer(conn, dialogue_id=dialogue_id, ranks=ranks_to_report)
-        update_dialogue_status(conn, dialogue_id, 'oracle_reported', reason=comments)
-
-
-@sio.on('report questioner', namespace='/q_oracle')
-@sio.on('report questioner', namespace='/oracle')
-def report_questioner(sid, reason):
-    player, partner, dialogue = get_dialogue_and_players(sid)
-
-    with engine.begin() as conn:
-        update_dialogue_status(conn, dialogue.id, 'questioner_reported',
-                               reason=reason)
-    delete_game([player, partner])
-    sio.emit('reported', '', room=partner.sid, namespace=partner.namespace)
-    if partner.role == "QualifyQuestioner":
-        find_qualification_oracle(partner.sid)
-        find_qualification_questioner(player.sid)
-    else:
-        find_normal_oracle(partner.sid)
-        find_normal_questioner(player.sid)
-
-
-
-@sio.on('newquestion', namespace='/q_questioner')
-@sio.on('newquestion', namespace='/questioner')
-def new_question(sid, message):
-    player, partner, dialogue = get_dialogue_and_players(sid)
-
-    with engine.begin() as conn:
-        dialogue.question_ids.append(
-            insert_question(conn, dialogue.id, message))
-
-    dialogue.turn = 'oracle'
-    dialogue.deadline = datetime.datetime.now() + datetime.timedelta(seconds=30)
-
-    sio.emit('new question', message,
-             room=player.partner.sid, namespace=partner.namespace)
-
 
 @sio.on('new answer', namespace='/q_oracle')
 @sio.on('new answer', namespace='/oracle')
@@ -675,234 +357,6 @@ def update_answer(sid, msg):
 
 
 
-@sio.on('guess', namespace='/q_questioner')
-@sio.on('guess', namespace='/questioner')
-def guess(sid):
-    player = players[sid]
-    dialogue = dialogues[player.dialogue_id]
-    dialogue.turn = 'questioner'
-    dialogue.deadline = datetime.datetime.now() + datetime.timedelta(seconds=30)
-    objs = [obj.to_json() for obj in dialogue.picture.objects]
-    sio.emit('all annotations', {'objs': objs},
-             room=sid, namespace=player.namespace)
-    sio.emit('start guessing', '',
-             room=player.partner.sid, namespace=player.partner.namespace)
-
-
-@sio.on('guess annotation', namespace='/q_questioner')
-def guess_annotation(sid, object_id):
-    player = players[sid]
-    dialogue = dialogues[player.dialogue_id]
-    conn = engine.connect()
-    insert_guess(conn, dialogue.id, object_id)
-    selected_obj = dialogue.object
-    if selected_obj.object_id == object_id:
-        update_dialogue_status(conn, dialogue.id, 'success')
-
-        stats, finished_flag = check_qualified(conn, player)
-        sio.emit('correct annotation', {'object': selected_obj.to_json(),
-                                        'stats': stats,
-                                        'finished': finished_flag,
-                                        'qualified': False},
-                 room=sid, namespace=player.namespace)
-        stats, finished_flag = check_qualified(conn, player.partner)
-        sio.emit('correct annotation', {'object': selected_obj.to_json(),
-                                        'stats': stats,
-                                        'finished': finished_flag,
-                                        'qualified': False},
-                 room=player.partner.sid, namespace=player.partner.namespace)
-    else:
-        update_dialogue_status(conn, dialogue.id, 'failure')
-        for obj in dialogue.picture.objects:
-            if obj.object_id == object_id:
-                guessed_obj = obj
-        stats, blocked = check_blocked(conn, player)
-        sio.emit('wrong annotation', {'object': selected_obj.to_json(),
-                                      'stats': stats,
-                                      'blocked': blocked,
-                                      'qualified': False},
-                 room=sid, namespace=player.namespace)
-        stats, blocked = check_blocked(conn, player.partner)
-        sio.emit('wrong annotation', {'object': guessed_obj.to_json(),
-                                      'stats': stats,
-                                      'blocked': blocked,
-                                      'qualified': False},
-                 room=player.partner.sid, namespace=player.partner.namespace)
-    delete_game([player, player.partner])
-    conn.close()
-
-
-@sio.on('guess annotation', namespace='/questioner')
-def guess_annotation2(sid, object_id):
-    player = players[sid]
-    dialogue = dialogues[player.dialogue_id]
-    conn = engine.connect()
-    insert_guess(conn, dialogue.id, object_id)
-    selected_obj = dialogue.object
-    if selected_obj.object_id == object_id:
-        update_dialogue_status(conn, dialogue.id, 'success')
-        stats, finished_flag1 = check_assignment_completed(conn, player)
-        sio.emit('correct annotation', {'object': selected_obj.to_json(),
-                                        'stats': stats,
-                                        'finished': finished_flag1,
-                                        'qualified': True},
-                 room=sid, namespace=player.namespace)
-
-        stats = get_assignment_stats(conn, player.partner.worker_id,
-                                     questioner=False)
-
-        stats, finished_flag2 = check_assignment_completed(conn, player.partner)
-        sio.emit('correct annotation', {'object': selected_obj.to_json(),
-                                        'stats': stats,
-                                        'finished': finished_flag2,
-                                        'qualified': True},
-                 room=player.partner.sid, namespace='/oracle')
-        if finished_flag1:
-            pay_questioner_bonus(conn, player)
-        if finished_flag2:
-            pay_oracle_bonus(conn, player.partner)
-    else:
-        update_dialogue_status(conn, dialogue.id, 'failure')
-        for obj in dialogue.picture.objects:
-            if obj.object_id == object_id:
-                guessed_obj = obj
-        stats = get_assignment_stats(conn, player.assignment_id,
-                                     questioner=True)
-        blocked = False
-        if (stats['failure'] + stats['questioner_disconnect'] + stats['questioner_timeout'] + stats['oracle_reported']) > 3:
-            blocked = True
-        sio.emit('wrong annotation', {'object': selected_obj.to_json(),
-                                      'stats': stats,
-                                      'blocked': blocked,
-                                      'qualified': True},
-                 room=sid, namespace=player.namespace)
-        stats = get_assignment_stats(conn, player.partner.assignment_id,
-                                     questioner=False)
-        blocked = False
-        if (stats['failure'] + stats['oracle_disconnect'] + stats['oracle_timeout'] + stats['oracle_reported']) > 3:
-            blocked = True
-        sio.emit('wrong annotation', {'object': guessed_obj.to_json(),
-                                      'stats': stats,
-                                      'blocked': blocked,
-                                      'qualified': True},
-                 room=player.partner.sid, namespace='/oracle')
-    delete_game([player, player.partner])
-    conn.close()
-
-
-def get_difficulty(player):
-    sample = random.random()
-    if player.is_qualified():
-        if sample > 0.3:
-            difficulty = 2
-        else:
-            difficulty = 1
-    else:
-        if sample > 0.3:
-            difficulty = 1
-        else:
-            difficulty = 2
-
-    return difficulty
-
-
-@sio.on('next questioner', namespace='/q_oracle')
-def find_qualification_questioner(sid):
-    find_player(sid, _player_queue=q_oracle_queue, _partner_queue=q_questioner_queue, mode='qualification')
-
-
-@sio.on('next questioner', namespace='/oracle')
-def find_normal_questioner(sid):
-    find_player(sid, _player_queue=oracle_queue, _partner_queue=questioner_queue, mode='normal')
-
-
-@sio.on('next oracle', namespace='/q_questioner')
-def find_qualification_oracle(sid):
-    find_player(sid, _player_queue=q_questioner_queue, _partner_queue=q_oracle_queue, mode='qualification')
-
-
-@sio.on('next oracle', namespace='/questioner')
-def find_normal_oracle(sid):
-    find_player(sid, _player_queue=questioner_queue, _partner_queue=oracle_queue, mode='normal')
-
-
-def find_player(sid, _player_queue, _partner_queue, mode):
-    # Retrieve players by socket id
-    player = players[sid]
-
-    # If a partner is available, start a new dialogue with the current player
-    if len(_partner_queue) > 0:
-
-        # remove partner from queue
-        with engine.begin() as conn:
-            partner = _partner_queue.pop()
-            remove_from_queue(conn, partner, 'dialogue')
-
-        # Provide each other partners
-        partner.partner = player
-        player.partner = partner
-
-        instantiate_dialogue(player=player, partner=partner, mode=mode)
-
-    # Otherwise, queue the player
-    else:
-        player.partner_sid = None
-
-        with engine.begin() as conn:
-            player.queue_id = insert_into_queue(conn, player)
-
-        _player_queue.appendleft(player)
-
-
-def instantiate_dialogue(player, partner, mode):
-    # define roles
-    oracle_ping, questioner_ping = False, False
-    if player.is_questioner():
-        _questioner = player
-        _oracle = partner
-        oracle_ping = True
-    else:
-        _questioner = partner
-        _oracle = player
-        questioner_ping = True
-
-    # Instantiate a new dialogue in the db
-    with engine.begin() as conn:
-        dialogue = start_dialogue(conn, difficulty=get_difficulty(player), mode=mode,
-                                  questioner_session_id=_questioner.session_id,
-                                  oracle_session_id=_oracle.session_id)
-
-    # Store dialogue id
-    dialogues[dialogue.id] = dialogue
-    partner.dialogue_id = dialogue.id
-    player.dialogue_id = dialogue.id
-
-    # provide sid
-    dialogue.oracle_sid = _oracle.sid
-    dialogue.questioner_sid = _questioner.sid
-
-    # Create json msg for both questioner/oracle
-    image_src = ('https://msvocds.blob.core.windows.net/imgs/{}.jpg').format(dialogue.picture.id)
-
-    sio.emit('questioner',
-             {'img': {'src': image_src,
-                      'width': dialogue.picture.width,
-                      'height': dialogue.picture.height},
-              'dialogue_id': dialogue.id,
-              'ping': questioner_ping},
-             room=_questioner.sid,
-             namespace=_questioner.namespace)
-    sio.emit('answerer',
-             {'img': {'src': image_src,
-                      'width': dialogue.picture.width,
-                      'height': dialogue.picture.height},
-              'object': dialogue.object.to_json(),
-              'dialogue_id': dialogue.id,
-              'ping': oracle_ping},
-             room=_oracle.sid,
-             namespace=_oracle.namespace,
-             )
-
 
 def get_hit_info(url):
     par = urlparse.parse_qs(urlparse.urlparse(url).query)
@@ -925,25 +379,8 @@ def connect_player(_Player, sid, response):
     players[sid] = player
     print('add: ' + str(sid))
 
-@sio.on('connect', namespace='/q_oracle')
-def q_oracle_connect(sid, re):
-    connect_player(QualifyOracle, sid, re)
-
-@sio.on('connect', namespace='/oracle')
-def oracle_connect(sid, re):
-    connect_player(Oracle, sid, re)
-
-@sio.on('connect', namespace='/questioner')
-def questioner_connect(sid, re):
-    connect_player(Questioner, sid, re)
-
-@sio.on('connect', namespace='/q_questioner')
-def q_questioner_connect(sid, re):
-    connect_player(QualifyQuestioner, sid, re)
 
 
-
-@sio.on('update session', namespace='/q_oracle')
 @sio.on('update session', namespace='/oracle')
 @sio.on('update session', namespace='/q_questioner')
 @sio.on('update session', namespace='/questioner')
@@ -966,62 +403,8 @@ def disconnect(sid):
     if sid in players:
         player = players[sid]
 
-        with engine.begin() as conn:
-            """Four cases:
-            1. Player is in involved in dialogue."""
-            if player.partner is not None:
-                dialogue = dialogues[player.dialogue_id]
-                partner = player.partner
-                sio.emit('partner_disconnect',
-                         '',
-                         room=partner.sid,
-                         namespace=partner.namespace)
-                if partner.role in ['Oracle', 'QualifyOracle']:
-                    update_dialogue_status(conn, dialogue.id,
-                                           'questioner_disconnect')
-                else:
-                    update_dialogue_status(conn, dialogue.id,
-                                           'oracle_disconnect')
-                if player.role == 'QualifyOracle' or player.role == 'QualifyQuestioner':
-                    check_blocked(conn, player)
-                delete_game([player, partner])
-
-                if partner.role == 'Oracle':
-                    find_normal_questioner(partner.sid)
-                elif partner.role == 'QualifyOracle':
-                    find_qualification_questioner(partner.sid)
-                elif partner.role == 'QualifyQuestioner':
-                    find_qualification_oracle(partner.sid)
-                else:
-                    find_normal_oracle(partner.sid)
-            """2. Player is in oracle queue."""
-            if player in oracle_queue:
-                oracle_queue.remove(player)
-                remove_from_queue(conn, player, 'disconnect')
-            if player in q_oracle_queue:
-                q_oracle_queue.remove(player)
-                remove_from_queue(conn, player, 'disconnect')
-            """3. Player is in questioner queue"""
-            if player in questioner_queue:
-                questioner_queue.remove(player)
-                remove_from_queue(conn, player, 'disconnect')
-            if player in q_questioner_queue:
-                q_questioner_queue.remove(player)
-                remove_from_queue(conn, player, 'disconnect')
-            """4. Player did not start a game yet"""
-            end_session(conn, player.session_id)
-
-        print ('del: ' + str(sid))
-        del players[sid]
 
 
-def delete_game(players):
-    """Remove dialogues"""
-    for player in players:
-        if player.dialogue_id is not None and player.dialogue_id in dialogues:
-            del dialogues[player.dialogue_id]
-        player.partner = None
-        player.dialogue_id = None
 
 
 @app.errorhandler(500)
@@ -1029,5 +412,5 @@ def internal_error(error):
     print (error)
     return "500 error"
 
-if async_mode == 'eventlet':
-    eventlet.wsgi.server(eventlet.listen(('', int(os.environ['PORT']))), app)
+#if async_mode == 'eventlet':
+#    eventlet.wsgi.server(eventlet.listen(('', int(os.environ['PORT']))), app)
