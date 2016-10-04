@@ -27,11 +27,35 @@ $(document).ready(function() {
 
     $('#submit_button').click(function (event) {
 
-        //TODO check answers
 
+        // check for missing fix
+        one_found = false
+        $(".fixed_question").each(function()
+        {
+            console.log("coucou")
+
+            var msg = $(this).val();
+            if (msg == '' || msg.match(/\S+/g).length < 3)
+            {
+                one_found = true
+                $(this).css("border", "1px solid #d66")
+            }
+            else
+            {
+                $(this).css("border", "")
+            }
+
+        });
+        if(one_found)
+        {
+            $("html, body").animate({ scrollTop: 0 }, "slow");
+            vex.dialog.alert({message: 'Please use at least 3 words to fix the question".'});
+            return
+        }
+
+
+        //Send data
         var all_fix = [];
-
-
         $(".row").each(function() {
 
             var one_fix = new Object();
@@ -43,11 +67,19 @@ $(document).ready(function() {
 
         });
 
-        console.log(all_fix);
-
         socket.emit('dialogue fix',  all_fix );
 
-        vex.dialog.alert({message : "Thank you for your hit!"});
+        // remove the current data from the page
+        $(".container").empty()
+
+        vex.dialog.confirm({
+            message: 'Thank you for your hit! Do you want to start a new hit?',
+            callback: function (value) {
+                if (value) {
+                    location.reload();  //reload the current page -> not sure whether it really works :)
+                }
+            }
+        });
         
     });
 
