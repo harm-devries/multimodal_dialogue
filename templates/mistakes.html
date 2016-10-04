@@ -40,10 +40,10 @@
                         </tr>
                       </thead>
                        <tbody id="exchange_table">
+                       {% set i = 0 %}
                        {% for entry in mistake.qas %}
-                           {% set i = 0 %}
                            <tr>
-                           {% if i ==  mistake.question_index  %}
+                           {% if i == mistake.question_index  %}
                              <td class="well well-sm"> <span style="color: #F44336">{{ entry.question}}</span> </td>
                              <td class="well well-sm"> <span style="color: #F44336">{{ entry.answer}}</span> </td>
                            {% else %}
@@ -51,7 +51,7 @@
                               <td class="well well-sm">{{ entry.answer}}</td>
                            {% endif %}
                            <tr/>
-                           {% set i = m +1 %}
+                           {% set i = i +1 %}
                         {% endfor %}
                       </tbody>
                 </table>

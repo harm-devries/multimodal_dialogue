@@ -173,7 +173,7 @@ def q_oracle():
 
 
     questions_to_fix = [question1]
-    print("coucou")
+
     return render_template('mistakes.html',  title='Mistake - ', mistakes=questions_to_fix)
 
 
