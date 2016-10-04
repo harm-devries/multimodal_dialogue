@@ -21,6 +21,7 @@ from database.db_utils import (get_dialogues, get_dialogue_stats,
                                get_one_worker_status, update_one_worker_status,
                                assignment_completed, is_worker_playing, get_ongoing_workers,
                                report_answer)
+from sqlalchemy.sql import text
 from worker import (check_qualified, check_blocked, check_assignment_completed,
                     pay_questioner_bonus, pay_oracle_bonus)
 from players import QualifyOracle, Oracle, QualifyQuestioner, Questioner
@@ -57,9 +58,6 @@ dialogues = {}  # indexed by dialogue_id
 auth = HTTPBasicAuth()
 
 
-
-
-
 @auth.get_password
 def get_pw(username):
     return "multimodal"
@@ -93,57 +91,76 @@ def check_browser(user_agent_string):
     return browser_ok
 
 
+@app.route('/correct_questions', methods=['POST'])
+def save_correction():
+    if not ('worker_id' in request.form and 'assignment_id' in request.form):
+        return render_template('error.html', title='Correcting spelling mistakes - ',
+                               msg='Missing mturk parameters.')
+    assignment_id = request.form['assignment_id']
+    worker_id = request.form['worker_id']
 
-@sio.on('show dialogue')
-def update_answer(sid, msg):
-    player, partner, dialogue = get_dialogue_and_players(sid)
+    # Add to database
     with engine.begin() as conn:
-        ans = {'Yes': 'Yes', 'No': 'No', 'Not applicable': 'N/A'}[msg['new_msg']]
-        insert_answer(conn, dialogue.question_ids[msg['round']], ans)
-    sio.emit('update answer', msg, room=partner.sid, namespace=partner.namespace)
+        i = 0
+        while ("text_{}".format(i) in request.form):
+            question = request.form["text_{}".format(i)]
+            question_id = request.form["question_id_{}".format(i)]
+            conn.execute(text("INSERT INTO fixed_question(question_id, worker_id, "
+                              "assignment_id, corrected_text) "
+                              "VALUES(:qid, :wid, :aid, :text)"),
+                         qid=question_id, wid=worker_id,
+                         aid=assignment_id, text=question)
+            i += 1
 
+    return render_template('submit_mistake_hit.html', title='Correcting spelling mistakes - ',
+                           assignment_id=assignment_id, worker_id=worker_id)
 
-
-
-
-def start_new_fix():
-    dialogue_id = 46206
-    question_id = 181134
-
+def start_new_fix(assignment_id, worker_id):
     with engine.begin() as conn:
-        (picture_id, width, height, status,
-         oracle_id, questioner_id, time) = get_dialogue_info(conn, dialogue_id)
+        questions_to_fix = []
+        result = conn.execute("SELECT q.dialogue_id, tq.question_id FROM "
+                              "question AS q, typo_question AS tq WHERE "
+                              "q.question_id = tq.question_id LIMIT 25")
+        for row in result:
+            dialogue_id = row[0]
+            question_id = row[1]
 
-        if picture_id is None:
-            return render_template('error.html', msg='Dialogue not found.')
+            (picture_id, width, height, status,
+             oracle_id, questioner_id, time) = get_dialogue_info(conn, dialogue_id)
 
-        image = ('https://msvocds.blob.core.windows.net/imgs/{}.jpg').format(picture_id)
-        guess = get_dialogue_guess(conn, dialogue_id)
-        obj = get_dialogue_object(conn, dialogue_id)
-        objs = [obj.to_json()]
-        if guess is not None and guess.object_id != obj.object_id:
-            objs.append(guess.to_json())
-        qas = get_dialogue_conversation(conn, dialogue_id)
-        qas = [_qas for _qas in reversed(qas)]
+            if picture_id is None:
+                return render_template('error.html', msg='Dialogue not found.')
 
-    for i, x in enumerate(qas):
-        if x.question_id == question_id:
-            question_index = i
-            break
-    else:
-        question_index = 0
+            image = ('https://msvocds.blob.core.windows.net/imgs/{}.jpg').format(picture_id)
+            guess = get_dialogue_guess(conn, dialogue_id)
+            obj = get_dialogue_object(conn, dialogue_id)
+            objs = [obj.to_json()]
+            if guess is not None and guess.object_id != obj.object_id:
+                objs.append(guess.to_json())
+            qas = get_dialogue_conversation(conn, dialogue_id)
+            qas = [_qas for _qas in reversed(qas)]
 
-    question1 = {}
-    question1["dialogue_id"] = dialogue_id
-    question1["question_id"] = question_id
-    question1["question_index"] = question_index
-    question1["question"] = qas[question_index].question
-    question1["qas"] = qas
-    question1["img"] = image
+            for i, x in enumerate(qas):
+                if x.question_id == question_id:
+                    question_index = i
+                    break
+            else:
+                question_index = 0
 
-    questions_to_fix = [question1]
+            question1 = {}
+            question1["dialogue_id"] = dialogue_id
+            question1["question_id"] = question_id
+            question1["question_index"] = question_index
+            question1["question"] = qas[question_index].question
+            question1["qas"] = qas
+            question1["img"] = image
 
-    return render_template('mistakes.html', title='Mistake - ', mistakes=questions_to_fix)
+            questions_to_fix.append(question1)
+
+    return render_template('mistakes.html', title='Mistake - ',
+                           mistakes=questions_to_fix,
+                           assignment_id=assignment_id,
+                           worker_id=worker_id)
 
 @app.route('/fix_mistake')
 def fix_mistake():
@@ -158,38 +175,15 @@ def fix_mistake():
                                msg='Missing mturk parameters.')
 
     assignment_id = request.args['assignmentId']
-
-    if len(players) > 1000:
-        msg = ('Sorry, there are currently'
-               'more than 1000 players.')
-        return render_template('error.html', title='Oracle - ',
-                               msg=msg)
+    worker_id = None
+    if 'workerId' in request.args:
+        worker_id = request['workerId']
 
     turk_submit_to = 'https://workersandbox.mturk.com'
     if 'turkSubmitTo' in request.args:
         turk_submit_to = request.args['turkSubmitTo']
 
-    accepted_hit = False
-
-
-    global thread
-    if thread is None:
-        thread = sio.start_background_task(check_for_timeouts)
-
-    return start_new_fix()
-
-
-@sio.on('dialogue fix')
-def report_questioner(sid, data):
-    with engine.begin() as conn:
-
-        for x in data:
-            print(x)
-            print(x["dialogue_id"])
-            print(x["question_id"])
-            print(x["text"])
-
-
+    return start_new_fix(assignment_id, worker_id)
 
 
 
@@ -410,5 +404,5 @@ def internal_error(error):
     print (error)
     return "500 error"
 
-#if async_mode == 'eventlet':
-#    eventlet.wsgi.server(eventlet.listen(('', int(os.environ['PORT']))), app)
+if async_mode == 'eventlet':
+    eventlet.wsgi.server(eventlet.listen(('', int(os.environ['PORT']))), app)
