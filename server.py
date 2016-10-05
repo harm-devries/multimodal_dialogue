@@ -119,12 +119,38 @@ def save_correction():
 def start_new_fix(assignment_id, worker_id):
     with engine.begin() as conn:
         questions_to_fix = []
-        result = conn.execute("SELECT q.dialogue_id, tq.question_id FROM "
-                              "question AS q, typo_question AS tq WHERE "
-                              "q.question_id = tq.question_id AND tq.fixed is False ORDER BY random() LIMIT 25")
+
+
+
+        #result = conn.execute("SELECT q.dialogue_id, tq.question_id FROM "
+        #                      "question AS q, typo_question AS tq WHERE "
+        #                      "q.question_id = tq.question_id AND tq.fixed is False ORDER BY random() LIMIT 25")
+
+        # Pick 25 random questions and provide the original typo and the last answer
+        result = conn.execute( "WITH last_fixed_question AS ( "
+                "SELECT * FROM (SELECT p.question_id, "
+                "   p.corrected_text, "
+                "  ROW_NUMBER() OVER(PARTITION BY p.question_id "
+                "                         ORDER BY p.timestamp DESC) AS rk "
+                "FROM fixed_question p) t "
+                "WHERE t.rk = 1  ) "
+                "SELECT tmp.dialogue_id, tmp.question_id, content, corrected_text FROM ( "
+                "  SELECT tq.question_id, q.content, q.dialogue_id FROM typo_question tq, question q "
+                "     WHERE q.question_id = tq.question_id AND tq.fixed is False  ORDER BY random() LIMIT 25) tmp "
+                "LEFT JOIN last_fixed_question fq ON tmp.question_id = fq.question_id; ");
+
+
+
         for row in result:
             dialogue_id = row[0]
             question_id = row[1]
+            original_question = row[2]
+            last_question = row[3]
+
+            if last_question is not None and last_question != "":
+                question_to_show = last_question
+            else:
+                question_to_show = original_question
 
             (picture_id, width, height, status,
              oracle_id, questioner_id, time) = get_dialogue_info(conn, dialogue_id)
@@ -152,7 +178,8 @@ def start_new_fix(assignment_id, worker_id):
             question["dialogue_id"] = dialogue_id
             question["question_id"] = question_id
             question["question_index"] = question_index
-            question["question"] = qas[question_index].question
+            question["question_to_show"] = question_to_show
+            question["question_original"] = original_question
             question["qas"] = qas
             question["img"] = image
 

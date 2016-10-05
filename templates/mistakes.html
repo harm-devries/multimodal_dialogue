@@ -24,6 +24,7 @@
     </ul>
      <p>The question comes from the GuessWhat!? game. In this game, you have to guess an object from a picture by asking questions.
          Thus, you may sometimes have to know the dialogue around a question to reformulate it. Click on the green button to display it.</p>
+     <p>Some displayed questions may have already been fixed by other workers. If the displayed question make no sense, you may display the original question by hovering it or displaying the full dialogue</p>
      <p>NB: copy/past option has been removed to avoid cheating :)</p>
   <table class="table table-striped">
   <thead>
@@ -41,7 +42,7 @@
     {% set m = 0 %}
   	{% for mistake in mistakes%}
       <tr>
-        <td> <span id="span_{{m}}">{{mistake.question}}</span></td>
+        <td> <span id="span_{{m}}" title="Original question: {{ mistake.question_original }}" >{{mistake.question_to_show}}</span></td>
         <td><input type="text" name="text_{{m}}" id="text_{{ m }}" class="form-control fixed_question" value="" title="The questions must have at least three words and end with a question tag." pattern="[A-Za-z]+ [A-Za-z]+ [A-Za-z]+.*\?" required></td>
         <td><a class="btn btn-info show_dialogue" value="{{ m }}" role="button">Display dialogues &raquo;</a>
         <input type="hidden" name="question_id_{{m}}" id="question_id_{{ m }}" class="question_id" value="{{ mistake.question_id }}">
