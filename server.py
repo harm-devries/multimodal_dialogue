@@ -121,7 +121,7 @@ def start_new_fix(assignment_id, worker_id):
         questions_to_fix = []
         result = conn.execute("SELECT q.dialogue_id, tq.question_id FROM "
                               "question AS q, typo_question AS tq WHERE "
-                              "q.question_id = tq.question_id AND tq.fixed is False LIMIT 25")
+                              "q.question_id = tq.question_id AND tq.fixed is False ORDER BY random() LIMIT 25")
         for row in result:
             dialogue_id = row[0]
             question_id = row[1]
