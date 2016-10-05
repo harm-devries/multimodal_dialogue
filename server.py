@@ -404,5 +404,5 @@ def internal_error(error):
     print (error)
     return "500 error"
 
-if async_mode == 'eventlet':
-    eventlet.wsgi.server(eventlet.listen(('', int(os.environ['PORT']))), app)
+#if async_mode == 'eventlet':
+#    eventlet.wsgi.server(eventlet.listen(('', int(os.environ['PORT']))), app)

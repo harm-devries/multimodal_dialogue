@@ -10,6 +10,20 @@
 {% block body %}
 
 <div class="container" style="margin-top: 15px">
+    <h2>Instruction</h2>
+    <p>You have to either fix or reformulate the following questions with correct english. A question must:</p>
+     <ul>
+      <li>Contain at least three words</li>
+      <li>End by a question tag</li>
+    </ul>
+    <p>The question will be colored:</p>
+     <ul>
+      <li>In <span style="color:red">red</span> if it does not follow the previous constraints Contain at least three words</li>
+      <li>In <span style="color:orange">orange</span> if no fix has been done (This may happen) </li>
+      <li>In <span style="color:green">green</span> if it has been modified</li>
+    </ul>
+     <p>The question comes from the GuessWhat!? game. In this game, you have to guess an object from a picture by asking questions.
+         Thus, you may sometimes have to know the dialogue around a question to reformulate it. Click on the green button to display it.</p>
   <table class="table table-striped">
   <thead>
     <tr>
@@ -26,13 +40,13 @@
     {% set m = 0 %}
   	{% for mistake in mistakes%}
       <tr>
-        <td> <span>{{mistake.question}} </span></td>
-        <td><input type="text" name="text_{{m}}" id="text_{{ m }}" class="form-control" value="" required></td>
+        <td> <span id="span_{{m}}">{{mistake.question}}</span></td>
+        <td><input type="text" name="text_{{m}}" id="text_{{ m }}" class="form-control fixed_question" value="" title="The questions must have at least three words and end with a question tag." pattern="[A-Za-z]+ [A-Za-z]+ [A-Za-z]+.*\?" required></td>
         <td><a class="btn btn-info show_dialogue" value="{{ m }}" role="button">Display dialogues &raquo;</a>
         <input type="hidden" name="question_id_{{m}}" id="question_id_{{ m }}" class="question_id" value="{{ mistake.question_id }}">
         <input type="hidden" name="dialogue_id_{{m}}" id="dialogue_id_{{ m }}" class="dialogue_id" value="{{ mistake.dialogue_id }}">
          <div id="log_{{ m }}" style="display: none">
-                <img src="{{ mistake.img }}">
+                <img src="{{ mistake.img }}" style="margin:0px auto;display:block;max-width:500px:max-height:500px">
                 <table class="table table-striped">
                      <thead>
                         <tr>
