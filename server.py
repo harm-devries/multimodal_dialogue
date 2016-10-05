@@ -105,6 +105,7 @@ def save_correction():
         while ("text_{}".format(i) in request.form):
             question = request.form["text_{}".format(i)]
             question_id = request.form["question_id_{}".format(i)]
+
             conn.execute(text("INSERT INTO fixed_question(question_id, worker_id, "
                               "assignment_id, corrected_text) "
                               "VALUES(:qid, :wid, :aid, :text)"),
@@ -120,7 +121,7 @@ def start_new_fix(assignment_id, worker_id):
         questions_to_fix = []
         result = conn.execute("SELECT q.dialogue_id, tq.question_id FROM "
                               "question AS q, typo_question AS tq WHERE "
-                              "q.question_id = tq.question_id LIMIT 25")
+                              "q.question_id = tq.question_id AND tq.fixed is False LIMIT 25")
         for row in result:
             dialogue_id = row[0]
             question_id = row[1]
@@ -147,15 +148,15 @@ def start_new_fix(assignment_id, worker_id):
             else:
                 question_index = 0
 
-            question1 = {}
-            question1["dialogue_id"] = dialogue_id
-            question1["question_id"] = question_id
-            question1["question_index"] = question_index
-            question1["question"] = qas[question_index].question
-            question1["qas"] = qas
-            question1["img"] = image
+            question = {}
+            question["dialogue_id"] = dialogue_id
+            question["question_id"] = question_id
+            question["question_index"] = question_index
+            question["question"] = qas[question_index].question
+            question["qas"] = qas
+            question["img"] = image
 
-            questions_to_fix.append(question1)
+            questions_to_fix.append(question)
 
     return render_template('mistakes.html', title='Mistake - ',
                            mistakes=questions_to_fix,
@@ -404,5 +405,5 @@ def internal_error(error):
     print (error)
     return "500 error"
 
-#if async_mode == 'eventlet':
-#    eventlet.wsgi.server(eventlet.listen(('', int(os.environ['PORT']))), app)
+if async_mode == 'eventlet':
+    eventlet.wsgi.server(eventlet.listen(('', int(os.environ['PORT']))), app)
