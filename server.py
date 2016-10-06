@@ -189,6 +189,7 @@ def start_new_fix(assignment_id, worker_id, turk_submit_to, accepted_hit):
                            mistakes=questions_to_fix,
                            assignment_id=assignment_id,
                            worker_id=worker_id,
+                           turk_submit_to=turk_submit_to,
                            hit_accepted=accepted_hit)
 
 @app.route('/fix_mistake')
