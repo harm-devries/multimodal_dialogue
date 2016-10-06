@@ -13,13 +13,13 @@
     <h2>Instructions</h2>
     <p>You have to be a native english speaker in order to participate in this HIT. </p>
     <p>
-    You have to reformulate questions to correct english. The questions are extracted from the GuessWhat!? game in which a player locates an object in a picture by asking yes/no questions. For some questions more context is necessary to correct them, clicking on the 'show dialogue' button will show the game which the question was part of. </p>
+    Your task is to reformulate questions to correct english. The questions are extracted from the GuessWhat!? game in which a player locates an object in a picture by asking yes/no questions. For some questions more context is necessary to correct them, clicking on the 'show dialogue' button will show the game which the question was part of. </p>
     <p>
     Two example corrections:
     </p>
     <ul>
       <li>ba na na? -> Is it a banana?</li>
-      <li>blonde lady pink sweater? -> Is it the blond lady with pink sweater?</li>
+      <li>in left of pic the far 2... one of them -> Is it one of the far two in the left of the picture?</li>
     </ul>
     </p>
     <p>Note further that a questions must:</p>
@@ -47,6 +47,7 @@
     <form action="/correct_questions" method="POST">
     <input type="hidden" name="assignment_id" id="assignment_id" value="{{assignment_id}}" />
     <input type="hidden" name="worker_id" id="worker_id" value="{{worker_id}}" />
+    <input type="hidden" name="turk_submit_to" id="turk_submit_to" value="{{turk_submit_to}}" />
 
     {% set m = 0 %}
   	{% for mistake in mistakes%}
@@ -86,7 +87,7 @@
         </tr>
         {% set m = m +1 %}
 	{% endfor %}
-  {% if accepted_hit %}
+  {% if hit_accepted %}
   <tr>
     <td></td>
     <td></td>

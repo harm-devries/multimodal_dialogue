@@ -186,11 +186,11 @@ def start_new_fix(assignment_id, worker_id, turk_submit_to, accepted_hit):
 
             questions_to_fix.append(question)
 
-    return render_template('mistakes.html', title='Mistake - ',
+    return render_template('mistakes.html', title='Spelling correction - ',
                            mistakes=questions_to_fix,
                            assignment_id=assignment_id,
                            worker_id=worker_id,
-                           accepted_hit=accepted_hit)
+                           hit_accepted=accepted_hit)
 
 @app.route('/fix_mistake')
 def fix_mistake():
