@@ -122,13 +122,14 @@ def save_correction():
 def start_new_fix(assignment_id, worker_id, turk_submit_to):
     with engine.begin() as conn:
         questions_to_fix = []
+        print 'start_new_fix'
 
         #result = conn.execute("SELECT q.dialogue_id, tq.question_id FROM "
         #                      "question AS q, typo_question AS tq WHERE "
         #                      "q.question_id = tq.question_id AND tq.fixed is False ORDER BY random() LIMIT 25")
 
         # Pick 25 random questions and provide the original typo and the last answer
-        result = conn.execute( "WITH last_fixed_question AS ( "
+        result = conn.execute("WITH last_fixed_question AS ( "
                 "SELECT * FROM (SELECT p.question_id, "
                 "   p.corrected_text, "
                 "  ROW_NUMBER() OVER(PARTITION BY p.question_id "
@@ -203,11 +204,11 @@ def fix_mistake():
             'assignmentId' in request.args):
         return render_template('error.html', title='Oracle - ',
                                msg='Missing mturk parameters.')
-
+    print 'here'
     assignment_id = request.args['assignmentId']
     worker_id = None
     if 'workerId' in request.args:
-        worker_id = request['workerId']
+        worker_id = request.args['workerId']
 
     turk_submit_to = 'https://workersandbox.mturk.com'
     if 'turkSubmitTo' in request.args:
