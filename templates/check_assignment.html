@@ -1,0 +1,40 @@
+{% extends "main.html" %}
+
+{% block body %}
+
+
+<div class="container" style="margin-top: 15px">
+  <table class="table table-striped">
+  <tr>
+        <td>Status: </td>
+        <td>{{ status }}</td>
+        <td>
+              <form action="/check_assignment/{{ assignment_id }}" method="POST">
+                  <select name="status">
+                      <option value="approved">Approved</option>
+                      <option value="rejected">Rejected</option>
+                  </select>
+                  <input type="submit" value="Update status">
+              </form>
+        </td>
+  </tr>
+  </table>
+
+  <table class="table table-striped">
+  	<thead>
+    <tr>
+      <th>Original</th>
+      <th>Correction</th>
+    </tr>
+  </thead>
+  <tbody>
+  	{% for c in corrections %}
+	    <tr>
+	      <td>{{c.original}}</td>
+	      <td>{{c.correction}}</td>
+	    </tr>
+	{% endfor %}
+  </tbody>
+  </table>
+</div>
+{% endblock %}

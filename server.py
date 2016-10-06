@@ -100,10 +100,13 @@ def save_correction():
     assignment_id = request.form['assignment_id']
     worker_id = request.form['worker_id']
     turk_submit_to = request.form['turk_submit_to']
-    print 'turk_submit_to'
-    print turk_submit_to
     # Add to database
     with engine.begin() as conn:
+        conn.execute(text("INSERT INTO spellcheck_assignment (assignment_id) "
+                          "SELECT :id WHERE NOT EXISTS"
+                          "(SELECT 1 FROM spellcheck_assignment WHERE assignment_id = :id);"),
+                     id=assignment_id)
+
         i = 0
         while ("text_{}".format(i) in request.form):
             question = request.form["text_{}".format(i)]
@@ -218,6 +221,59 @@ def fix_mistake():
     return start_new_fix(assignment_id, worker_id, turk_submit_to, accepted_hit)
 
 
+@app.route('/assignments/<status>')
+@auth.login_required
+def all_assignments(status):
+    with engine.begin() as conn:
+        assignments = []
+        rows = conn.execute(text("SELECT assignment_id "
+                                 "FROM spellcheck_assignment "
+                                 "WHERE status = :status ORDER BY timestamp DESC"),
+                            status=status)
+        for row in rows:
+            assignments.append({'id': row[0]})
+
+    return render_template('assignments.html',
+                           assignments=assignments)
+
+
+@app.route('/check_assignment/<id>', methods=['POST'])
+@auth.login_required
+def change_assignment_status(id):
+    status = request.form['status']
+    with engine.begin() as conn:
+        conn.execute(text("UPDATE spellcheck_assignment SET status = :status WHERE assignment_id = :id"),
+                     status=status, id=id)
+
+    return check_assignment(id)
+
+
+@app.route('/check_assignment/<id>')
+@auth.login_required
+def check_assignment(id):
+    with engine.begin() as conn:
+        result = conn.execute(text("SELECT status FROM spellcheck_assignment "
+                                   "WHERE assignment_id = :id"),
+                              id=id)
+        if result.rowcount > 0:
+            status = result.first()[0]
+        else:
+            status = 'none'
+
+        corrections = []
+        rows = conn.execute(text("SELECT fq.corrected_text, tq.content "
+                                 "FROM typo_question AS tq, fixed_question AS fq "
+                                 "WHERE fq.assignment_id = :aid AND "
+                                 "fq.question_id = tq.question_id"),
+                            aid=id)
+        for row in rows:
+            corrections.append({'original': row[1], 'correction': row[0]})
+
+    return render_template('check_assignment.html',
+                           corrections=corrections,
+                           status=status,
+                           assignment_id=id)
+
 
 @app.route('/dialogues')
 @auth.login_required
@@ -276,6 +332,7 @@ def workers():
     workers = get_workers(conn)
     conn.close()
     return render_template('workers.html', workers=workers)
+
 
 
 def render_worker(id):

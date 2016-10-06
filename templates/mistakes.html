@@ -33,8 +33,8 @@
       <li>In <span style="color:orange">orange</span> if no correction has been made (in some cases this is fine) </li>
       <li>In <span style="color:green">green</span> if it has been modified</li>
     </ul>
-    <p>Some displayed questions may have already been corrected by other workers. If the displayed question make no sense, you may display the original question by hovering it or displaying the full dialogue</p>
-    <p>NB: copy/past option has been removed to avoid cheating :)</p>
+    <p>Some displayed questions may have already been corrected by other workers. If the displayed question make no sense, you may display the original question by hovering it or displaying the full dialogue. </p>
+    <p>For any questions regarding the HIT, please contact Harm de Vries at guesswhat.mturk@gmail.com.</p>
   <table class="table table-striped">
   <thead>
     <tr>
@@ -53,7 +53,7 @@
   	{% for mistake in mistakes%}
       <tr>
         <td> <span id="span_{{m}}" title="Original question: {{ mistake.question_original }}" >{{mistake.question_to_show}}</span></td>
-        <td><input type="text" name="text_{{m}}" id="text_{{ m }}" class="form-control fixed_question" value="" title="The questions must have at least three words and end with a question tag." pattern="[A-Za-z]+ [A-Za-z]+ [A-Za-z]+.*\?" required></td>
+        <td><input type="text" name="text_{{m}}" id="text_{{ m }}" class="form-control fixed_question" value="" title="The questions must have at least three words and end with a question tag." pattern="[A-Za-z!#.,]+ [A-Za-z!#.,]+ [A-Za-z!#.,]+.*\?" required></td>
         <td><a class="btn btn-info show_dialogue" value="{{ m }}" role="button">Display dialogue &raquo;</a>
         <input type="hidden" name="question_id_{{m}}" id="question_id_{{ m }}" class="question_id" value="{{ mistake.question_id }}">
         <input type="hidden" name="dialogue_id_{{m}}" id="dialogue_id_{{ m }}" class="dialogue_id" value="{{ mistake.dialogue_id }}">

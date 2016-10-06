@@ -1,0 +1,22 @@
+{% extends "main.html" %}
+
+{% block body %}
+
+
+<div class="container" style="margin-top: 15px">
+  <table class="table table-striped">
+  	<thead>
+    <tr>
+      <th>Assignment id</th>
+    </tr>
+  </thead>
+  <tbody>
+  	{% for c in assignments %}
+	    <tr>
+	      <td><a href="/check_assignment/{{c.id}}">{{c.id}}</a></td>
+	    </tr>
+	{% endfor %}
+  </tbody>
+  </table>
+</div>
+{% endblock %}
