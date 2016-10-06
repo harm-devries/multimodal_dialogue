@@ -119,10 +119,9 @@ def save_correction():
                            assignment_id=assignment_id, worker_id=worker_id,
                            turk_submit_to=turk_submit_to)
 
-def start_new_fix(assignment_id, worker_id, turk_submit_to):
+def start_new_fix(assignment_id, worker_id, turk_submit_to, accepted_hit):
     with engine.begin() as conn:
         questions_to_fix = []
-        print 'start_new_fix'
 
         #result = conn.execute("SELECT q.dialogue_id, tq.question_id FROM "
         #                      "question AS q, typo_question AS tq WHERE "
@@ -190,8 +189,8 @@ def start_new_fix(assignment_id, worker_id, turk_submit_to):
     return render_template('mistakes.html', title='Mistake - ',
                            mistakes=questions_to_fix,
                            assignment_id=assignment_id,
-                           worker_id=worker_id, 
-                           )
+                           worker_id=worker_id,
+                           accepted_hit=accepted_hit)
 
 @app.route('/fix_mistake')
 def fix_mistake():
@@ -202,19 +201,21 @@ def fix_mistake():
 
     if not ('hitId' in request.args and
             'assignmentId' in request.args):
-        return render_template('error.html', title='Oracle - ',
+        return render_template('error.html', title='Correct spelling mistakes - ',
                                msg='Missing mturk parameters.')
-    print 'here'
+
     assignment_id = request.args['assignmentId']
     worker_id = None
+    accepted_hit = False
     if 'workerId' in request.args:
         worker_id = request.args['workerId']
+        accepted_hit = True
 
     turk_submit_to = 'https://workersandbox.mturk.com'
     if 'turkSubmitTo' in request.args:
         turk_submit_to = request.args['turkSubmitTo']
 
-    return start_new_fix(assignment_id, worker_id, turk_submit_to)
+    return start_new_fix(assignment_id, worker_id, turk_submit_to, accepted_hit)
 
 
 
