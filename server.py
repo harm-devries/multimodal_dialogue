@@ -93,11 +93,13 @@ def check_browser(user_agent_string):
 
 @app.route('/correct_questions', methods=['POST'])
 def save_correction():
-    if not ('worker_id' in request.form and 'assignment_id' in request.form):
+    if not ('worker_id' in request.form and 'assignment_id' in request.form and
+            'turk_submit_to' in request.form):
         return render_template('error.html', title='Correcting spelling mistakes - ',
                                msg='Missing mturk parameters.')
     assignment_id = request.form['assignment_id']
     worker_id = request.form['worker_id']
+    turk_submit_to = request.form['turk_submit_to']
 
     # Add to database
     with engine.begin() as conn:
@@ -114,13 +116,12 @@ def save_correction():
             i += 1
 
     return render_template('submit_mistake_hit.html', title='Correcting spelling mistakes - ',
-                           assignment_id=assignment_id, worker_id=worker_id)
+                           assignment_id=assignment_id, worker_id=worker_id,
+                           turk_submit_to=turk_submit_to)
 
-def start_new_fix(assignment_id, worker_id):
+def start_new_fix(assignment_id, worker_id, turk_submit_to):
     with engine.begin() as conn:
         questions_to_fix = []
-
-
 
         #result = conn.execute("SELECT q.dialogue_id, tq.question_id FROM "
         #                      "question AS q, typo_question AS tq WHERE "
@@ -188,7 +189,8 @@ def start_new_fix(assignment_id, worker_id):
     return render_template('mistakes.html', title='Mistake - ',
                            mistakes=questions_to_fix,
                            assignment_id=assignment_id,
-                           worker_id=worker_id)
+                           worker_id=worker_id, 
+                           )
 
 @app.route('/fix_mistake')
 def fix_mistake():
@@ -211,7 +213,7 @@ def fix_mistake():
     if 'turkSubmitTo' in request.args:
         turk_submit_to = request.args['turkSubmitTo']
 
-    return start_new_fix(assignment_id, worker_id)
+    return start_new_fix(assignment_id, worker_id, turk_submit_to)
 
 
 
