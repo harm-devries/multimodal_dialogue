@@ -261,13 +261,13 @@ def check_assignment(id):
             status = 'none'
 
         corrections = []
-        rows = conn.execute(text("SELECT fq.corrected_text, tq.content "
-                                 "FROM typo_question AS tq, fixed_question AS fq "
+        rows = conn.execute(text("SELECT fq.corrected_text, tq.content, q.dialogue_id, tq.fixed "
+                                 "FROM typo_question AS tq, fixed_question AS fq, question AS q "
                                  "WHERE fq.assignment_id = :aid AND "
-                                 "fq.question_id = tq.question_id"),
+                                 "fq.question_id = tq.question_id AND fq.question_id = q.question_id"),
                             aid=id)
         for row in rows:
-            corrections.append({'original': row[1], 'correction': row[0]})
+            corrections.append({'original': row[1], 'correction': row[0], 'dialogue_id': row[2], 'is_valid': row[3]})
 
     return render_template('check_assignment.html',
                            corrections=corrections,
@@ -337,22 +337,18 @@ def workers():
 
 def render_worker(id):
     with engine.begin() as conn:
-        worker_dialogues = get_worker(conn, id)
-        status = get_one_worker_status(conn, id)
 
-        ongoing_worker = is_worker_playing(conn, id)
+        corrections = []
+        rows = conn.execute(text("SELECT fq.corrected_text, tq.content, q.dialogue_id, tq.fixed "
+                                 "FROM typo_question AS tq, fixed_question AS fq, question AS q "
+                                 "WHERE fq.worker_id = :aid AND "
+                                 "fq.question_id = tq.question_id AND fq.question_id = q.question_id"
+                                 ""),
+                            aid=id)
+        for row in rows:
+            corrections.append({'original': row[1], 'correction': row[0], 'dialogue_id': row[2], 'is_valid': row[3]})
 
-        status["playing"] = ongoing_worker.is_playing
-        status["role"] = ongoing_worker.role
-        status["socket_db"] = ongoing_worker.socket_id
-        status["socket_io"] = 0
-
-        for sid, player in players.iteritems():
-            if player.worker_id == id:
-                status["socket_io"] = sid
-                break
-
-    return render_template('worker.html', dialogues=worker_dialogues, worker=status)
+    return render_template('check_assignment.html', status="", corrections=corrections)
 
 
 @app.route('/worker/<id>')
