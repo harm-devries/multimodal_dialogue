@@ -53,7 +53,7 @@
   	{% for mistake in mistakes%}
       <tr>
         <td> <span id="span_{{m}}" title="Original question: {{ mistake.question_original }}" >{{mistake.question_to_show}}</span></td>
-        <td><input type="text" name="text_{{m}}" id="text_{{ m }}" class="form-control fixed_question" value="" title="The questions must have at least three words and end with a question tag." pattern="[A-Za-z!#.,]+ [A-Za-z!#.,]+ [A-Za-z!#.,]+.*\?" required></td>
+        <td><input type="text" name="text_{{m}}" id="text_{{ m }}" class="form-control fixed_question" value="" title="The questions must have at least three words and end with a question tag." pattern="[A-Za-z!#.,0-9]+ [A-Za-z!#.,0-9]+ [A-Za-z!#.,0-9]+.*\?" required></td>
         <td><a class="btn btn-info show_dialogue" value="{{ m }}" role="button">Display dialogue &raquo;</a>
         <input type="hidden" name="question_id_{{m}}" id="question_id_{{ m }}" class="question_id" value="{{ mistake.question_id }}">
         <input type="hidden" name="dialogue_id_{{m}}" id="dialogue_id_{{ m }}" class="dialogue_id" value="{{ mistake.dialogue_id }}">
