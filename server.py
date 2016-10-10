@@ -103,15 +103,16 @@ def save_correction():
     turk_submit_to = request.form['turk_submit_to']
     # Add to database
     with engine.begin() as conn:
-        #conn.execute(text("INSERT INTO spellcheck_assignment (assignment_id) "
-        #                  "SELECT :id WHERE NOT EXISTS"
-        #                  "(SELECT 1 FROM spellcheck_assignment WHERE assignment_id = :id);"),
-        #             id=assignment_id)
+        conn.execute(text("INSERT INTO diff_assignment (assignment_id) "
+                          "SELECT :id WHERE NOT EXISTS"
+                          "(SELECT 1 FROM diff_assignment WHERE assignment_id = :id);"),
+                     id=assignment_id)
 
         i = 0
         while ("fix_id_{}".format(i) in request.form):
             question_id = request.form["question_id_{}".format(i)]
             fix_id = request.form["fix_id_{}".format(i)]
+            typo_id = request.form["typo_id_{}".format(i)]
             res = request.form["radio_{}".format(i)]
 
             if res == "Yes":
@@ -127,6 +128,10 @@ def save_correction():
                               "VALUES(:qid, :fid, :valid, :report)"),
                          qid=question_id, fid=fix_id,
                          valid=valid, report=report)
+
+            # prevent from providing the diff twice
+            conn.execute(text("UPDATE typo_question SET fixed = True WHERE typo_id = :id"), id=typo_id)
+
             i += 1
 
     return render_template('submit_mistake_hit.html', title='Correcting diff mistakes - ',
