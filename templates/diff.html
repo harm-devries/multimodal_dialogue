@@ -37,7 +37,7 @@
 <div class="container" style="margin-top: 15px">
     <h2>Instructions</h2>
     <p>You have to be a native english speaker in order to participate in this HIT. </p>
-    <p>Your task is to check weither the following 50 questions were correctly reformulate. The questions are extracted from the GuessWhat!? game in which a player locates an object in a picture by asking yes/no questions. For some questions more context is necessary to correct them, clicking on the 'show dialogue' button will show the game which the question was part of. </p>
+    <p>Your task is to check weither the following 80 questions were correctly reformulate. The questions are extracted from the GuessWhat!? game in which a player locates an object in a picture by asking yes/no questions. For some questions more context is necessary to correct them, clicking on the 'show dialogue' button will show the game which the question was part of. </p>
 
     <p>You have to select</p>
      <ul>
@@ -82,7 +82,7 @@
 	      <td><span id="original_{{ m }}">{{diff.original}}</span></td>
 	      <td><span id="correction_{{ m }}">{{diff.correction}}</span></td>
           <td><span class="diff"></span></td>
-                <td><input type="radio" name="radio_{{ m }}" value="Yes"></td>
+                <td><input type="radio" name="radio_{{ m }}" value="Yes" required></td>
                 <td><input type="radio" name="radio_{{ m }}" value="No"></td>
                 <td><input type="radio" name="radio_{{ m }}" value="Report"></td>
         <td><a class="btn btn-info show_dialogue" value="{{ m }}" role="button">Display dialogue &raquo;</a>
