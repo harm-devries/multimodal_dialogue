@@ -71,7 +71,7 @@
     </tr>
   </thead>
   <tbody>
-    <form action="/correct_questions" method="POST">
+    <form action="/correct_diff" method="POST">
     <input type="hidden" name="assignment_id" id="assignment_id" value="{{assignment_id}}" />
     <input type="hidden" name="worker_id" id="worker_id" value="{{worker_id}}" />
     <input type="hidden" name="turk_submit_to" id="turk_submit_to" value="{{turk_submit_to}}" />
@@ -85,11 +85,11 @@
                 <td><input type="radio" name="radio_{{ m }}" value="Yes"></td>
                 <td><input type="radio" name="radio_{{ m }}" value="No"></td>
                 <td><input type="radio" name="radio_{{ m }}" value="Report"></td>
-        </form>
-
         <td><a class="btn btn-info show_dialogue" value="{{ m }}" role="button">Display dialogue &raquo;</a>
         <input type="hidden" name="question_id_{{m}}" id="question_id_{{ m }}" class="question_id" value="{{ diff.question_id }}">
         <input type="hidden" name="dialogue_id_{{m}}" id="dialogue_id_{{ m }}" class="dialogue_id" value="{{ diff.dialogue_id }}">
+        <input type="hidden" name="typo_id_{{m}}" id="typo_id_{{ m }}" class="typo_id" value="{{ diff.typo_id }}">
+        <input type="hidden" name="fix_id_{{m}}" id="fix_id_{{ m }}" class="fix_id" value="{{ diff.fix_id }}">
          <div id="log_{{ m }}" style="display: none">
                 <img src="{{ diff.img }}" style="margin:0px auto;display:block;max-width:500px:max-height:500px">
                 <table class="table table-striped">
@@ -111,7 +111,7 @@
                               <td class="well well-sm">{{ entry.answer}}</td>
                            {% endif %}
                            <tr/>
-                           {% set i = i +1 %}
+                           {% set i = i + 1 %}
                         {% endfor %}
                       </tbody>
                 </table>

@@ -91,35 +91,45 @@ def check_browser(user_agent_string):
     return browser_ok
 
 
-@app.route('/correct_questions', methods=['POST'])
+@app.route('/correct_diff', methods=['POST'])
 def save_correction():
     if not ('worker_id' in request.form and 'assignment_id' in request.form and
             'turk_submit_to' in request.form):
         return render_template('error.html', title='Correcting spelling mistakes - ',
                                msg='Missing mturk parameters.')
+
     assignment_id = request.form['assignment_id']
     worker_id = request.form['worker_id']
     turk_submit_to = request.form['turk_submit_to']
     # Add to database
     with engine.begin() as conn:
-        conn.execute(text("INSERT INTO spellcheck_assignment (assignment_id) "
-                          "SELECT :id WHERE NOT EXISTS"
-                          "(SELECT 1 FROM spellcheck_assignment WHERE assignment_id = :id);"),
-                     id=assignment_id)
+        #conn.execute(text("INSERT INTO spellcheck_assignment (assignment_id) "
+        #                  "SELECT :id WHERE NOT EXISTS"
+        #                  "(SELECT 1 FROM spellcheck_assignment WHERE assignment_id = :id);"),
+        #             id=assignment_id)
 
         i = 0
-        while ("text_{}".format(i) in request.form):
-            question = request.form["text_{}".format(i)]
+        while ("fix_id_{}".format(i) in request.form):
             question_id = request.form["question_id_{}".format(i)]
+            fix_id = request.form["fix_id_{}".format(i)]
+            res = request.form["radio_{}".format(i)]
 
-            conn.execute(text("INSERT INTO fixed_question(question_id, worker_id, "
-                              "assignment_id, corrected_text) "
-                              "VALUES(:qid, :wid, :aid, :text)"),
-                         qid=question_id, wid=worker_id,
-                         aid=assignment_id, text=question)
+            if res == "Yes":
+                valid, report = True, False
+            elif res == "No":
+                valid, report = False, False
+            else:
+                valid, report = False, True
+
+
+            conn.execute(text("INSERT INTO diff(question_id, fix_id, "
+                              "valid, report) "
+                              "VALUES(:qid, :fid, :valid, :report)"),
+                         qid=question_id, fid=fix_id,
+                         valid=valid, report=report)
             i += 1
 
-    return render_template('submit_mistake_hit.html', title='Correcting spelling mistakes - ',
+    return render_template('submit_mistake_hit.html', title='Correcting diff mistakes - ',
                            assignment_id=assignment_id, worker_id=worker_id,
                            turk_submit_to=turk_submit_to)
 
@@ -151,10 +161,11 @@ def start_new_fix(assignment_id, worker_id, turk_submit_to, accepted_hit):
         #                      "ORDER BY random() LIMIT 25")
 
 
-        result = conn.execute(text("SELECT q.dialogue_id, q.question_id, tq.content, fq.corrected_text "
+        result = conn.execute(text("SELECT q.dialogue_id, q.question_id, tq.content, fq.corrected_text, tq.typo_question_id, fq.fixed_question_id "
                                  "FROM typo_question AS tq, fixed_question AS fq, question AS q "
                                  "WHERE fq.question_id = tq.question_id AND fq.question_id = q.question_id "
-                                 "ORDER BY random() LIMIT 50"))
+                                 "AND tq.fixed=False "
+                                 "ORDER BY random() LIMIT 6"))
 
 
         for row in result:
@@ -162,6 +173,8 @@ def start_new_fix(assignment_id, worker_id, turk_submit_to, accepted_hit):
             question_id = row[1]
             original = row[2]
             correction = row[3]
+            typo_id = row[4]
+            fix_id = row[5]
 
             (picture_id, width, height, status,
              oracle_id, questioner_id, time) = get_dialogue_info(conn, dialogue_id)
@@ -187,6 +200,8 @@ def start_new_fix(assignment_id, worker_id, turk_submit_to, accepted_hit):
 
             question = {}
             question["dialogue_id"] = dialogue_id
+            question["typo_id"] = typo_id
+            question["fix_id"] = fix_id
             question["question_id"] = question_id
             question["question_index"] = question_index
             question["original"] = original
@@ -502,5 +517,5 @@ def internal_error(error):
     print (error)
     return "500 error"
 
-if async_mode == 'eventlet':
-    eventlet.wsgi.server(eventlet.listen(('', int(os.environ['PORT']))), app)
+#if async_mode == 'eventlet':
+#    eventlet.wsgi.server(eventlet.listen(('', int(os.environ['PORT']))), app)
