@@ -125,7 +125,8 @@ def save_correction():
 
 def start_new_fix(assignment_id, worker_id, turk_submit_to, accepted_hit):
     with engine.begin() as conn:
-        questions_to_fix = []
+        diff_to_check = []
+
 
         #result = conn.execute("SELECT q.dialogue_id, tq.question_id FROM "
         #                      "question AS q, typo_question AS tq WHERE "
@@ -143,22 +144,24 @@ def start_new_fix(assignment_id, worker_id, turk_submit_to, accepted_hit):
         #                       "  SELECT tq.question_id, q.content, q.dialogue_id FROM typo_question tq, question q "
         #                       "     WHERE q.question_id = tq.question_id AND tq.fixed is False  ORDER BY random() LIMIT 25) tmp "
         #                       "LEFT JOIN last_fixed_question fq ON tmp.question_id = fq.question_id; ");
-        result = conn.execute("SELECT q.dialogue_id, tq.question_id, tq.content "
-                              "FROM typo_question AS tq, question AS q "
-                              "WHERE tq.question_id = q.question_id AND "
-                              " tq.question_id NOT IN (SELECT question_id FROM fixed_question) "
-                              "ORDER BY random() LIMIT 25")
+        #result = conn.execute("SELECT q.dialogue_id, tq.question_id, tq.content "
+        #                      "FROM typo_question AS tq, question AS q "
+        #                      "WHERE tq.question_id = q.question_id AND "
+        #                      " tq.question_id NOT IN (SELECT question_id FROM fixed_question) "
+        #                      "ORDER BY random() LIMIT 25")
+
+
+        result = conn.execute(text("SELECT q.dialogue_id, q.question_id, tq.content, fq.corrected_text "
+                                 "FROM typo_question AS tq, fixed_question AS fq, question AS q "
+                                 "WHERE fq.question_id = tq.question_id AND fq.question_id = q.question_id "
+                                 "ORDER BY random() LIMIT 50"))
+
 
         for row in result:
             dialogue_id = row[0]
             question_id = row[1]
-            original_question = row[2]
-            last_question = None
-
-            if last_question is not None and last_question != "":
-                question_to_show = last_question
-            else:
-                question_to_show = original_question
+            original = row[2]
+            correction = row[3]
 
             (picture_id, width, height, status,
              oracle_id, questioner_id, time) = get_dialogue_info(conn, dialogue_id)
@@ -186,22 +189,25 @@ def start_new_fix(assignment_id, worker_id, turk_submit_to, accepted_hit):
             question["dialogue_id"] = dialogue_id
             question["question_id"] = question_id
             question["question_index"] = question_index
-            question["question_to_show"] = question_to_show
-            question["question_original"] = original_question
+            question["original"] = original
+            question["correction"] = correction
             question["qas"] = qas
             question["img"] = image
 
-            questions_to_fix.append(question)
+            diff_to_check.append(question)
 
-    return render_template('mistakes.html', title='Spelling correction - ',
-                           mistakes=questions_to_fix,
+    return render_template('diff.html', title='diff correction - ',
+                           differences=diff_to_check,
                            assignment_id=assignment_id,
                            worker_id=worker_id,
                            turk_submit_to=turk_submit_to,
                            hit_accepted=accepted_hit)
 
-@app.route('/fix_mistake')
-def fix_mistake():
+
+
+
+@app.route('/validate_diff')
+def validate_diff():
     if not check_browser(request.user_agent.string):
         # Handler for IE users if IE is not supported.
         msg = 'Your browser is not supported.'
@@ -215,6 +221,7 @@ def fix_mistake():
     assignment_id = request.args['assignmentId']
     worker_id = None
     accepted_hit = False
+
     if 'workerId' in request.args:
         worker_id = request.args['workerId']
         accepted_hit = True
@@ -224,6 +231,7 @@ def fix_mistake():
         turk_submit_to = request.args['turkSubmitTo']
 
     return start_new_fix(assignment_id, worker_id, turk_submit_to, accepted_hit)
+
 
 
 @app.route('/assignments/<status>')
