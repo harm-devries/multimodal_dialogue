@@ -1,7 +1,12 @@
 {% extends "main.html" %}
 
 {% block includes %}
-    <script src="https://neil.fraser.name/software/diff_match_patch/svn/trunk/javascript/diff_match_patch.js"></script>
+<script src="{{ url_for('static', filename='js/mistakes.js') }}"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vex-js/2.3.4/js/vex.combined.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vex-js/2.3.4/css/vex.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vex-js/2.3.4/css/vex-theme-default.css" />
+
+     <script src="https://neil.fraser.name/software/diff_match_patch/svn/trunk/javascript/diff_match_patch.js"></script>
 
     <SCRIPT TYPE="text/javascript" LANGUAGE="JavaScript">
 
@@ -24,14 +29,10 @@
           });
       });
     </SCRIPT>
-}
+
 {% endblock %}
 
-
-
-
 {% block body %}
-
 
 <div class="container" style="margin-top: 15px">
    {% if status != "" %}
@@ -51,36 +52,51 @@
   </tr>
   </table>
 {% endif %}
+    <br>    <br>
   <table class="table table-striped">
-  	<thead>
+  <thead>
     <tr>
-        <th>Dialogue</th>
-      <th>Original</th>
+      <th>Dialogue</th>
+      <th>Questions</th>
       <th>Correction</th>
       <th>Diff</th>
-      <th>valid</th>
+      <th>Result</th>
     </tr>
   </thead>
   <tbody>
-  {% set i = 0 %}
-  	{% for c in corrections %}
-	    <tr>
-          <th scope="row"><a href="/dialogue/{{c.dialogue_id}}">{{c.dialogue_id}}</a></th>
-	      <td><span id="original_{{ i }}">{{c.original}}</span></td>
-	      <td><span id="correction_{{ i }}">{{c.correction}}</span></td>
+    <input type="hidden" name="assignment_id" id="assignment_id" value="{{assignment_id}}" />
+    <input type="hidden" name="worker_id" id="worker_id" value="{{worker_id}}" />
+    <input type="hidden" name="turk_submit_to" id="turk_submit_to" value="{{turk_submit_to}}" />
+
+    {% set m = 0 %}
+  	{% for diff in differences %}
+      <tr>
+          <td><a href="/dialogue/{{diff.dialogue_id}}">{{diff.dialogue_id}}</a></td>
+	      <td><span id="original_{{ m }}">{{diff.original}}</span></td>
+	      <td><span id="correction_{{ m }}">{{diff.correction}}</span></td>
           <td><span class="diff"></span></td>
           <td>
-                  {% if c.is_valid == True %}
-                <span style="color: #689F38">Yes</span>
-        {% else  %}
-                <span style="color: #F44336">No</span>
-        {% endif %}
+              {% if diff.valid == True %}
+                <span style="color:green">Yes</span>
+                {% elif diff.report == True %}
+                <span style="color:red">Report</span>
+                {% else %}
+                <span style="color:orange">No</span>
+                {% endif %}
           </td>
-	    </tr>
-        {% set i = i +1 %}
+        </tr>
+        {% set m = m +1 %}
 	{% endfor %}
+  {% if hit_accepted %}
+  <tr>
+    <td></td>
+    <td></td>
+  </tr>
+  {% endif %}
   </tbody>
   </table>
 </div>
+
 {% endblock %}
+
 

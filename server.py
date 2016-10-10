@@ -294,16 +294,17 @@ def check_assignment(id):
             status = 'none'
 
         corrections = []
-        rows = conn.execute(text("SELECT fq.corrected_text, tq.content, q.dialogue_id, tq.fixed "
-                                 "FROM fixed_question AS fq, question AS q "
-                                 "WHERE fq.assignment_id = :aid AND "
-                                 "fq.question_id = tq.question_id AND fq.question_id = q.question_id"),
+        rows = conn.execute(text("SELECT q.content, fq.corrected_text, q.dialogue_id, d.valid, d.report "
+                                 "FROM fixed_question AS fq, question AS q, diff AS d "
+                                 "WHERE d.assignment_id = :aid AND "
+                                 "fq.question_id = q.question_id AND d.question_id = q.question_id"),
                             aid=id)
         for row in rows:
-            corrections.append({'original': row[1], 'correction': row[0], 'dialogue_id': row[2], 'is_valid': row[3]})
+            corrections.append({'original': row[0], 'correction': row[1], 'dialogue_id': row[2], 'valid': row[3], 'report': row[4]})
+
 
     return render_template('check_assignment.html',
-                           corrections=corrections,
+                           differences=corrections,
                            status=status,
                            assignment_id=id)
 
@@ -522,5 +523,5 @@ def internal_error(error):
     print (error)
     return "500 error"
 
-#if async_mode == 'eventlet':
-#    eventlet.wsgi.server(eventlet.listen(('', int(os.environ['PORT']))), app)
+if async_mode == 'eventlet':
+    eventlet.wsgi.server(eventlet.listen(('', int(os.environ['PORT']))), app)
