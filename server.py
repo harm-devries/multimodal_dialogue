@@ -124,9 +124,9 @@ def save_correction():
 
 
             conn.execute(text("INSERT INTO diff(question_id, fix_id, "
-                              "valid, report) "
-                              "VALUES(:qid, :fid, :valid, :report)"),
-                         qid=question_id, fid=fix_id,
+                              "valid, report, assignment_id) "
+                              "VALUES(:qid, :fid, :valid, :report, :aid)"),
+                         qid=question_id, fid=fix_id, aid=assignment_id,
                          valid=valid, report=report)
 
             # prevent from providing the diff twice
@@ -260,7 +260,7 @@ def all_assignments(status):
     with engine.begin() as conn:
         assignments = []
         rows = conn.execute(text("SELECT assignment_id "
-                                 "FROM spellcheck_assignment "
+                                 "FROM diff_assignment "
                                  "WHERE status = :status ORDER BY timestamp DESC"),
                             status=status)
         for row in rows:
@@ -275,7 +275,7 @@ def all_assignments(status):
 def change_assignment_status(id):
     status = request.form['status']
     with engine.begin() as conn:
-        conn.execute(text("UPDATE spellcheck_assignment SET status = :status WHERE assignment_id = :id"),
+        conn.execute(text("UPDATE diff_assignment SET status = :status WHERE assignment_id = :id"),
                      status=status, id=id)
 
     return check_assignment(id)
@@ -285,7 +285,7 @@ def change_assignment_status(id):
 @auth.login_required
 def check_assignment(id):
     with engine.begin() as conn:
-        result = conn.execute(text("SELECT status FROM spellcheck_assignment "
+        result = conn.execute(text("SELECT status FROM diff_assignment "
                                    "WHERE assignment_id = :id"),
                               id=id)
         if result.rowcount > 0:
@@ -295,7 +295,7 @@ def check_assignment(id):
 
         corrections = []
         rows = conn.execute(text("SELECT fq.corrected_text, tq.content, q.dialogue_id, tq.fixed "
-                                 "FROM typo_question AS tq, fixed_question AS fq, question AS q "
+                                 "FROM fixed_question AS fq, question AS q "
                                  "WHERE fq.assignment_id = :aid AND "
                                  "fq.question_id = tq.question_id AND fq.question_id = q.question_id"),
                             aid=id)
