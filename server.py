@@ -167,10 +167,10 @@ def start_new_fix(assignment_id, worker_id, turk_submit_to, accepted_hit):
 
 
         result = conn.execute(text("SELECT q.dialogue_id, q.question_id, tq.content, fq.corrected_text, tq.typo_question_id, fq.fixed_question_id "
-                                 "FROM typo_question AS tq, fixed_question AS fq, question AS q "
-                                 "WHERE fq.question_id = tq.question_id AND fq.question_id = q.question_id "
-                                 "AND tq.fixed = False "
-                                 "ORDER BY random() LIMIT 80"))
+                                   "FROM typo_question AS tq, fixed_question AS fq, question AS q "
+                                   "WHERE fq.question_id = tq.question_id AND fq.question_id = q.question_id "
+                                   "AND tq.fixed = False "
+                                   "ORDER BY random() LIMIT 50"))
 
 
         for row in result:
