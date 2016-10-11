@@ -86,7 +86,7 @@
           </td>
         </tr>
         <tr>
-        <td colspan=3><input type="text" name="text_{{m}}" id="text_{{ m }}" class="form-control fixed_question" value="" title="The questions must have at least three words and end with a question tag." pattern="[A-Za-z!#.,0-9]+ [A-Za-z!#.,0-9]+ [A-Za-z!#.,0-9]+.*\?" required></td>
+        <td colspan=3><input type="text" name="text_{{m}}" id="text_{{ m }}" class="form-control fixed_question" value="{{mistake.correction}}" title="The questions must have at least three words and end with a question tag." pattern="[A-Za-z!#.,0-9]+ [A-Za-z!#.,0-9]+ [A-Za-z!#.,0-9]+.*\?" required></td>
 
              <td>
               {% if mistake.report == True %}
