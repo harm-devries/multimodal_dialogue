@@ -93,19 +93,14 @@ def check_browser(user_agent_string):
 
 @app.route('/correct_questions', methods=['POST'])
 def save_correction():
-    if not ('worker_id' in request.form and 'assignment_id' in request.form and
-            'turk_submit_to' in request.form):
-        return render_template('error.html', title='Correcting spelling mistakes - ',
-                               msg='Missing mturk parameters.')
-    assignment_id = request.form['assignment_id']
-    worker_id = request.form['worker_id']
-    turk_submit_to = request.form['turk_submit_to']
+
+
     # Add to database
     with engine.begin() as conn:
-        conn.execute(text("INSERT INTO spellcheck_assignment (assignment_id) "
-                          "SELECT :id WHERE NOT EXISTS"
-                          "(SELECT 1 FROM spellcheck_assignment WHERE assignment_id = :id);"),
-                     id=assignment_id)
+
+        conn.execute(   "INSERT INTO spellcheck_assignment (assignment_id) "
+                        "SELECT '0' WHERE NOT EXISTS "
+                        "(SELECT 1 FROM spellcheck_assignment WHERE assignment_id = '0'); ")
 
         i = 0
         while ("text_{}".format(i) in request.form):
@@ -115,15 +110,17 @@ def save_correction():
             conn.execute(text("INSERT INTO fixed_question(question_id, worker_id, "
                               "assignment_id, corrected_text) "
                               "VALUES(:qid, :wid, :aid, :text)"),
-                         qid=question_id, wid=worker_id,
-                         aid=assignment_id, text=question)
+                         qid=question_id, wid=0,
+                         aid=0, text=question)
+
+
             i += 1
 
-    return render_template('submit_mistake_hit.html', title='Correcting spelling mistakes - ',
-                           assignment_id=assignment_id, worker_id=worker_id,
-                           turk_submit_to=turk_submit_to)
+    return render_template('submit_mistake_hit.html', title='Correcting spelling mistakes - ')
 
-def start_new_fix(assignment_id, worker_id, turk_submit_to, accepted_hit):
+@app.route('/fix_mistake')
+def fix_mistake():
+
     with engine.begin() as conn:
         questions_to_fix = []
 
@@ -143,22 +140,21 @@ def start_new_fix(assignment_id, worker_id, turk_submit_to, accepted_hit):
         #                       "  SELECT tq.question_id, q.content, q.dialogue_id FROM typo_question tq, question q "
         #                       "     WHERE q.question_id = tq.question_id AND tq.fixed is False  ORDER BY random() LIMIT 25) tmp "
         #                       "LEFT JOIN last_fixed_question fq ON tmp.question_id = fq.question_id; ");
-        result = conn.execute("SELECT q.dialogue_id, tq.question_id, tq.content "
-                              "FROM typo_question AS tq, question AS q "
-                              "WHERE tq.question_id = q.question_id AND "
-                              " tq.question_id NOT IN (SELECT question_id FROM fixed_question) "
-                              "ORDER BY random() LIMIT 25")
+        result = conn.execute(  "SELECT q.dialogue_id, q.question_id, q.content, fq.corrected_text, d.report, fq.assignment_id FROM  "
+                                "   (SELECT * FROM diff WHERE valid = 'false' ) d "
+                                " INNER JOIN question q ON q.question_id = d.question_id "
+                                " INNER JOIN fixed_question fq ON fq.fixed_question_id = d.fix_id "
+                                " WHERE q.question_id NOT IN (SELECT question_id FROM fixed_question WHERE assignment_id = '0') "
+                                " ORDER BY random() LIMIT 20 ")
+
 
         for row in result:
             dialogue_id = row[0]
             question_id = row[1]
-            original_question = row[2]
-            last_question = None
+            original = row[2]
+            correction = row[3]
+            report = row[4]
 
-            if last_question is not None and last_question != "":
-                question_to_show = last_question
-            else:
-                question_to_show = original_question
 
             (picture_id, width, height, status,
              oracle_id, questioner_id, time) = get_dialogue_info(conn, dialogue_id)
@@ -186,71 +182,16 @@ def start_new_fix(assignment_id, worker_id, turk_submit_to, accepted_hit):
             question["dialogue_id"] = dialogue_id
             question["question_id"] = question_id
             question["question_index"] = question_index
-            question["question_to_show"] = question_to_show
-            question["question_original"] = original_question
+            question["original"] = original
+            question["correction"] = correction
+            question["report"] = report
             question["qas"] = qas
             question["img"] = image
 
             questions_to_fix.append(question)
 
-    return render_template('mistakes.html', title='Spelling correction - ',
-                           mistakes=questions_to_fix,
-                           assignment_id=assignment_id,
-                           worker_id=worker_id,
-                           turk_submit_to=turk_submit_to,
-                           hit_accepted=accepted_hit)
 
-@app.route('/fix_mistake')
-def fix_mistake():
-    if not check_browser(request.user_agent.string):
-        # Handler for IE users if IE is not supported.
-        msg = 'Your browser is not supported.'
-        return render_template('error.html', msg=msg)
-
-    if not ('hitId' in request.args and
-            'assignmentId' in request.args):
-        return render_template('error.html', title='Correct spelling mistakes - ',
-                               msg='Missing mturk parameters.')
-
-    assignment_id = request.args['assignmentId']
-    worker_id = None
-    accepted_hit = False
-    if 'workerId' in request.args:
-        worker_id = request.args['workerId']
-        accepted_hit = True
-
-    turk_submit_to = 'https://workersandbox.mturk.com'
-    if 'turkSubmitTo' in request.args:
-        turk_submit_to = request.args['turkSubmitTo']
-
-    return start_new_fix(assignment_id, worker_id, turk_submit_to, accepted_hit)
-
-
-@app.route('/assignments/<status>')
-@auth.login_required
-def all_assignments(status):
-    with engine.begin() as conn:
-        assignments = []
-        rows = conn.execute(text("SELECT assignment_id "
-                                 "FROM spellcheck_assignment "
-                                 "WHERE status = :status ORDER BY timestamp DESC"),
-                            status=status)
-        for row in rows:
-            assignments.append({'id': row[0]})
-
-    return render_template('assignments.html',
-                           assignments=assignments)
-
-
-@app.route('/check_assignment/<id>', methods=['POST'])
-@auth.login_required
-def change_assignment_status(id):
-    status = request.form['status']
-    with engine.begin() as conn:
-        conn.execute(text("UPDATE spellcheck_assignment SET status = :status WHERE assignment_id = :id"),
-                     status=status, id=id)
-
-    return check_assignment(id)
+    return render_template('mistakes.html', title='Spelling correction - ',  mistakes=questions_to_fix )
 
 
 @app.route('/check_assignment/<id>')
@@ -308,8 +249,6 @@ def show_dialogue(id):
 
     image = ('https://msvocds.blob.core.windows.net/imgs/'
              '{}.jpg').format(picture_id)
-
-    print(image)
 
     guess = get_dialogue_guess(conn, id)
     obj = get_dialogue_object(conn, id)

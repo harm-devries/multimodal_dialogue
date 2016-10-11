@@ -5,42 +5,40 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/vex-js/2.3.4/js/vex.combined.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vex-js/2.3.4/css/vex.css" />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vex-js/2.3.4/css/vex-theme-default.css" />
+         <script src="https://neil.fraser.name/software/diff_match_patch/svn/trunk/javascript/diff_match_patch.js"></script>
+
+    <SCRIPT TYPE="text/javascript" LANGUAGE="JavaScript">
+
+        $(document).ready(function() {
+
+          var dmp = new diff_match_patch();
+
+          $(".diff").each(function (i) {
+
+              var text1 = $("#original_"+i).text();
+              var text2 = $("#correction_"+i).text();
+              dmp.Diff_Timeout = 1;
+              dmp.Diff_EditCost = 4;
+
+              var d = dmp.diff_main(text1, text2);
+              dmp.diff_cleanupEfficiency(d);
+              var ds = dmp.diff_prettyHtml(d);
+
+              $(this).html(ds);
+          });
+      });
+    </SCRIPT>
 {% endblock %}
 
 {% block body %}
 
 <div class="container" style="margin-top: 15px">
-    <h2>Instructions</h2>
-    <p>You have to be a native english speaker in order to participate in this HIT. </p>
-    <p>Your task is to reformulate the following 25 questions which probably contain some spelling or grammar mistakes. The questions are extracted from the GuessWhat!? game in which a player locates an object in a picture by asking yes/no questions. For some questions more context is necessary to correct them, clicking on the 'show dialogue' button will show the game which the question was part of. </p>
-    <p>
-    Two example corrections:
-    </p>
-    <ul>
-      <li>ba na na? -> Is it a banana?</li>
-      <li>in left of pic the far 2... one of them -> Is it one of the far two in the left of the picture?</li>
-      <li>
-    </ul>
-
-    <p>Also make sure you retain the meaning of the question. Note further that a questions must:</p>
-     <ul>
-      <li>contain at least three words</li>
-      <li>end with a question tag (?)</li>
-    </ul>
-    <p>Your correction will be colored:</p>
-    <ul>
-      <li>In <span style="color:red">red</span> if it does not follow the above constraints</li>
-      <li>In <span style="color:orange">orange</span> if no correction has been made (in some cases this is fine) </li>
-      <li>In <span style="color:green">green</span> if it has been modified</li>
-    </ul>
-    <p>Some displayed questions may have been corrected by other workers. If the displayed question makes no sense, you may display the original question by hovering it or displaying the full dialogue. </p>
-    <p>For any further questions regarding the HIT, please contact Harm de Vries at guesswhat.mturk@gmail.com.</p>
   <table class="table table-striped">
   <thead>
     <tr>
       <th>Questions</th>
-      <th>Your correction</th>
-      <th>More context</th>
+      <th>Correction</th>
+      <th>Diff</th>
     </tr>
   </thead>
   <tbody>
@@ -52,8 +50,10 @@
     {% set m = 0 %}
   	{% for mistake in mistakes%}
       <tr>
-        <td> <span id="span_{{m}}" title="Original question: {{ mistake.question_original }}" >{{mistake.question_to_show}}</span></td>
-        <td><input type="text" name="text_{{m}}" id="text_{{ m }}" class="form-control fixed_question" value="" title="The questions must have at least three words and end with a question tag." pattern="[A-Za-z!#.,0-9]+ [A-Za-z!#.,0-9]+ [A-Za-z!#.,0-9]+.*\?" required></td>
+
+        <td><span id="original_{{ m }}">{{mistake.original}}</span></td>
+	    <td><span id="correction_{{ m }}">{{mistake.correction}}</span>
+        <td><span class="diff"></span></td>
         <td><a class="btn btn-info show_dialogue" value="{{ m }}" role="button">Display dialogue &raquo;</a>
         <input type="hidden" name="question_id_{{m}}" id="question_id_{{ m }}" class="question_id" value="{{ mistake.question_id }}">
         <input type="hidden" name="dialogue_id_{{m}}" id="dialogue_id_{{ m }}" class="dialogue_id" value="{{ mistake.dialogue_id }}">
@@ -85,15 +85,28 @@
             </div>
           </td>
         </tr>
+        <tr>
+        <td colspan=3><input type="text" name="text_{{m}}" id="text_{{ m }}" class="form-control fixed_question" value="" title="The questions must have at least three words and end with a question tag." pattern="[A-Za-z!#.,0-9]+ [A-Za-z!#.,0-9]+ [A-Za-z!#.,0-9]+.*\?" required></td>
+
+             <td>
+              {% if mistake.report == True %}
+                  <span style="color:red">Reported</span>
+              {% else %}
+                  <span style="color:green">Not reported</span>
+              {% endif %}
+          </td>
+        </tr>
+        <td colspan=4> </td>
+        <tr>
+
+        </tr>
         {% set m = m +1 %}
 	{% endfor %}
-  {% if hit_accepted %}
   <tr>
     <td></td>
     <td></td>
     <td><input type="submit" id="submit_button" class="btn btn-success" role="button" value="Complete &raquo;" /></form></td>
   </tr>
-  {% endif %}
   </tbody>
   </table>
 </div>
