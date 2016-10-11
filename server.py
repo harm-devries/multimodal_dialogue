@@ -216,12 +216,15 @@ def start_new_fix(assignment_id, worker_id, turk_submit_to, accepted_hit):
 
             diff_to_check.append(question)
 
-    return render_template('diff.html', title='diff correction - ',
-                           differences=diff_to_check,
-                           assignment_id=assignment_id,
-                           worker_id=worker_id,
-                           turk_submit_to=turk_submit_to,
-                           hit_accepted=accepted_hit)
+    if len(diff_to_check) > 0:
+        return render_template('diff.html', title='diff correction - ',
+                               differences=diff_to_check,
+                               assignment_id=assignment_id,
+                               worker_id=worker_id,
+                               turk_submit_to=turk_submit_to,
+                               hit_accepted=accepted_hit)
+    else:
+        return render_template('error.html', msg="Please return this HIT. ")
 
 
 
