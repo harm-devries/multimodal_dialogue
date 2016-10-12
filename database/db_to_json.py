@@ -14,7 +14,7 @@ from tqdm import tqdm
 
 
 with open('guesswhat.json', 'w') as outfile:
-    with psycopg2.connect('postgres://login:pwd!@localhost:5432/dbname') as conn:
+    with psycopg2.connect('postgres://login:pwd@localhost:5432/dbname') as conn:
 
         print("Load dialogues... This should take less than 2 minutes ")
         cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
@@ -23,16 +23,11 @@ with open('guesswhat.json', 'w') as outfile:
             SELECT
                 d.dialogue_id, d.picture_id, d.object_id, d.start_timestamp, d.mode, d.status,
                 sq.worker_id,
-                p.flickr_url, p.file_name, p.height, p.width, p.coco_url,
-                o.segment, o.bbox, o.is_crowd, o.area,
-                c.category_id, c.name
-
+                p.flickr_url, p.file_name, p.height, p.width, p.coco_url
                 FROM dialogue d
                 INNER JOIN session sq ON d.questioner_session_id = sq.id
                 INNER JOIN session so ON d.oracle_session_id = so.id
                 INNER JOIN picture p ON d.picture_id = p.picture_id
-                INNER JOIN object o ON d.object_id = o.object_id
-                INNER JOIN object_category c ON o.category_id = c.category_id
                 WHERE
                 d.prev_dialogue_id is NULL
                 AND
@@ -71,17 +66,7 @@ with open('guesswhat.json', 'w') as outfile:
             questioner_anonymous_id[worker_id] = questioner_anonymous_id.get(worker_id, len(questioner_anonymous_id))
             dialogue['questioner_id'] = questioner_anonymous_id[worker_id]
 
-            #WHY all the segment of the picture?
-            obj = {}
-            obj['category_id'] = int(row['category_id'])
-            obj['category'] = row['name']
-            obj['segment'] = row['segment']
-            obj['bbox'] = row['bbox']
-            obj['iscrowd'] = row['is_crowd']
-            obj['area'] = float(row['area'])
-            dialogue['object'] = obj
-
-
+            # Picture
             pict= {}
             pict["coco_url"] = row['coco_url']
             pict["flickr_url"] = row['flickr_url']
@@ -90,14 +75,31 @@ with open('guesswhat.json', 'w') as outfile:
             pict["width"] =  row['width']
             dialogue['picture'] = pict
 
+            # Objects
+            dialogue['objects'] = {}
+            cur.execute(("""
+                          SELECT  o.object_id, o.category_id, c.name, c.category_id, o.segment, o.area, o.is_crowd, o.bbox
+                          FROM object AS o, object_category AS c
+                         WHERE o.category_id = c.category_id AND o.picture_id = %s   ORDER BY o.area ASC; """)
+                        , [dialogue['picture_id']])
+            objects = cur.fetchall()
 
-            # When a questioner disconnect from an unfinished dialogue, his nect dialogue has the same target object
-            # Here we fetch all question answer pairs from this dialogue and its precursors
+            dialogue['object'] = dict()
+            for o in objects:
+                obj = {}
+                obj['object_id']   = int(o['object_id'])
+                obj['category_id'] = int(o['category_id'])
+                obj['category'] = o['name']
+                obj['segment'] = o['segment']
+                obj['bbox'] = o['bbox']
+                obj['iscrowd'] = o['is_crowd']
+                obj['area'] = float(o['area'])
+
+                dialogue['object']["object_id"] = obj
 
 
-
-
-
+        # When a questioner disconnect from an unfinished dialogue, his nect dialogue has the same target object
+        # Here we fetch all question answer pairs from this dialogue and its precursors
         #    query = ("SELECT "
         #             "q.question_id, "
         #            "q.content, "
@@ -155,7 +157,6 @@ with open('guesswhat.json', 'w') as outfile:
             qas = [{'id': q[0], 'q': q[1], 'a': q[2]} for q in questions]
             dialogue['qas'] = qas
 
-            #pprint.pprint(dialogue)
 
             outfile.write(json.dumps(dialogue))
             outfile.write('\n')
