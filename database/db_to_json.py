@@ -31,7 +31,9 @@ with open('guesswhat.json', 'w') as outfile:
                 WHERE
                 d.prev_dialogue_id is NULL
                 AND
-                ((d.mode = 'qualification') OR (d.mode = 'normal' AND d.status = 'success'))
+                ((d.mode = 'normal') OR (d.mode = 'qualification' AND d.status = 'success'))
+                AND
+                d.dialogue_id IN (SELECT DISTINCT q.dialogue_id FROM question q, answer a	WHERE q.question_id = a.question_id)
                 ORDER BY d.dialogue_id ASC
         """)
 
@@ -39,7 +41,7 @@ with open('guesswhat.json', 'w') as outfile:
         nr_of_dialogues = cur.rowcount
 
         rows = cur.fetchall()
-        print(str(nr_of_dialogues) + "dialogues loaded")
+        print(str(nr_of_dialogues) + " dialogues loaded!")
 
         total_q = 0
         i = 0
