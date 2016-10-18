@@ -6,6 +6,7 @@ import itertools
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
+import collections
 
 import re
 
@@ -49,11 +50,18 @@ print("max num questions: " + str(q_by_d.max()))
 
 # Count number of words by question
 w_by_q = np.zeros(len(questions))
+word_counter = collections.Counter()
 for i, q in enumerate(questions):
     q = re.sub('[?]', '', q)
-    w_by_q[i] = len(re.findall(r'\w+', q))
+    words = re.findall(r'\w+', q)
+
+    w_by_q[i] = len(words)
+
+    for w in words:
+        word_counter[w.lower()] += 1
 
 
+pprint(word_counter)
 
 
 
