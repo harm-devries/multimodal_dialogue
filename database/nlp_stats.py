@@ -8,6 +8,8 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import collections
 
+from wordcloud import WordCloud
+
 import re
 
 
@@ -51,15 +53,19 @@ print("max num questions: " + str(q_by_d.max()))
 # Count number of words by question
 w_by_q = np.zeros(len(questions))
 word_counter = collections.Counter()
+word_list = []
 for i, q in enumerate(questions):
     q = re.sub('[?]', '', q)
     words = re.findall(r'\w+', q)
 
     w_by_q[i] = len(words)
+    word_list.append(words)
 
     for w in words:
         word_counter[w.lower()] += 1
 
+
+word_list = list(itertools.chain(*word_list))
 
 pprint(word_counter)
 
@@ -78,4 +84,35 @@ sns.distplot(w_by_q, norm_hist =True, kde=False, bins=np.arange(2.5, 15.5, 1), a
 f.tight_layout()
 
 
+plt.show()
+
+
+def color_func(word=None, font_size=None, position=None,  orientation=None, font_path=None, random_state=None):
+    color_list =["green",'blue', 'brown', "red", 'white', "black", "yellow", "color", "orange"]
+    people_list  =['people', 'person', "he", "she", "human"]
+    prep = ['on', "in", 'of', 'to', "with"]
+    number = ['one', "two", "three", "four", "five", "six"]
+    spatial = ["left", "right", "side", "next", "front", "middle", "background", "near", "behind"]
+    verb=["wearing", "have", "can", "holding", "sitting"]
+    misc = ["picture"]
+    obj = ["table", 'car', "food", 'animal', "shirt", "something", ""]
+
+    if word in color_list: return 'rgb(0, 102, 204)' #blue
+    if word in people_list: return  'rgb(255, 0, 0)' #red
+    if word in prep: return 'rgb(0, 153, 0)' #green
+    if word in number: return 'rgb(204, 204, 0)' #yellow
+    if word in spatial: return 'rgb(204, 102, 0)' #purple
+    if word in verb: return 'rgb(0, 204, 102)' #turquoise
+    if word in obj: return 'rgb(64, 64, 64)' #grey
+    else:
+        return 'rgb(255, 128, 0)' #orange
+
+stopwords=["a","an","is","it","the","does","do","are","you","that","they","doe"]
+
+# take relative word frequencies into account, lower max_font_size
+wordcloud = WordCloud(background_color="white", color_func=color_func, max_font_size=30, max_words=100, stopwords=stopwords )\
+    .generate(" ".join(str(x) for x in word_list))
+plt.figure()
+plt.imshow(wordcloud)
+plt.axis("off")
 plt.show()
