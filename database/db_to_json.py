@@ -9,7 +9,7 @@ import pprint
 from tqdm import tqdm
 
 
-db_path = 'postgres://login:pwd@localhost:5432/dbname'
+db_path = 'postgres://fstrub:21914218820*I!@localhost:5432/mkdb'
 
 
 
@@ -143,12 +143,14 @@ with open('guesswhat.json', 'w') as outfile:
                                            WHERE t.rk = 1 )
 
             -- Do the actual SQL statement to retrieve the complete dialogue
-            SELECT q.question_id,
+            SELECT * FROM (SELECT q.question_id,
             COALESCE(corrected_text, q.content) question, -- pick the last fix if i exist, otherwise take the original content
             (SELECT answer.content FROM answer WHERE question_id = q.question_id ORDER BY timestamp DESC LIMIT 1) answer -- pick the latest answer (if oracle edit its answer)
             FROM original_questions q
             LEFT JOIN last_fixed_questions fq ON q.question_id = fq.question_id
-            ORDER BY q.timestamp ASC """)
+            ORDER BY q.timestamp ASC ) final_table
+            WHERE answer IS NOT NULL
+            """)
 
             cursor = conn.cursor()
             cursor.execute(query, [dialogue['dialogue_id']])
