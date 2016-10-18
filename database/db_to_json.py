@@ -9,12 +9,12 @@ import pprint
 from tqdm import tqdm
 
 
-
+db_path = 'postgres://login:pwd@localhost:5432/dbname'
 
 
 
 with open('guesswhat.json', 'w') as outfile:
-    with psycopg2.connect('postgres://login:pwd@localhost:5432/dbname') as conn:
+    with psycopg2.connect(db_path) as conn:
 
         print("Load dialogues... This should take less than 2 minutes ")
         cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
@@ -33,7 +33,7 @@ with open('guesswhat.json', 'w') as outfile:
                 AND
                 ((d.mode = 'normal') OR (d.mode = 'qualification' AND d.status = 'success'))
                 AND
-                d.dialogue_id IN (SELECT DISTINCT q.dialogue_id FROM question q, answer a	WHERE q.question_id = a.question_id)
+                d.dialogue_id IN (SELECT DISTINCT q.dialogue_id FROM question q, answer a WHERE q.question_id = a.question_id)
                 ORDER BY d.dialogue_id ASC
         """)
 
@@ -78,7 +78,6 @@ with open('guesswhat.json', 'w') as outfile:
             dialogue['picture'] = pict
 
             # Objects
-            dialogue['objects'] = {}
             cur.execute(("""
                           SELECT  o.object_id, o.category_id, c.name, c.category_id, o.segment, o.area, o.is_crowd, o.bbox
                           FROM object AS o, object_category AS c
@@ -86,7 +85,7 @@ with open('guesswhat.json', 'w') as outfile:
                         , [dialogue['picture_id']])
             objects = cur.fetchall()
 
-            dialogue['object'] = dict()
+            dialogue['objects'] = dict()
             for o in objects:
                 obj = {}
                 obj['object_id']   = int(o['object_id'])
@@ -97,7 +96,7 @@ with open('guesswhat.json', 'w') as outfile:
                 obj['iscrowd'] = o['is_crowd']
                 obj['area'] = float(o['area'])
 
-                dialogue['object']["object_id"] = obj
+                dialogue['objects'][obj['object_id']] = obj
 
 
         # When a questioner disconnect from an unfinished dialogue, his nect dialogue has the same target object
