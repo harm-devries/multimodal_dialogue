@@ -58,10 +58,10 @@ with open('guesswhat.json', 'w') as outfile:
             dialogue['timestamp'] = row['start_timestamp'].strftime("%Y-%m-%d %H:%M:%S")
 
             status = row['status']
-            if status != "success" or status != "failure":
+            if status == "success" or status == "failure":
                 dialogue['status'] = status
             else :
-                dialogue['status'] = "unfinished"
+                dialogue['status'] = "incomplete"
 
             # Anonymise the amazon worker_id
             worker_id = row[7]
