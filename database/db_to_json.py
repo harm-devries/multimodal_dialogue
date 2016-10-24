@@ -167,8 +167,6 @@ with open('guesswhat.json', 'w') as outfile:
             qas = [{'id': q[0], 'q': preprocess_string(q[1]), 'a': q[2]} for q in questions]
             dialogue['qas'] = qas
 
-            print(dialogue['qas'])
-
 
             outfile.write(json.dumps(dialogue))
             outfile.write('\n')
