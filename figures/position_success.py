@@ -58,8 +58,8 @@ total_sum = np.zeros((x_bin+1, y_bin+1))
 
 for pos, s in zip(center, status):
 
-    x = np.round(pos[0] * x_bin)
-    y = np.round(pos[1] * y_bin)
+    x = int(pos[0] * x_bin)
+    y = int(pos[1] * y_bin)
 
     total_sum[x][y] += 1.0
 

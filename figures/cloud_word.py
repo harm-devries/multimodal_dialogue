@@ -8,6 +8,9 @@ import collections
 import matplotlib.pyplot as plt
 from wordcloud import WordCloud
 
+import numpy as np
+import seaborn as sns
+
 
 import re
 
