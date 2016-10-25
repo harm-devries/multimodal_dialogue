@@ -13,7 +13,7 @@ import seaborn as sns
 import re
 
 
-json_file = 'guesswhat2.json'
+json_file = 'guesswhat.json'
 
 
 dialogues = []
@@ -71,7 +71,7 @@ sns.set(style="whitegrid")
 f = sns.distplot(w_by_q, norm_hist =True, kde=False, bins=np.arange(3, 16, 1), color="g")
 
 f.set_xlabel("Number of words", {'size':'14'})
-f.set_ylabel("Number of questions", {'size':'14'})
+f.set_ylabel("Percentage of questions", {'size':'14'})
 f.set_xlim(3,14)
 f.set_ylim(bottom=0)
 
@@ -85,7 +85,7 @@ f.set_xlim(3,25)
 f.set_ylim(bottom=0)
 
 f.set_xlabel("Number of questions", {'size':'14'})
-f.set_ylabel("Number of dialogues", {'size':'14'})
+f.set_ylabel("Percentage of dialogues", {'size':'14'})
 
 
 plt.tight_layout()

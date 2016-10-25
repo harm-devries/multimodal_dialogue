@@ -12,10 +12,9 @@ import seaborn as sns
 import re
 
 
-json_file = 'guesswhat2.json'
+json_file = 'guesswhat.json'
 
 ratio_q_object = []
-
 
 
 with open(json_file) as f:
@@ -48,8 +47,8 @@ f = sns.regplot(x=x, y=x         , order=1, scatter=False, label="y = x"      , 
 f.legend(loc="best")
 f.set_xlim(3,20)
 f.set_ylim(0,20)
-f.set_xlabel("Number of objects")
-f.set_ylabel("Number of questions")
+f.set_xlabel("Number of objects", {'size':'14'})
+f.set_ylabel("Number of questions", {'size':'14'})
 
 plt.tight_layout()
 plt.show()

@@ -12,7 +12,7 @@ from wordcloud import WordCloud
 import re
 
 
-json_file = 'guesswhat2.json'
+json_file = 'guesswhat.json'
 
 
 questions = []

@@ -11,7 +11,7 @@ import numpy as np
 import seaborn as sns
 
 
-json_file = 'tmp.json'
+json_file = 'guesswhat.json'
 
 
 status = []
@@ -60,9 +60,9 @@ sum_failure    = np.array(objects)[np.logical_or(success, failure)]
 sum_incomplete = np.array(objects)
 
 
-sns.distplot(sum_incomplete  , bins=rng, kde=False, label="Incomplete", color="g", hist_kws={'alpha':0.8})
-sns.distplot(sum_failure     , bins=rng, kde=False, label="Failure"   , color="r", hist_kws={'alpha':0.8})
-f =  sns.distplot(sum_success, bins=rng, kde=False, label="Success"   , color="b", hist_kws={'alpha':0.8})
+sns.distplot(sum_incomplete  , bins=rng, kde=False, label="Incomplete", color="g")
+sns.distplot(sum_failure     , bins=rng, kde=False, label="Failure"   , color="r")
+f =  sns.distplot(sum_success, bins=rng, kde=False, label="Success"   , color="b")
 
 #Dummy legend
 sns.regplot(x=np.array([-1]), y=np.array([-1]), scatter=False, line_kws={'linestyle':'--'}, label="% Success",ci=None, color="grey")
