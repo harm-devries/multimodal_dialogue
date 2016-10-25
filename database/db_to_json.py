@@ -9,8 +9,7 @@ import pprint
 from tqdm import tqdm
 
 
-db_path = 'postgres://fstrub:21914218820*I!@localhost:5432/mkdb'
-
+db_path = 'postgres://localhost:5432/dd1rgn94b1f6e9'
 
 
 with open('guesswhat.json', 'w') as outfile:
@@ -30,6 +29,8 @@ with open('guesswhat.json', 'w') as outfile:
                 INNER JOIN picture p ON d.picture_id = p.picture_id
                 WHERE
                 d.prev_dialogue_id is NULL
+                AND
+                d.valid = TRUE
                 AND
                 ((d.mode = 'normal') OR (d.mode = 'qualification' AND d.status = 'success'))
                 AND
@@ -79,8 +80,8 @@ with open('guesswhat.json', 'w') as outfile:
 
             # Objects
             cur.execute(("""
-                          SELECT  o.object_id, o.category_id, c.name, c.category_id, o.segment, o.area, o.is_crowd, o.bbox
-                          FROM object AS o, object_category AS c
+                         SELECT  o.object_id, o.category_id, c.name, c.category_id, o.segment, o.area, o.is_crowd, o.bbox
+                         FROM object AS o, object_category AS c
                          WHERE o.category_id = c.category_id AND o.picture_id = %s   ORDER BY o.area ASC; """)
                         , [dialogue['picture_id']])
             objects = cur.fetchall()
@@ -130,7 +131,7 @@ with open('guesswhat.json', 'w') as outfile:
 
             -- retrieve all the questions from a list of consecutive dialogues
             original_questions AS (
-            SELECT * FROM question WHERE dialogue_id IN (SELECT dialogue_id FROM concatenate_dialogues)
+            SELECT * FROM question WHERE valid = TRUE AND dialogue_id IN (SELECT dialogue_id FROM concatenate_dialogues)
             ),
 
             -- table that only contain the last fix of the questions (according timestamp)
@@ -159,7 +160,6 @@ with open('guesswhat.json', 'w') as outfile:
 
             qas = [{'id': q[0], 'q': q[1], 'a': q[2]} for q in questions]
             dialogue['qas'] = qas
-
 
             outfile.write(json.dumps(dialogue))
             outfile.write('\n')
