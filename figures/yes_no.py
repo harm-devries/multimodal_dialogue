@@ -10,18 +10,14 @@ import collections
 import numpy as np
 import seaborn as sns
 
-import re
-
-
 
 json_file = 'guesswhat2.json'
-json_file = 'tmp.json'
+#json_file = 'tmp.json'
 
 
 
-yes_no = []
-
-number_yesno = {"yes" : 0, "no": 0, "NA" : 0}
+yes_no = collections.defaultdict(list)
+number_yesno = collections.defaultdict(int)
 
 
 with open(json_file) as f:
@@ -46,14 +42,8 @@ with open(json_file) as f:
                 number_yesno["NA"] += 1
                 yn.append(0.5)
 
-
-        x = np.linspace(0,1,len(yn))
-        yes_no.append(np.array([x,yn]))
-
-
-
-
-yes_no = np.concatenate([ys for ys in yes_no], axis=1).transpose()
+        no_question = len(data["qas"])
+        yes_no[no_question].append(yn)
 
 print(number_yesno)
 
@@ -61,13 +51,22 @@ print(number_yesno)
 
 sns.set(style="whitegrid")
 
+for key, yn in yes_no.items():
 
-f = sns.regplot(x=yes_no[:,0], y=yes_no[:,1], x_bins=10, order=3, label="Yes-no ratio", marker=".", truncate=True)
+    no_question = int(key)
+    yn_mean = np.array(yn).mean(axis=0)
 
-f.set_xlim(0,1)
-f.set_ylim(0,1)
-f.set_xlabel("ratio yes-no")
-f.set_ylabel('Dialogue advancement')
+    if no_question < 15 :
+        f = sns.regplot(x=np.arange(1, no_question + 1, 1), y=yn_mean, lowess=True, scatter=False)
+
+#dummy legend
+sns.regplot(x=np.array([-1]), y=np.array([-1]), scatter=False, line_kws={'linestyle':'-'}, label="Ratio yes-no",ci=None, color="g")
+f.legend(loc="best", fontsize='large')
+
+f.set_xlim(1,14)
+f.set_ylim(0.1,1)
+f.set_xlabel("Number of questions", {'size':'14'})
+f.set_ylabel('Ratio yes-no', {'size':'14'})
 
 plt.tight_layout()
 plt.show()
