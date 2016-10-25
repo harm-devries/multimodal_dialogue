@@ -48,7 +48,7 @@ with open('guesswhat.json', 'w') as outfile:
         i = 0
         questioner_anonymous_id = {}
 
-        print("Generate json... This should take between 30/60 minutes ")
+        print("Generate json... This should take between 1-3 hours")
         for row in tqdm(rows):
 
             dialogue = {}
@@ -59,10 +59,10 @@ with open('guesswhat.json', 'w') as outfile:
             dialogue['timestamp'] = row['start_timestamp'].strftime("%Y-%m-%d %H:%M:%S")
 
             status = row['status']
-            if status != "success" or status != "failure":
+            if status == "success" or status == "failure":
                 dialogue['status'] = status
             else :
-                dialogue['status'] = "unfinished"
+                dialogue['status'] = "incomplete"
 
             # Anonymise the amazon worker_id
             worker_id = row[7]
@@ -158,7 +158,14 @@ with open('guesswhat.json', 'w') as outfile:
             questions = cursor.fetchall()
             total_q += cursor.rowcount
 
-            qas = [{'id': q[0], 'q': q[1], 'a': q[2]} for q in questions]
+            def preprocess_string(str):
+                str = str.lower()
+                str = str.replace("?", "")
+                str = str.replace(".", "")
+                str += " ?" #add space + ? as a final token
+                return str
+
+            qas = [{'id': q[0], 'q': preprocess_string(q[1]), 'a': q[2]} for q in questions]
             dialogue['qas'] = qas
 
             outfile.write(json.dumps(dialogue))
