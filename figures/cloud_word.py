@@ -8,11 +8,14 @@ import collections
 import matplotlib.pyplot as plt
 from wordcloud import WordCloud
 
+import numpy as np
+import seaborn as sns
+
 
 import re
 
 
-json_file = 'guesswhat2.json'
+json_file = 'guesswhat.json'
 
 
 questions = []
