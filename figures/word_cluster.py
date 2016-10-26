@@ -97,7 +97,9 @@ plt.setp(f.ax_heatmap.get_yticklabels(), rotation=0)
 
 if len(sys.argv) > 1:
     from matplotlib.backends.backend_pdf import PdfPages
-    pp = PdfPages('out/word_cooccurence.pdf')
-    plt.savefig(pp, format='pdf')
+
+    with PdfPages('out/word_cooccurence.pdf') as pdf:
+        pdf.savefig()
+        plt.close()
 else:
     plt.show()

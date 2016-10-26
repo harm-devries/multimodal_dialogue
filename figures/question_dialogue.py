@@ -85,8 +85,10 @@ plt.tight_layout()
 
 if len(sys.argv) > 1:
     from matplotlib.backends.backend_pdf import PdfPages
-    pp = PdfPages('out/w_q.pdf')
-    plt.savefig(pp, format='pdf')
+
+    with PdfPages('out/w_q.pdf') as pdf:
+        pdf.savefig()
+        plt.close()
 else:
     plt.show()
 

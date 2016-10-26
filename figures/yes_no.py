@@ -75,12 +75,12 @@ f.set_ylabel('Ratio yes-no', {'size':'14'})
 
 plt.tight_layout()
 
-
-
 if len(sys.argv) > 1:
     from matplotlib.backends.backend_pdf import PdfPages
-    pp = PdfPages('out/yes_no.pdf')
-    plt.savefig(pp, format='pdf')
+
+    with PdfPages('out/yes_no.pdf') as pdf:
+        pdf.savefig()
+        plt.close()
 else:
     plt.show()
 

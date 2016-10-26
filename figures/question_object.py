@@ -57,14 +57,14 @@ f.set_ylabel("Number of questions", {'size':'14'})
 plt.tight_layout()
 
 
-
 if len(sys.argv) > 1:
     from matplotlib.backends.backend_pdf import PdfPages
-    pp = PdfPages('out/success_objects.pdf')
-    plt.savefig(pp, format='pdf')
+
+    with PdfPages('out/object_question.pdf') as pdf:
+        pdf.savefig()
+        plt.close()
 else:
     plt.show()
-
 
 
 

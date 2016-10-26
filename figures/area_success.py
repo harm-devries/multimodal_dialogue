@@ -99,10 +99,11 @@ ax2.set_ylabel("Success ratio", {'size':'14'})
 plt.tight_layout()
 
 
-
 if len(sys.argv) > 1:
     from matplotlib.backends.backend_pdf import PdfPages
-    pp = PdfPages('out/success_area.pdf')
-    plt.savefig(pp, format='pdf')
+
+    with PdfPages('out/success_area.pdf') as pdf:
+        pdf.savefig()
+        plt.close()
 else:
     plt.show()

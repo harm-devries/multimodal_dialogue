@@ -95,10 +95,11 @@ plt.imshow(wordcloud)
 plt.axis("off")
 plt.tight_layout()
 
-
 if len(sys.argv) > 1:
     from matplotlib.backends.backend_pdf import PdfPages
-    pp = PdfPages('out/cloud.pdf')
-    plt.savefig(pp, format='pdf')
+
+    with PdfPages('out/cloud.pdf') as pdf:
+        pdf.savefig()
+        plt.close()
 else:
     plt.show()
