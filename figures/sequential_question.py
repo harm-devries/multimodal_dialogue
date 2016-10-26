@@ -156,6 +156,8 @@ f.set_xticklabels(df.index, rotation=0)
 f.set_xlim(-0.5,6.5)
 f.set_ylim(bottom=0)
 
+plt.tight_layout()
+
 if len(sys.argv) > 1:
     from matplotlib.backends.backend_pdf import PdfPages
     pp = PdfPages('out/seq_question_lenght.pdf')
