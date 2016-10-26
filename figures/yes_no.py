@@ -11,8 +11,13 @@ import numpy as np
 import seaborn as sns
 
 
-json_file = 'guesswhat2.json'
-#json_file = 'tmp.json'
+import sys
+
+if len(sys.argv) > 1:
+    json_file = sys.argv[1]
+else:
+    json_file = 'tmp.json'
+
 
 
 
@@ -69,7 +74,14 @@ f.set_xlabel("Number of questions", {'size':'14'})
 f.set_ylabel('Ratio yes-no', {'size':'14'})
 
 plt.tight_layout()
-plt.show()
 
+
+
+if len(sys.argv) > 1:
+    from matplotlib.backends.backend_pdf import PdfPages
+    pp = PdfPages('out/yes_no.pdf')
+    plt.savefig(pp, format='pdf')
+else:
+    plt.show()
 
 

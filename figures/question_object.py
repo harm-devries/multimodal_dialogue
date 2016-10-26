@@ -10,9 +10,13 @@ import numpy as np
 import seaborn as sns
 
 import re
+import sys
 
+if len(sys.argv) > 1:
+    json_file = sys.argv[1]
+else:
+    json_file = 'tmp.json'
 
-json_file = 'guesswhat.json'
 
 ratio_q_object = []
 
@@ -51,8 +55,15 @@ f.set_xlabel("Number of objects", {'size':'14'})
 f.set_ylabel("Number of questions", {'size':'14'})
 
 plt.tight_layout()
-plt.show()
 
+
+
+if len(sys.argv) > 1:
+    from matplotlib.backends.backend_pdf import PdfPages
+    pp = PdfPages('out/success_objects.pdf')
+    plt.savefig(pp, format='pdf')
+else:
+    plt.show()
 
 
 

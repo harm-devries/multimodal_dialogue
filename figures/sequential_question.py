@@ -13,10 +13,13 @@ import seaborn as sns
 
 
 import re
+import sys
 
+if len(sys.argv) > 1:
+    json_file = sys.argv[1]
+else:
+    json_file = 'tmp.json'
 
-
-json_file = 'tmp.json'
 
 
 
@@ -88,8 +91,15 @@ f.set_xlabel("Type of sequential question", {'size':'14'})
 f.set_ylabel("Number of questions", {'size':'14'})
 
 plt.tight_layout()
-plt.show()
 
+
+
+if len(sys.argv) > 1:
+    from matplotlib.backends.backend_pdf import PdfPages
+    pp = PdfPages('out/seq_question_total.pdf')
+    plt.savefig(pp, format='pdf')
+else:
+    plt.show()
 
 
 
@@ -146,4 +156,9 @@ f.set_xticklabels(df.index, rotation=0)
 f.set_xlim(-0.5,6.5)
 f.set_ylim(bottom=0)
 
-plt.show()
+if len(sys.argv) > 1:
+    from matplotlib.backends.backend_pdf import PdfPages
+    pp = PdfPages('out/seq_question_lenght.pdf')
+    plt.savefig(pp, format='pdf')
+else:
+    plt.show()
