@@ -16,7 +16,7 @@ import re
 
 
 
-json_file = 'guesswhat2.json'
+json_file = 'tmp.json'
 
 
 
@@ -39,57 +39,56 @@ link = "\w \w .* it.*"
 
 print("number of questions: " + str(len(questions)))
 
-# # count the number of wor
-# cur_counter = collections.Counter()
-# cur_list = []
-# for i, q in enumerate(questions):
-#
-#     has_one = False
-#
-#     if re.search(link, q):
-#         cur_counter["link"] += 1
-#         has_one = True
-#
-#     question_words = re.findall(r'\w+', re.sub('[?]', '', q))
-#
-#     if any(word in one for word in question_words):
-#         cur_counter["one"] += 1
-#         cur_list.append(2)
-#         has_one = True
-#
-#     if any(word in numbers for word in question_words):
-#         cur_counter["numbers"] += 1
-#         cur_list.append(3)
-#         has_one = True
-#
-#     if any(word in preposition for word in question_words):
-#         cur_counter["preposition"] += 1
-#         has_one = True
-#         cur_list.append(4)
-#
-#
-#     if has_one:
-#         cur_counter["dependant"] += 1
-#         cur_list.append(1)
-#
-# print(cur_counter)
-#
-# cur_counter["All"] += len(questions)
-#
-#
-#
-# sns.set(style="white")
-#
-# #Really really ugly hack! fail to use frequency as input! -> look df.plot(bar="")
-# f = sns.distplot(np.array(cur_list), kde=False, bins=[2,3,4,5])
-# f = sns.distplot(np.array(cur_list), kde=False, bins=[1,2])
-# f.set_xticklabels(['', 'Total', '', "One", '', 'Numbers', '', "Preposition"], rotation=60)
-#
-# f.set_xlabel("Type of sequential question", {'size':'14'})
-# f.set_ylabel("Number of dialogues", {'size':'14'})
-#
-# plt.tight_layout()
-# plt.show()
+# count the number of wor
+cur_counter = collections.Counter()
+cur_list = []
+for i, q in enumerate(questions):
+
+    has_one = False
+
+    if re.search(link, q):
+        cur_counter["link"] += 1
+        has_one = True
+
+    question_words = re.findall(r'\w+', re.sub('[?]', '', q))
+
+    if any(word in one for word in question_words):
+        cur_counter["one"] += 1
+        has_one = True
+
+    if any(word in numbers for word in question_words):
+        cur_counter["numbers"] += 1
+        has_one = True
+
+    if any(word in preposition for word in question_words):
+        cur_counter["preposition"] += 1
+        has_one = True
+
+
+    if has_one:
+        cur_counter["All"] += 1
+
+print(cur_counter)
+
+
+
+sns.set(style="whitegrid")
+
+print cur_counter
+df = pd.DataFrame([x for x in cur_counter.itervalues()], index=[x for x in cur_counter])
+df =  df.sort(columns=0, ascending=False)
+df.columns = ['Number of questions']
+f = df.plot(kind='bar', width=1, alpha = 0.3)
+f.get_children()[0].set_color('g')
+
+f.set_xticklabels(df.index, rotation=0)
+
+f.set_xlim(-0.5,4.5)
+f.set_xlabel("Type of sequential question", {'size':'14'})
+f.set_ylabel("Number of questions", {'size':'14'})
+
+plt.tight_layout()
+plt.show()
 
 
 
@@ -134,13 +133,17 @@ for dialogue in dialogues:
 print(seq_counter)
 
 
-df = pd.DataFrame.from_dict(seq_counter, orient='index').reset_index()
+df = pd.DataFrame([x for x in seq_counter.itervalues()], index=[x for x in seq_counter])
+df =  df.sort(columns=0, ascending=False)
+df.columns = ['Number of questions']
+
 sns.set(style="whitegrid")
 
-f = df.get(0).plot(kind='bar', width=1, alpha = 0.3)
+f = df.plot(kind='bar', width=1, alpha = 0.3)
 f.set_xlabel("Length of the sequence of questions", {'size':'14'})
 f.set_ylabel("Number of sequences", {'size':'14'})
-
-
+f.set_xticklabels(df.index, rotation=0)
+f.set_xlim(-0.5,6.5)
+f.set_ylim(bottom=0)
 
 plt.show()
