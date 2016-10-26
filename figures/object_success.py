@@ -67,6 +67,8 @@ f =  sns.distplot(sum_success, bins=rng, kde=False, label="Success"   , color="b
 #Dummy legend
 sns.regplot(x=np.array([-1]), y=np.array([-1]), scatter=False, line_kws={'linestyle':'--'}, label="% Success",ci=None, color="grey")
 
+#TODO -> use panda plot.(stacked = true) to avoid all those tricks (seaborn does not have this option)
+
 histo_success = np.histogram(objects[success], bins=rng)
 histo_failure = np.histogram(objects[failure], bins=rng)
 histo_incomp  = np.histogram(objects[incomp], bins=rng)

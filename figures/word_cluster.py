@@ -9,13 +9,17 @@ import collections
 import matplotlib.pyplot as plt
 
 import numpy as np
+import pandas as pd
 import seaborn as sns
 
 
 import re
 
 
-json_file = 'tmp.json'
+no_words = 100
+json_file = 'guesswhat2.json'
+
+
 
 # retrieve all the sentence
 questions = []
@@ -32,7 +36,7 @@ stopwords = ["a", "an", "is", "it", "the", "does", "do", "are", "you", "that",
              "they", "doe", "this", "there", "hi", "his", "her", "its", "picture", "can", "he", "she", "bu", "us",
              "photo"]
 
-
+# count the number of wor
 word_counter = collections.Counter()
 for q in questions:
     q = re.sub('[?]', '', q)
@@ -45,16 +49,18 @@ for q in questions:
 pprint(word_counter)
 
 
-stopwords=["a","an","is","it","the","does","do","are","you","that",
+stopwords=["a","an","is","it","the","does","do","are","you","that","and", "at",
            "they","doe", "this", "there", "hi", "his", "her", "its", "picture", "can", "he", "she", "bu", "us", "photo"]
+
+print(word_counter.most_common(no_words))
 
 for word_to_remove in stopwords:
     del word_counter[word_to_remove]
 
-common_words = word_counter.most_common(20)
+common_words = word_counter.most_common(no_words)
 common_words = [pair[0] for pair in common_words]
 
-corrmat = np.zeros((20,20))
+corrmat = np.zeros((no_words,no_words))
 
 for i, question in enumerate(question_token):
 
@@ -64,15 +70,23 @@ for i, question in enumerate(question_token):
             for other_word in question:
                 if other_word in common_words:
                     if word != other_word:
-                        corrmat[common_words.index(word)][common_words.index(other_word)] += 1
+                        corrmat[common_words.index(word)][common_words.index(other_word)] += 1.
 
-    print(i)
 
-print (common_words)
-print corrmat
+df = pd.DataFrame(data=corrmat, index=common_words, columns=common_words)
 
-f, ax = plt.subplots(figsize=(12, 9))
-sns.heatmap(corrmat, square=True)
 
-plt.tight_layout()
+print(common_words)
+
+
+
+f = sns.clustermap(df, standard_scale=0, col_cluster=False, cbar_kws={"label" : "co-occurence"})
+
+f.ax_heatmap.xaxis.tick_top()
+#f.ax_heatmap.yaxis.tick_left()
+
+plt.setp(f.ax_heatmap.get_xticklabels(), rotation=90)
+plt.setp(f.ax_heatmap.get_yticklabels(), rotation=0)
+
+
 plt.show()

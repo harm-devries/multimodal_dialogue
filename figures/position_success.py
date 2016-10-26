@@ -73,7 +73,7 @@ sns.set(style="whitegrid")
 
 
 # Draw the heatmap with the mask and correct aspect ratio
-f = sns.heatmap(ratio, robust=True, linewidths=.5)
+f = sns.heatmap(ratio, robust=True, linewidths=.5, cbar_kws={"label" : "% Success"})
 f.set_xlabel("normalized x-axis", {'size':'14'})
 f.set_ylabel("normalized y-axis", {'size':'14'})
 
