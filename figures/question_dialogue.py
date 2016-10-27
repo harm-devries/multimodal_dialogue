@@ -12,8 +12,13 @@ import seaborn as sns
 
 import re
 
+import sys
 
-json_file = 'guesswhat.json'
+if len(sys.argv) > 1:
+    json_file = sys.argv[1]
+else:
+    json_file = 'tmp.json'
+
 
 
 dialogues = []
@@ -76,7 +81,17 @@ f.set_xlim(3,14)
 f.set_ylim(bottom=0)
 
 plt.tight_layout()
-plt.show()
+
+
+if len(sys.argv) > 1:
+    from matplotlib.backends.backend_pdf import PdfPages
+
+    with PdfPages('out/w_q.pdf') as pdf:
+        pdf.savefig()
+        plt.close()
+else:
+    plt.show()
+
 
 
 #ratio question/dialogues
@@ -89,6 +104,13 @@ f.set_ylabel("Percentage of dialogues", {'size':'14'})
 
 
 plt.tight_layout()
-plt.show()
 
+
+
+if len(sys.argv) > 1:
+    from matplotlib.backends.backend_pdf import PdfPages
+    pp = PdfPages('out/q_d.pdf')
+    plt.savefig(pp, format='pdf')
+else:
+    plt.show()
 

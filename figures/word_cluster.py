@@ -16,9 +16,16 @@ import seaborn as sns
 import re
 
 
-no_words = 100
-json_file = 'guesswhat2.json'
 
+import sys
+
+if len(sys.argv) > 1:
+    json_file = sys.argv[1]
+else:
+    json_file = 'tmp.json'
+
+
+no_words = 100
 
 
 # retrieve all the sentence
@@ -88,5 +95,11 @@ f.ax_heatmap.xaxis.tick_top()
 plt.setp(f.ax_heatmap.get_xticklabels(), rotation=90)
 plt.setp(f.ax_heatmap.get_yticklabels(), rotation=0)
 
+if len(sys.argv) > 1:
+    from matplotlib.backends.backend_pdf import PdfPages
 
-plt.show()
+    with PdfPages('out/word_cooccurence.pdf') as pdf:
+        pdf.savefig()
+        plt.close()
+else:
+    plt.show()

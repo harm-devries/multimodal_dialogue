@@ -11,7 +11,12 @@ import numpy as np
 import seaborn as sns
 
 
-json_file = 'guesswhat.json'
+import sys
+
+if len(sys.argv) > 1:
+    json_file = sys.argv[1]
+else:
+    json_file = 'tmp.json'
 
 
 status = []
@@ -98,4 +103,14 @@ ax2.set_ylabel("Success ratio", {'size':'14'})
 
 
 plt.tight_layout()
-plt.show()
+
+
+
+if len(sys.argv) > 1:
+    from matplotlib.backends.backend_pdf import PdfPages
+
+    with PdfPages('out/seq_question_length.pdf') as pdf:
+        pdf.savefig()
+        plt.close()
+else:
+    plt.show()
