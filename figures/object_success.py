@@ -109,7 +109,7 @@ plt.tight_layout()
 if len(sys.argv) > 1:
     from matplotlib.backends.backend_pdf import PdfPages
 
-    with PdfPages('out/seq_question_length.pdf') as pdf:
+    with PdfPages('out/success_objects.pdf') as pdf:
         pdf.savefig()
         plt.close()
 else:

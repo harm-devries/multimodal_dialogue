@@ -106,11 +106,14 @@ f.set_ylabel("Percentage of dialogues", {'size':'14'})
 plt.tight_layout()
 
 
-
 if len(sys.argv) > 1:
     from matplotlib.backends.backend_pdf import PdfPages
-    pp = PdfPages('out/q_d.pdf')
-    plt.savefig(pp, format='pdf')
+
+    with PdfPages('out/q_d.pdf') as pdf:
+        pdf.savefig()
+        plt.close()
 else:
     plt.show()
+
+
 
