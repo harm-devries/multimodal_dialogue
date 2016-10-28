@@ -53,7 +53,6 @@ for q in questions:
     for w in words:
         word_counter[w.lower()] += 1
 
-pprint(word_counter)
 
 
 stopwords=["a","an","is","it","the","does","do","are","you","that","and", "at",
