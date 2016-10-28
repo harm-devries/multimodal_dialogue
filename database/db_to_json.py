@@ -159,10 +159,10 @@ with open('guesswhat.json', 'w') as outfile:
             total_q += cursor.rowcount
 
             def preprocess_string(str):
-                str = str.lower()
-                str = str.replace("?", "")
-                str = str.replace(".", "")
-                str += " ?" #add space + ? as a final token
+                # str = str.lower()
+                # str = str.replace("?", "")
+                # str = str.replace(".", "")
+                # str += " ?" #add space + ? as a final token
                 return str
 
             qas = [{'id': q[0], 'q': preprocess_string(q[1]), 'a': q[2]} for q in questions]
