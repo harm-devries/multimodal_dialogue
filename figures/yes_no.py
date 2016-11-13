@@ -66,7 +66,7 @@ for key, yn in yes_no.items():
 
 #dummy legend
 sns.regplot(x=np.array([-1]), y=np.array([-1]), scatter=False, line_kws={'linestyle':'-'}, label="Ratio yes-no",ci=None, color="g")
-f.legend(loc="best", fontsize='large')
+f.legend(loc="best", fontsize='x-large')
 
 f.set_xlim(1,14)
 f.set_ylim(0.1,1)

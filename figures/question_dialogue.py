@@ -17,7 +17,7 @@ import sys
 if len(sys.argv) > 1:
     json_file = sys.argv[1]
 else:
-    json_file = 'tmp.json'
+    json_file = 'guesswhat.json'
 
 
 
@@ -68,16 +68,17 @@ for i, q in enumerate(questions):
     w_by_q[i] = len(words)
 
 
-sns.set(style="whitegrid")
+
+sns.set_style("whitegrid", {"axes.grid": False})
 
 
 
 #ratio question/words
-f = sns.distplot(w_by_q, norm_hist =True, kde=False, bins=np.arange(3, 16, 1), color="g")
+f = sns.distplot(w_by_q, norm_hist =True, kde=False, bins=np.arange(2.5, 15.5, 1), color="g")
 
 f.set_xlabel("Number of words", {'size':'14'})
-f.set_ylabel("Percentage of questions", {'size':'14'})
-f.set_xlim(3,14)
+f.set_ylabel("Ratio of questions", {'size':'14'})
+f.set_xlim(2.5,14.5)
 f.set_ylim(bottom=0)
 
 plt.tight_layout()
@@ -93,17 +94,22 @@ else:
     plt.show()
 
 
+sns.set_style("whitegrid", {"axes.grid": False})
+
 
 #ratio question/dialogues
-f = sns.distplot(q_by_d, norm_hist =True, kde=False, bins=np.arange(0, 25, 1))
-f.set_xlim(3,25)
+f = sns.distplot(q_by_d, norm_hist =True, kde=False, bins=np.arange(0.5, 25.5, 1))
+f.set_xlim(0.5,25.5)
 f.set_ylim(bottom=0)
 
 f.set_xlabel("Number of questions", {'size':'14'})
-f.set_ylabel("Percentage of dialogues", {'size':'14'})
+f.set_ylabel("Ratio of dialogues", {'size':'14'})
 
+#hist= np.histogram(q_by_d, bins=np.arange(0, 25, 1), density=True)
+#sns.regplot(x=hist[1][3:-1], y=np.log(hist[0][3:]))
 
 plt.tight_layout()
+
 
 
 if len(sys.argv) > 1:
@@ -114,6 +120,7 @@ if len(sys.argv) > 1:
         plt.close()
 else:
     plt.show()
+
 
 
 

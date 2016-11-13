@@ -19,7 +19,7 @@ import sys
 if len(sys.argv) > 1:
     json_file = sys.argv[1]
 else:
-    json_file = 'tmp.json'
+    json_file = 'guesswhat.json'
 
 
 
@@ -48,7 +48,7 @@ for q in questions:
 
 
 word_list = list(itertools.chain(*word_list))
-
+pprint(word_counter)
 
 def color_func(word=None, font_size=None, position=None,  orientation=None, font_path=None, random_state=None):
     color_list =["green",'blue', 'brown', "red", 'white', "black", "yellow", "color", "orange", "pink"]
@@ -59,7 +59,7 @@ def color_func(word=None, font_size=None, position=None,  orientation=None, font
                "near", "behind", "back", "at", "row", "far", "whole", "closest"]
     verb=["wearing", "have", "can", "holding", "sitting", "building", "standing", "see"]
     obj = ["hand","table", 'car', "food", "plate", "shirt", "something", "thing", "object",
-           "light", "hat", "tree", "bag", "book", "sign", "bottle", "glas", "bus", "wall", "vehicle",
+           "light", "hat", "tree", "bag", "book", "sign", "bottle", "glass", "bus", "wall", "vehicle",
            "chair", "dog", "cat", "windows", "boat", "item", "shelf", "horse", "furniture", "water", "camera", "bike",
            "train", "window", "bowl", "plant", "ball", "cup", ]
     misc = [ 'visible', "made", "part", "piece", "all"]
@@ -84,10 +84,11 @@ stopwords=["a","an","is","it","the","does","do","are","you","that",
 
 # take relative word frequencies into account, lower max_font_size
 wordcloud = WordCloud(background_color="white", color_func=color_func, max_font_size=40, max_words=80,
-                      stopwords=stopwords, prefer_horizontal=1, width=500, height=350)\
+                      stopwords=stopwords, prefer_horizontal=1, width=400, height=200)\
     .generate(" ".join(str(x) for x in word_list))
 
 
+print(len(word_counter))
 
 plt.figure()
 plt.imshow(wordcloud)

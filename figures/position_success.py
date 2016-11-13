@@ -28,17 +28,18 @@ x_bin = 7
 y_bin = 7
 
 def get_center(bbox, picture):
-    width = picture["width"]
-    height = picture["height"]
+    im_width = picture["width"]
+    im_height = picture["height"]
 
-    x_up  = 1.0 * bbox[0]
-    y_up  = 1.0 * bbox[1]
-    x_down = x_up + bbox[2]
-    y_down = y_up + bbox[3]
+    x_width = bbox[2]
+    y_height = bbox[3]
+
+    x_left = bbox[0]
+    y_upper = im_height - bbox[1]
 
 
-    x_center = (x_up + x_down) / ( 2. * width)
-    y_center = (y_up + y_down) / ( 2. * height)
+    x_center = (x_left + 0.5 * x_width) / im_width
+    y_center = (y_upper - 0.5 * y_height)/ im_height
 
     return [x_center, y_center]
 
@@ -77,10 +78,10 @@ sns.set(style="whitegrid")
 
 
 # Draw the heatmap with the mask and correct aspect ratio
-f = sns.heatmap(ratio, robust=True, linewidths=.5, cbar_kws={"label" : "% Success"})
-f.set_xlabel("normalized x-axis", {'size':'14'})
-f.set_ylabel("normalized y-axis", {'size':'14'})
-
+f = sns.heatmap(ratio, robust=True, linewidths=.5, cbar_kws={"label" : "% Success"}, xticklabels=False, yticklabels=False)
+f.set_xlabel("normalized image width", {'size':'14'})
+f.set_ylabel("normalized image height", {'size':'14'})
+f.legend(loc="upper left", fontsize='x-large')
 plt.tight_layout()
 
 

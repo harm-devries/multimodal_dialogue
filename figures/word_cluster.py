@@ -22,7 +22,7 @@ import sys
 if len(sys.argv) > 1:
     json_file = sys.argv[1]
 else:
-    json_file = 'tmp.json'
+    json_file = 'guesswhat.json'
 
 
 no_words = 100
@@ -55,9 +55,6 @@ for q in questions:
 
 
 
-stopwords=["a","an","is","it","the","does","do","are","you","that","and", "at",
-           "they","doe", "this", "there", "hi", "his", "her", "its", "picture", "can", "he", "she", "bu", "us", "photo"]
-
 print(word_counter.most_common(no_words))
 
 for word_to_remove in stopwords:
@@ -86,7 +83,7 @@ print(common_words)
 
 
 
-f = sns.clustermap(df, standard_scale=0, col_cluster=False, cbar_kws={"label" : "co-occurence"})
+f = sns.clustermap(df, standard_scale=0, col_cluster=False, row_cluster=True, cbar_kws={"label" : "co-occurence"})
 
 f.ax_heatmap.xaxis.tick_top()
 #f.ax_heatmap.yaxis.tick_left()

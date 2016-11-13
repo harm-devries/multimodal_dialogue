@@ -38,7 +38,7 @@ with open(json_file) as f:
 ratio_q_object = np.array(ratio_q_object)
 
 
-sns.set(style="whitegrid")
+sns.set(style="white")
 
 
 
@@ -48,7 +48,7 @@ sns.regplot    (x=ratio_q_object[:,0], y=ratio_q_object[:,1], x_bins=17, order=4
 sns.regplot    (x=x, y=np.log2(x), order=6, scatter=False, label="y = log2(x)", line_kws={'linestyle':'--'})
 f = sns.regplot(x=x, y=x         , order=1, scatter=False, label="y = x"      , line_kws={'linestyle':'--'})
 
-f.legend(loc="best")
+f.legend(loc="best", fontsize='x-large')
 f.set_xlim(3,20)
 f.set_ylim(0,20)
 f.set_xlabel("Number of objects", {'size':'14'})

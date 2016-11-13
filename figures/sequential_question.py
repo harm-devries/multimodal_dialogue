@@ -18,7 +18,7 @@ import sys
 if len(sys.argv) > 1:
     json_file = sys.argv[1]
 else:
-    json_file = 'tmp.json'
+    json_file = 'guesswhat.json'
 
 
 
@@ -36,7 +36,8 @@ questions = list(itertools.chain(*dialogues))
 
 numbers = ["first", "second", "2nd", "third", "fourth", "sixth", "seventh", "eighth" , "ninth", "tenth"]
 one = ["one"]
-preposition = ["his", "her", "their", "its", "him", "them"]
+cod = ["her", "its", "him", "them"]
+ownership = ["his", "her", "their"]
 link = "\w \w .* it.*"
 
 
@@ -49,24 +50,24 @@ for i, q in enumerate(questions):
 
     has_one = False
 
-    if re.search(link, q):
-        cur_counter["link"] += 1
-        has_one = True
 
     question_words = re.findall(r'\w+', re.sub('[?]', '', q))
 
     if any(word in one for word in question_words):
-        cur_counter["one"] += 1
+        cur_counter["One"] += 1
         has_one = True
 
     if any(word in numbers for word in question_words):
-        cur_counter["numbers"] += 1
+        cur_counter["Ordinal numbers"] += 1
         has_one = True
 
-    if any(word in preposition for word in question_words):
-        cur_counter["preposition"] += 1
+    if re.search(link, q) or any(word in cod for word in question_words):
+        cur_counter["Object Pronouns"] += 1
         has_one = True
 
+    if any(word in cod for word in question_words):
+        cur_counter["Possessive Pronouns"] += 1
+        has_one = True
 
     if has_one:
         cur_counter["All"] += 1
@@ -87,9 +88,8 @@ f.get_children()[0].set_color('g')
 f.set_xticklabels(df.index, rotation=0)
 
 f.set_xlim(-0.5,4.5)
-f.set_xlabel("Type of sequential question", {'size':'14'})
+f.set_xlabel("Question dependencies", {'size':'14'})
 f.set_ylabel("Number of questions", {'size':'14'})
-
 plt.tight_layout()
 
 
@@ -116,7 +116,8 @@ def count_sequence(remaining_question, c=0):
     if re.search(link, question) or \
         any(word in one for word in question_words) or \
         any(word in numbers for word in question_words) or \
-        any(word in preposition for word in question_words):
+        any(word in ownership for word in question_words) or \
+        any(word in cod for word in question_words):
 
         return count_sequence(remaining_question[1:], c+1)
 
@@ -148,8 +149,8 @@ df.columns = ['Number of questions']
 sns.set(style="whitegrid")
 
 f = df.plot(kind='bar', width=1, alpha = 0.3)
-f.set_xlabel("Length of the sequence of questions", {'size':'14'})
-f.set_ylabel("Number of sequences", {'size':'14'})
+f.set_xlabel("Dependency length", {'size':'14'})
+f.set_ylabel("Number of questions", {'size':'14'})
 f.set_xticklabels(df.index, rotation=0)
 f.set_xlim(-0.5,6.5)
 f.set_ylim(bottom=0)
