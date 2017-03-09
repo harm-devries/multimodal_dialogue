@@ -77,7 +77,6 @@ def detokenize(question, tokens, new_tokens):
     if detok_question[-2:] == ' ?':
         detok_question = detok_question[:-2] + '?'
 
-    print question
     if detok_question[-1] == '/':
         detok_question = detok_question[:-1] + '?'
 
@@ -86,28 +85,23 @@ def detokenize(question, tokens, new_tokens):
 
     return detok_question
 
-with open(dialogues_file) as f:
+with open(dialogues_file) as f, open('guesswhat_postprocessed.jsonl', 'w') as outfile:
     for line in f:
         dialogue = json.loads(line)
         for qa in dialogue['qas']:
             question = qa['q'].strip()
             tokens = wpt.tokenize(qa['q'])
             new_tokens = []
-            flag = False
             for tok in tokens:
                 tok_lower = tok.lower()
                 if tok_lower in correction and correction[tok_lower] not in ['1', '0', 0, 1]:
                     tok = correction[tok_lower]
                     if tok in number_corr:
                         tok = number_corr[tok]
-                        flag = True
                     new_tokens.append(tok)
                 else:
                     new_tokens.append(tok)
-            print qa['id']
-            print question
 
-            detok_question = detokenize(question, tokens, new_tokens)
-            if flag:
-                print question
-                print detok_question
+            qa['q'] = detokenize(question, tokens, new_tokens)
+        outfile.write(json.dumps(dialogue))
+        outfile.write('\n')
